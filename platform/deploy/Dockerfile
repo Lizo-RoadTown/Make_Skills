@@ -22,7 +22,6 @@ RUN pip install --no-cache-dir --upgrade pip && \
 # mounted as volumes by compose — NOT baked in — so editing them on the host
 # is immediately visible inside the container with no rebuild.
 COPY platform/api /app/api
-COPY platform/ui /app/ui
 
 # Default command is overridden per-service in docker-compose.yml.
 CMD ["python", "-c", "print('Override CMD via docker-compose service definition.')"]

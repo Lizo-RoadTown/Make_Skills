@@ -23,8 +23,8 @@ On your laptop, visit:
 
 | Service | URL |
 |---------|-----|
-| Chat UI (chainlit) | `http://<desktop-tailnet-name>:8000` |
-| Chat UI (Next.js dev) | `http://<desktop-tailnet-name>:3000` (only when `npm run dev` is running) |
+| Chat UI (Next.js dev) | `http://<desktop-tailnet-name>:3000` (only when `npm run dev` is running locally) |
+| Chat UI (production) | `https://humancensys.com` (lives on Vercel — reachable from anywhere already) |
 | API | `http://<desktop-tailnet-name>:8001` |
 | Grafana | `http://<desktop-tailnet-name>:3001` |
 | API docs | `http://<desktop-tailnet-name>:8001/docs` |
@@ -48,7 +48,9 @@ Use this if you want to share the agent (or Grafana dashboards) publicly, OR if 
 4. In the tunnel's config, route `chat.your-domain.com` → `http://localhost:8000`, `grafana.your-domain.com` → `http://localhost:3001`, etc.
 5. Cloudflare handles SSL automatically.
 
-Trade-offs vs. Tailscale: public URLs (good for sharing, bad if you don't want exposure), requires a domain, more moving parts. Auth in front of public services becomes important — at minimum, set Grafana back to password-required mode (don't leave anonymous editor on a public URL).
+Trade-offs vs. Tailscale: public URLs (good for sharing, bad if you don't want exposure), more moving parts. Auth in front of public services becomes important — at minimum, set Grafana back to password-required mode (don't leave anonymous editor on a public URL).
+
+Note: the chat UI itself is already public via Vercel at humancensys.com. The remote-access discussion here is about reaching the BACKEND services (API, Grafana, postgres) — the UI doesn't need a tunnel.
 
 ## Option C: Just put it in the cloud
 
