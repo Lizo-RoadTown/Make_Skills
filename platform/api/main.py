@@ -30,7 +30,7 @@ logging.basicConfig(level=logging.INFO)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     log.info("Building deepagents agent...")
-    app.state.agent = build_agent()
+    app.state.agent = await build_agent()
     log.info("Agent ready.")
     yield
 

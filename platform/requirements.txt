@@ -12,8 +12,9 @@ fastapi>=0.115
 uvicorn[standard]>=0.30
 chainlit>=2.0
 
-# DB driver for langgraph PostgresSaver
+# DB driver + pool for langgraph PostgresSaver
 psycopg[binary]>=3.2
+psycopg_pool>=3.2
 
 # Optional: tool & search providers
 # Uncomment per-tool only when you wire it into deepagents.toml MCP block.

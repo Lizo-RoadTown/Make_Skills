@@ -18,8 +18,12 @@ services:
     restart: unless-stopped
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?must be set in .env}
       POSTGRES_DB: ${POSTGRES_DB:-make_skills}
+      # Trust mode: no password required. Safe because port 5432 is not exposed
+      # to the host — only the api container on the private docker network can
+      # reach postgres. If you ever uncomment the `ports:` line below, switch
+      # back to POSTGRES_PASSWORD with a real value.
+      POSTGRES_HOST_AUTH_METHOD: trust
     volumes:
       - postgres-data:/var/lib/postgresql/data
     healthcheck:
@@ -46,7 +50,7 @@ services:
       LANGSMITH_API_KEY: ${LANGSMITH_API_KEY:-}
       LANGSMITH_PROJECT: ${LANGSMITH_PROJECT:-make-skills}
       LANGSMITH_TRACING: ${LANGSMITH_TRACING:-false}
-      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-make_skills}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}@postgres:5432/${POSTGRES_DB:-make_skills}
       AGENT_CONFIG_PATH: /repo/deepagents.toml
       AGENT_REPO_ROOT: /repo
     volumes:

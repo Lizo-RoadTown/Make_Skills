@@ -21,6 +21,13 @@ import sys
 import tempfile
 from pathlib import Path
 
+# Make output safe on Windows consoles that default to cp1252 (otherwise checkmarks crash).
+try:
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+except Exception:
+    pass
+
 
 def main() -> int:
     print("=== LlamaParse smoke test ===\n")

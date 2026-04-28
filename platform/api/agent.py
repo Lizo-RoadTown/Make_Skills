@@ -23,16 +23,17 @@ def load_config(config_path: str | Path) -> dict[str, Any]:
         return tomllib.load(f)
 
 
-def build_agent(config_path: str | Path | None = None, repo_root: str | Path | None = None):
+async def build_agent(config_path: str | Path | None = None, repo_root: str | Path | None = None):
     """
-    Build the deepagents agent with a Postgres-backed checkpointer.
+    Build the deepagents agent with an async Postgres-backed checkpointer.
 
-    Returns the compiled agent — call .invoke() / .ainvoke() / .astream()
-    on it. Each call should pass a thread_id in the config so the
-    PostgresSaver can persist state per conversation.
+    Returns the compiled agent — call .ainvoke() / .astream() on it. Each
+    call should pass a thread_id in the config so the AsyncPostgresSaver
+    can persist state per conversation.
     """
     from deepagents import create_deep_agent
-    from langgraph.checkpoint.postgres import PostgresSaver
+    from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
+    from psycopg_pool import AsyncConnectionPool
 
     config_path = Path(config_path or os.environ["AGENT_CONFIG_PATH"])
     repo_root = Path(repo_root or os.environ.get("AGENT_REPO_ROOT", config_path.parent))
@@ -47,36 +48,75 @@ def build_agent(config_path: str | Path | None = None, repo_root: str | Path | N
 
     skills = [abspath(p) for p in agent_cfg.get("skills", [])]
     memory = [abspath(p) for p in agent_cfg.get("memory", [])]
-    subagents_dir = agent_cfg.get("subagents_dir")
-    subagents_dir = abspath(subagents_dir) if subagents_dir else None
+    subagents_dir_raw = agent_cfg.get("subagents_dir")
+    subagents_dir = Path(abspath(subagents_dir_raw)) if subagents_dir_raw else None
 
-    # Postgres checkpointer — gives us per-thread conversation persistence.
+    # Postgres checkpointer — per-thread conversation persistence.
+    # Use a ConnectionPool so the saver has a real connection for the app's lifetime
+    # (PostgresSaver.from_conn_string returns a context manager, which doesn't fit a
+    # long-lived FastAPI lifespan).
     db_url = os.environ["DATABASE_URL"]
-    checkpointer = PostgresSaver.from_conn_string(db_url)
-    checkpointer.setup()  # idempotent — creates the checkpoint tables on first run
+    pool = AsyncConnectionPool(
+        conninfo=db_url,
+        max_size=20,
+        kwargs={"autocommit": True, "prepare_threshold": 0},
+        open=False,
+    )
+    await pool.open()
+    checkpointer = AsyncPostgresSaver(pool)
+    await checkpointer.setup()  # idempotent — creates the checkpoint tables on first run
 
-    # Build the agent. The exact kwarg names here (skills=, memory=, subagents_dir=)
-    # follow the deepagents canonical pattern documented in
-    # langchain-ai/deepagents/examples/deploy-gtm-agent. If the live API differs,
-    # this is the single place to fix it.
+    subagents = load_subagents(subagents_dir, repo_root) if subagents_dir else []
+
     agent = create_deep_agent(
-        model=_resolve_model(model_cfg),
+        model=_resolve_model_id(model_cfg),
         memory=memory,
         skills=skills,
-        subagents_dir=subagents_dir,
+        subagents=subagents,
         checkpointer=checkpointer,
     )
     return agent
 
 
-def _resolve_model(model_cfg: dict[str, Any]):
-    """Translate the [model] block in deepagents.toml into a LangChain chat model."""
+def _resolve_model_id(model_cfg: dict[str, Any]) -> str:
+    """Convert [model] provider+name into deepagents' 'provider:name' string format."""
     provider = model_cfg.get("provider", "anthropic")
     name = model_cfg.get("name", "claude-opus-4-7")
-    if provider == "anthropic":
-        from langchain_anthropic import ChatAnthropic
-        return ChatAnthropic(model=name)
-    if provider == "openai":
-        from langchain_openai import ChatOpenAI
-        return ChatOpenAI(model=name)
-    raise ValueError(f"Unsupported provider in deepagents.toml: {provider!r}")
+    return f"{provider}:{name}"
+
+
+def load_subagents(subagents_dir: Path, repo_root: Path) -> list[dict[str, Any]]:
+    """Walk subagents_dir, build a SubAgent TypedDict for each subdirectory that has
+    both AGENTS.md and deepagents.toml. AGENTS.md becomes the system_prompt; the
+    [agent] block in deepagents.toml provides name/description/skills; the [model]
+    block (optional) provides a per-subagent model override.
+    """
+    subagents: list[dict[str, Any]] = []
+    if not subagents_dir.is_dir():
+        return subagents
+    for sub_dir in sorted(subagents_dir.iterdir()):
+        if not sub_dir.is_dir() or sub_dir.name.startswith("_") or sub_dir.name.startswith("."):
+            continue
+        agents_md = sub_dir / "AGENTS.md"
+        toml_path = sub_dir / "deepagents.toml"
+        if not (agents_md.exists() and toml_path.exists()):
+            continue
+        sub_cfg = load_config(toml_path)
+        agent_block = sub_cfg.get("agent", {})
+        model_block = sub_cfg.get("model", {})
+
+        sub: dict[str, Any] = {
+            "name": agent_block.get("name", sub_dir.name),
+            "description": agent_block.get("description", ""),
+            "system_prompt": agents_md.read_text(encoding="utf-8"),
+        }
+        skill_paths = agent_block.get("skills", [])
+        if skill_paths:
+            sub["skills"] = [str((repo_root / p).resolve()) for p in skill_paths]
+        if model_block:
+            provider = model_block.get("provider", "anthropic")
+            name = model_block.get("name")
+            if name:
+                sub["model"] = f"{provider}:{name}"
+        subagents.append(sub)
+    return subagents
