@@ -127,6 +127,31 @@ After a successful execution, write the durable knowledge somewhere persistent:
 
 The goal is that invocation N+1 makes fewer decisions than invocation N. After enough runs, the skill stops "deciding" altogether — it's just executing a recipe the system has learned.
 
+## Two-mode discipline (2026-04-28 onward)
+
+The platform supports **two deployment modes** in parallel: self-host (single user, no auth, all data local) and hosted-multitenant (humancensys.com, auth, per-tenant isolation). Every change to platform code, every new skill that touches data, and every new endpoint MUST work in both modes.
+
+**For agents authoring skills or modifying platform code:**
+
+- **Read [`ARCHITECTURE.md`](../../ARCHITECTURE.md) first.** It defines what's per-tenant, what's shared, what's publishable.
+- **Tenant scope every data touch.** Any new endpoint, any new query, any new file write goes through the tenant abstraction. Never hardcode `tenant_id = "default"` outside the `NoAuthBackend` self-host path.
+- **Documentation requirement.** When you add or modify a feature, the relevant doc must explain how it appears in BOTH modes. Two-mode docs are not optional.
+- **Test requirement.** New code needs a test for self-host (`tenant_id = "default"`) AND a test for hosted (synthetic non-default `tenant_id`, verify isolation). PR is incomplete without both.
+
+**For skills specifically:**
+
+- A skill that calls `query_db` or `recall` is automatically tenant-safe — those tools handle scoping.
+- A skill that writes to the filesystem (e.g., `update_roadmap_status` writing to `ROADMAP.md`) needs to think about per-tenant paths. Currently `ROADMAP.md` is at repo root; in hosted mode it lives at `<tenant_dir>/ROADMAP.md`. The roadmap tools resolve this through `AGENT_REPO_ROOT` for self-host; hosted equivalent is `tenant_root_dir(tenant_id)`. Skill bodies should NOT assume a fixed path.
+
+**Anti-patterns to reject in PRs to platform code or skills:**
+
+- Hardcoded paths or queries without tenant scoping
+- "We'll add multi-tenancy later" — once data is being written, retrofitting is a migration nightmare
+- Tests that only cover one mode
+- Docs that explain only the self-host path
+
+See [`CONTRIBUTING.md`](../../CONTRIBUTING.md) for the four-question PR template.
+
 ## When NOT to make a skill agentic
 
 Some skills genuinely require human judgment at every step — typically:

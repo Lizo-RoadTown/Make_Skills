@@ -1,8 +1,41 @@
 # Make_Skills roadmap
 
-The Make_Skills platform organizes around **three top-level pillars**. Each pillar is a section of the site (humancensys.com) and a layer of the platform stack.
+The Make_Skills platform organizes around **three top-level pillars**, sitting on a **foundational pillar (Pillar 0)** that ensures everything we build supports both self-hosted and hosted-multitenant modes from day one.
 
 > **Status legend:** ✓ shipped · ⚠ partial · ✗ not started · 💬 needs discussion before execution
+
+> **Two-mode commitment (2026-04-28):** Every change from this point forward considers both deployment modes (self-host and hosted-multitenant), with documentation and tests for both. See [`ARCHITECTURE.md`](ARCHITECTURE.md) for the clean lines and [`CONTRIBUTING.md`](CONTRIBUTING.md) for the discipline.
+
+---
+
+## Pillar 0 — Foundational: open-source-ready + dual-mode
+
+The platform is **open-source-first** and **deployment-agnostic** (self-host AND hosted-multitenant). This pillar is invisible to users but governs every other pillar's design.
+
+| Capability | Status | Notes |
+|------------|--------|-------|
+| Architecture document with layered model + clean lines | ✓ | [`ARCHITECTURE.md`](ARCHITECTURE.md) |
+| `CONTRIBUTING.md` with two-mode discipline | ✓ | [`CONTRIBUTING.md`](CONTRIBUTING.md) |
+| Repo strategy: monorepo with module boundaries | ⚠ | Boundaries defined; explicit per-module READMEs in `platform/`, `web/`, `skills/` are partial |
+| License chosen + `LICENSE` committed | ✗ | 💬 MIT vs Apache 2.0 vs AGPL — needs decision |
+| Tenant abstraction (tenant_id on data, scoped queries) | ✗ | Required before *any* multi-tenant feature ships |
+| Auth interface (`NoAuthBackend` + stub `OAuthBackend`) | ✗ | Pluggable; default to NoAuth for self-host |
+| Config loader abstraction (filesystem ↔ multi-tenant config store) | ✗ | Platform code reads tenant config through this only |
+| `PLATFORM_MODE` env var + mode-aware startup | ✗ | Single switch determines auth backend |
+| Per-mode test scaffolding (unit + integration for both modes) | ✗ | CI must run both |
+| Per-mode docs (every feature explained for both modes) | ⚠ | Discipline declared; current docs are mostly self-host-only |
+| Code of Conduct | ✗ | 💬 default to Contributor Covenant unless redirected |
+| GitHub Actions CI for tests + smoke tests in both modes | ✗ | |
+| One-click self-host deploy (Render Blueprint, fly.toml, k8s helm) | ⚠ | Render Blueprint shipped; others later |
+| GitHub Discussions enabled for community Qs | ✗ | |
+
+**Discussion needed (decisions block downstream work):**
+
+- 💬 **License:** MIT/Apache 2.0 (max contributor friendliness) vs AGPL (forces SaaS hosters to share modifications)
+- 💬 **Auth provider for hosted mode:** GitHub OAuth, Clerk, Auth.js
+- 💬 **Tenant routing:** subdomain (`<tenant>.humancensys.com`) vs path (`humancensys.com/<tenant>`)
+- 💬 **Tenant config storage in hosted mode:** S3/blob, postgres rows, both
+- 💬 **Knowledge graph cross-tenant posture:** strict silo (default) vs opt-in publish vs federated
 
 ---
 
