@@ -1,0 +1,30 @@
+# Python dependencies for the always-on platform under platform/.
+# Used by the Dockerfile (TBD) and for local development.
+
+# Core agent runtime
+deepagents>=0.4
+langchain>=0.3
+langgraph>=0.2
+langgraph-checkpoint-postgres>=2.0   # for PostgresSaver (per-thread conversation state in postgres)
+
+# API + UI
+fastapi>=0.115
+uvicorn[standard]>=0.30
+chainlit>=2.0
+
+# DB driver for langgraph PostgresSaver
+psycopg[binary]>=3.2
+
+# Optional: tool & search providers
+# Uncomment per-tool only when you wire it into deepagents.toml MCP block.
+
+# tooluniverse>=0.5            # mims-harvard/ToolUniverse — scientific tool belt (~1000 tools, Compact Mode)
+# tavily-python>=0.5           # Tavily search (default for open_deep_research)
+# anthropic                    # if not already pulled by deepagents
+
+# Document parsing — see skills/document-parsing/SKILL.md for guidance on which to use
+# llama-parse>=0.5             # LlamaParse (hosted, best for complex tables/charts/scans)
+# llama-index-tools-mcp>=0.2   # LlamaIndex MCP client (if writing LlamaIndex-native agents)
+# marker-pdf>=1.0              # Local open-source PDF parser
+# docling>=2.0                 # IBM open-source document parser
+# unstructured[all-docs]>=0.16 # Broadest format support (DOCX, PPTX, EML, ...)
