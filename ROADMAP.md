@@ -17,7 +17,7 @@ The platform is **open-source-first** and **deployment-agnostic** (self-host AND
 | Architecture document with layered model + clean lines | ✓ | [`ARCHITECTURE.md`](ARCHITECTURE.md) |
 | `CONTRIBUTING.md` with two-mode discipline | ✓ | [`CONTRIBUTING.md`](CONTRIBUTING.md) |
 | Repo strategy: monorepo with module boundaries | ⚠ | Boundaries defined; explicit per-module READMEs in `platform/`, `web/`, `skills/` are partial |
-| License chosen + `LICENSE` committed | ✗ | 💬 MIT vs Apache 2.0 vs AGPL — needs decision |
+| License chosen + `LICENSE` committed | ✓ | Apache 2.0 — patent grant + max ecosystem adoption + dual-license-able later |
 | Tenant abstraction (tenant_id on data, scoped queries) | ✗ | Required before *any* multi-tenant feature ships |
 | Auth interface (`NoAuthBackend` + stub `OAuthBackend`) | ✗ | Pluggable; default to NoAuth for self-host |
 | Config loader abstraction (filesystem ↔ multi-tenant config store) | ✗ | Platform code reads tenant config through this only |
@@ -31,7 +31,7 @@ The platform is **open-source-first** and **deployment-agnostic** (self-host AND
 
 **Discussion needed (decisions block downstream work):**
 
-- 💬 **License:** MIT/Apache 2.0 (max contributor friendliness) vs AGPL (forces SaaS hosters to share modifications)
+- ✓ **License:** Apache 2.0 (decided 2026-04-28). Reasoning: patent grant matters in AI, highest adoption in the AI/ML ecosystem, dual-license-able later if commercial defense becomes priority (Grafana did exactly this, Apache → AGPL).
 - 💬 **Auth provider for hosted mode:** GitHub OAuth, Clerk, Auth.js
 - 💬 **Tenant routing:** subdomain (`<tenant>.humancensys.com`) vs path (`humancensys.com/<tenant>`)
 - 💬 **Tenant config storage in hosted mode:** S3/blob, postgres rows, both

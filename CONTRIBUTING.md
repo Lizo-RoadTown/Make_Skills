@@ -99,4 +99,4 @@ TBD. Defaulting to the [Contributor Covenant](https://www.contributor-covenant.o
 
 ## License
 
-TBD. See `LICENSE` once it's added. Until then, all rights reserved by the maintainer.
+This project is licensed under the [Apache License, Version 2.0](LICENSE). By contributing, you agree that your contributions are licensed under the same terms.
