@@ -29,6 +29,27 @@ Anything you'd ask the user, try to read first. Common probes:
 
 Treat probes as cheap and questions as expensive. Spend probe budget liberally; spend question budget rarely.
 
+### 1b. INVENTORY — consider ALL available tools, don't stop at first thought
+
+Before picking implementation tools, **list what you have available** and pick deliberately:
+
+- **Built-in tools** — Edit, Write, Read, Bash, Grep, Glob
+- **MCP servers** active for this project — list them via the configured `.mcp.json` and any user-scoped servers (Vercel, GitHub, Context7 for live docs, etc.)
+- **Subagents** — Plan, Explore, general-purpose, plus any specialist agents (vercel:*, claude-code-guide, etc.)
+- **Skills** — both this repo's `skills/` and the upstream `claude/anthropics-skills/skills/`
+- **Scheduled / background tools** — `ScheduleWakeup`, `Monitor`, `CronCreate` for delayed work
+
+For each, ask: **does it materially fit this task?** Common forks the inventory step catches:
+
+- "I need current docs for library X" → Context7 MCP exists, use it instead of guessing or fetching from the web
+- "I need to do parallel independent searches" → general-purpose / Explore agent fits, not 10 sequential Greps
+- "I need careful architectural reasoning" → Plan agent before diving into code
+- "I'm about to write a runbook for the user" → that's the anti-pattern; pick an Action tool instead
+
+Document the inventory in the response or commit message — both for the user's review and so the next agent learns which tools you considered and rejected. **Don't default to the boring obvious tools without explicitly considering the others.**
+
+The cost of inventory is tiny (one minute of thinking); the cost of *missing* a better-fitted tool is real (slower, lower quality, more turns).
+
 ### 2. DECIDE — defensible defaults, reasoning recorded
 
 For every decision, name the default and what would disconfirm it. Don't hand the choice to the user. The skill body should look like:

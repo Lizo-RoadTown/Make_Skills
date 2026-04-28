@@ -18,11 +18,19 @@ COPY platform/requirements.txt /app/requirements.txt
 RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir -r requirements.txt
 
-# Copy the runtime code. Skills, subagents, AGENTS.md, and deepagents.toml are
-# mounted as volumes by compose — NOT baked in — so editing them on the host
-# is immediately visible inside the container with no rebuild.
+# Copy the runtime code.
 COPY platform/api /app/api
-COPY platform/ui /app/ui
 
-# Default command is overridden per-service in docker-compose.yml.
-CMD ["python", "-c", "print('Override CMD via docker-compose service definition.')"]
+# Bake in skills, subagents, and root config. In local docker-compose these
+# are SHADOWED by the read-only volume mount at /repo (so edits hot-reload).
+# In Render (no volume mount), the COPY here is what the agent reads —
+# AGENT_REPO_ROOT is set to /app on Render and /repo locally.
+COPY skills /app/skills
+COPY subagents /app/subagents
+COPY AGENTS.md /app/AGENTS.md
+COPY deepagents.toml /app/deepagents.toml
+
+# Default command:
+#   - Local docker-compose: overridden by `command:` in docker-compose.yml (port 8001)
+#   - Render: respects $PORT (typically 10000); falls back to 8001 if unset
+CMD ["sh", "-c", "exec uvicorn api.main:app --host 0.0.0.0 --port ${PORT:-8001}"]

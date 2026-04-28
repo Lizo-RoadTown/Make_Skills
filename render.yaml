@@ -1,0 +1,51 @@
+# Render Blueprint — provisions the api web service + managed Postgres + persistent disk for LanceDB.
+# Connect this repo via Render Dashboard → New → Blueprint and Render reads this file.
+# Docs: https://render.com/docs/blueprint-spec
+
+services:
+  - type: web
+    name: make-skills-api
+    runtime: docker
+    dockerfilePath: ./platform/deploy/Dockerfile
+    dockerContext: .
+    plan: starter            # $7/mo — required for persistent disks
+    region: oregon           # change if you prefer another region
+    healthCheckPath: /healthz
+    autoDeploy: true         # deploy automatically on git push to main
+    envVars:
+      # Secrets — set in Render dashboard, not in this file.
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: LLAMA_CLOUD_API_KEY
+        sync: false
+      - key: TAVILY_API_KEY
+        sync: false
+      - key: LANGSMITH_API_KEY
+        sync: false
+      # Auto-wired from the managed Postgres below.
+      - key: DATABASE_URL
+        fromDatabase:
+          name: make-skills-db
+          property: connectionString
+      # Static config — these are baked-in paths (no volume mount on Render).
+      - key: AGENT_CONFIG_PATH
+        value: /app/deepagents.toml
+      - key: AGENT_REPO_ROOT
+        value: /app
+      - key: MEMORY_DATA_DIR
+        value: /data/memory
+      - key: LANGSMITH_PROJECT
+        value: make-skills
+      - key: LANGSMITH_TRACING
+        value: "false"
+    disk:
+      name: memory-data
+      mountPath: /data/memory
+      sizeGB: 1            # plenty for tens of thousands of records; expand later if needed
+
+databases:
+  - name: make-skills-db
+    plan: free             # 256 MB / 1 GB storage / 30-day inactivity expiry
+    databaseName: make_skills
+    user: make_skills
+    region: oregon         # match the web service region for low latency

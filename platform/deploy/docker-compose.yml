@@ -56,22 +56,36 @@ services:
     volumes:
       # Mount the repo (read-only) so the agent reads skills, subagents, AGENTS.md, deepagents.toml
       - ../..:/repo:ro
+      # Persistent semantic memory store (LanceDB directory)
+      - memory-data:/data/memory
     ports:
       - "${API_PORT:-8001}:8001"
     command: ["uvicorn", "api.main:app", "--host", "0.0.0.0", "--port", "8001"]
 
-  ui:
-    build:
-      context: ../..
-      dockerfile: platform/deploy/Dockerfile
+  grafana:
+    image: grafana/grafana:11.3.0
     restart: unless-stopped
     depends_on:
-      - api
+      postgres:
+        condition: service_healthy
     environment:
-      API_URL: http://api:8001
+      # Anonymous access — no login required. Safe locally; tighten if exposed.
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: "Editor"
+      GF_AUTH_DISABLE_LOGIN_FORM: "true"
+      # Embedding into the Next.js chat UI via iframe.
+      GF_SECURITY_ALLOW_EMBEDDING: "true"
+      GF_SECURITY_COOKIE_SAMESITE: "disabled"
+      # Auto-provisioned datasource and dashboards (mounted below).
+      GF_PATHS_PROVISIONING: /etc/grafana/provisioning
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
     ports:
-      - "${UI_PORT:-8000}:8000"
-    command: ["chainlit", "run", "ui/app.py", "--host", "0.0.0.0", "--port", "8000", "--headless"]
+      - "${GRAFANA_PORT:-3001}:3000"
 
 volumes:
   postgres-data:
+  grafana-data:
+  memory-data:

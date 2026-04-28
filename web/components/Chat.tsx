@@ -78,8 +78,16 @@ export function Chat({ threadId, onThreadChange }: Props) {
 
   return (
     <div className="flex h-full flex-1 flex-col">
-      <header className="border-b border-zinc-800 bg-zinc-900 px-6 py-3">
+      <header className="flex items-center justify-between border-b border-zinc-800 bg-zinc-900 px-6 py-3">
         <h1 className="text-sm font-semibold text-zinc-300">Make_Skills agent</h1>
+        <nav className="flex items-center gap-3 text-xs">
+          <a href="/memory" className="text-blue-400 hover:underline">
+            Memory
+          </a>
+          <a href="/dashboard" className="text-blue-400 hover:underline">
+            Dashboard →
+          </a>
+        </nav>
       </header>
       <div ref={scrollRef} className="flex-1 overflow-y-auto">
         <div className="mx-auto flex max-w-3xl flex-col gap-4 p-4">

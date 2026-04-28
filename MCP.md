@@ -8,6 +8,13 @@ Cross-client reference for the MCP servers this project uses. Each agent client 
 |--------|---------|------|--------|
 | **llama_index_docs** | Search LlamaIndex / LlamaParse / LlamaCloud documentation. Useful for looking up current API details. | None | Active in [`.mcp.json`](.mcp.json) (Claude Code project-scoped) |
 
+## Documented but inactive (commented stubs in `deepagents.toml`)
+
+| Server | Purpose | Why off | Activate by |
+|--------|---------|---------|-------------|
+| **tooluniverse** | ~1000 scientific tools (PubMed, ArXiv, etc.) via Compact Mode | Biomedical-leaning, requires `pip install tooluniverse` | Uncomment `[mcp.tooluniverse]` block |
+| **docker** | Container management — agent can inspect / restart / exec into containers | Significant capability bump; enable for a concrete use case, not preemptively | Uncomment one of the two `[mcp.docker]` variants in `deepagents.toml` |
+
 ## Per-client setup snippets
 
 ### Claude Code (CLI or VS Code extension)
