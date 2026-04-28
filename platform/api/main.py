@@ -171,6 +171,29 @@ async def memory_stats_endpoint():
         raise HTTPException(status_code=500, detail=str(e))
 
 
+class IngestRequest(BaseModel):
+    user_message: str
+    agent_response: str
+    source_thread_id: str = "backfill"
+
+
+@app.post("/memory/ingest")
+async def memory_ingest_endpoint(req: IngestRequest):
+    """Run the recorder on a single (user, agent) pair without going through the
+    chat loop. Used by backfill scripts that ingest historical transcripts
+    (Claude Code sessions, Copilot logs, etc.) into the same memory store the
+    live agent uses.
+    """
+    try:
+        count_inserted = await record_turn(
+            req.source_thread_id, req.user_message, req.agent_response
+        )
+        return {"ingested": count_inserted}
+    except Exception as e:
+        log.exception("Memory ingest failed")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @app.get("/threads/{thread_id}/state")
 async def thread_state(thread_id: str):
     """Fetch the persisted state for a thread (debugging aid)."""
