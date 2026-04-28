@@ -1,0 +1,46 @@
+# deepagents agent config — see https://github.com/langchain-ai/deepagents
+# Read by `deepagents deploy` and by `create_deep_agent(...)` when launched
+# from this repo root.
+
+[agent]
+name = "make-skills"
+description = "Personal multi-skill orchestrator running inside VS Code, with platform-specific configs for Claude / Copilot / ChatGPT alongside cross-platform SKILL.md skills."
+memory = ["./AGENTS.md"]
+skills = [
+    "./skills/",
+    "./skills/_upstream/anthropics-skills/skills/",
+]
+subagents_dir = "./subagents/"
+
+[model]
+# Default model for the orchestrator. Subagents may override per-agent.
+provider = "anthropic"
+name = "claude-opus-4-7"
+
+[sandbox]
+# Filesystem backend rooted at the repo. Adjust if you want the agent
+# scoped to a subdirectory or to use a different backend.
+type = "filesystem"
+root = "."
+
+# ---------- MCP servers (commented; uncomment per-server to activate) ----------
+# ToolUniverse — ~1000 scientific tools (PubMed, ArXiv, Semantic Scholar, ChEMBL, FDA, ...)
+# unified behind one MCP. Compact Mode collapses them into ~5 discovery tools so the
+# LLM doesn't see all 1000 at once. Mostly biomedical-flavored but the literature-search
+# layer is domain-agnostic. https://github.com/mims-harvard/ToolUniverse
+#
+# Install: pip install tooluniverse  (or rely on uvx --refresh)
+#
+# [mcp.tooluniverse]
+# command = "uvx"
+# args = ["--refresh", "tooluniverse", "--mode", "compact"]
+# env = { TOOLUNIVERSE_CACHE_DIR = "~/.cache/tooluniverse" }
+
+# LlamaIndex docs — searches LlamaIndex / LlamaParse / LlamaCloud documentation.
+# Useful so the agent can look up current API details when wiring document parsing.
+# Already enabled for Claude Code via .mcp.json — uncomment here to also expose
+# the same MCP to the deepagents runtime.
+#
+# [mcp.llama_index_docs]
+# transport = "http"
+# url = "https://developers.llamaindex.ai/mcp"

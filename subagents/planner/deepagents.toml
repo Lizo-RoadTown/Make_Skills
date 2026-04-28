@@ -1,0 +1,19 @@
+# planner subagent — see ../../skills/deep-research-pattern/SKILL.md
+# Decomposes user request into a structured research plan. No tools.
+
+[agent]
+name = "planner"
+description = "Decomposes a user request into structured research questions, source constraints, and success criteria. Produces JSON plan; no execution."
+memory = ["./AGENTS.md"]
+skills = []                      # No skills needed — pure reasoning role
+
+[model]
+provider = "anthropic"
+name = "claude-opus-4-7"          # Plan quality matters; use the strongest model
+
+[sandbox]
+type = "filesystem"
+root = "."
+read_only = true                  # Planner never writes files
+
+# No MCP / no tools — planner is reasoning-only.
