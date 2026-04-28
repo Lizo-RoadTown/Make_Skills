@@ -68,8 +68,13 @@ async def build_agent(config_path: str | Path | None = None, repo_root: str | Pa
 
     subagents = load_subagents(subagents_dir, repo_root) if subagents_dir else []
 
+    # Built-in tools — what the agent gets without uncommenting any MCPs.
+    from api.tools.db import query_db
+    builtin_tools = [query_db]
+
     agent = create_deep_agent(
         model=_resolve_model_id(model_cfg),
+        tools=builtin_tools,
         memory=memory,
         skills=skills,
         subagents=subagents,

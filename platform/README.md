@@ -38,31 +38,30 @@ The root `deepagents.toml` is the **single workflow config** — it tells the AP
 ## Architecture
 
 ```
-┌───────────────────────────────────────────────────────┐
-│ VS Code workspace (your editor)                       │
-│   ↕ HTTP                                              │
-│   ├─ browser tab     → http://localhost:8000 (UI)     │
-│   ├─ direct API      → http://localhost:8001 (FastAPI)│
-│   └─ VS Code chat / curl / any HTTP client            │
-└──────────────────────┬────────────────────────────────┘
+┌───────────────────────────────────────────────────────────┐
+│ Local browser  /  Tailscale-reachable laptop              │
+│   ├─ chainlit    → :8000                                  │
+│   ├─ Next.js UI  → :3000 (npm run dev in web/)            │
+│   ├─ FastAPI     → :8001                                  │
+│   └─ Grafana     → :3001                                  │
+└──────────────────────┬────────────────────────────────────┘
                        │
-┌──────────────────────▼────────────────────────────────┐
-│ Docker Compose (always running)                        │
-│  ┌─────────────┐  ┌──────────────┐  ┌─────────────┐  │
-│  │  chainlit   │  │  api         │  │  postgres   │  │
-│  │  :8000      │──│  :8001       │──│  :5432      │  │
-│  │  (chat UI)  │  │  (FastAPI    │  │  (state +   │  │
-│  │             │  │   wrapping   │  │  checkpoints│  │
-│  │             │  │   deepagents)│  │   for       │  │
-│  │             │  │              │  │   LangGraph)│  │
-│  └─────────────┘  └──────┬───────┘  └─────────────┘  │
-│                          │                            │
-│                          ▼                            │
-│   read-only volume mounts:                            │
-│     ../skills/        ../subagents/                   │
-│     ../AGENTS.md      ../deepagents.toml              │
-└────────────────────────────────────────────────────────┘
+┌──────────────────────▼────────────────────────────────────┐
+│ Docker Compose                                             │
+│  ┌─────────┐  ┌────────┐  ┌──────────┐  ┌───────────┐    │
+│  │chainlit │  │api     │  │postgres  │  │grafana    │    │
+│  │:8000    │──│:8001   │──│:5432     │←─│:3001      │    │
+│  │chat UI  │  │FastAPI │  │ckpts +   │  │dashboards │    │
+│  │         │  │+agent  │  │analytics │  │           │    │
+│  └─────────┘  └───┬────┘  └──────────┘  └───────────┘    │
+│                   │                                        │
+│   read-only volumes:                                       │
+│     ../skills/    ../subagents/    ../AGENTS.md           │
+│     ../deepagents.toml                                     │
+└────────────────────────────────────────────────────────────┘
 ```
+
+For laptop access while the desktop is running the stack: see [REMOTE_ACCESS.md](REMOTE_ACCESS.md). Recommended: Tailscale.
 
 ## Why each service
 
