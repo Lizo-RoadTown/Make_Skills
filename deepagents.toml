@@ -44,3 +44,28 @@ root = "."
 # [mcp.llama_index_docs]
 # transport = "http"
 # url = "https://developers.llamaindex.ai/mcp"
+
+# Docker MCP — lets the agent inspect and manage containers (docker ps, logs,
+# exec, compose). Powerful — scope cautiously. Use Docker's MCP Gateway which
+# bundles container + filesystem + git + browser MCPs behind one server, or
+# wire a bare docker MCP directly. https://github.com/docker/mcp-servers
+#
+# Concrete options:
+#
+# 1. Docker MCP Gateway (multi-server bundle — full toolbelt):
+#
+# [mcp.docker]
+# command = "docker"
+# args = ["mcp", "gateway", "run"]
+#
+# 2. Bare container management only (smaller blast radius, recommended start):
+#
+# [mcp.docker]
+# command = "uvx"
+# args = ["mcp-server-docker"]
+# env = { DOCKER_HOST = "unix:///var/run/docker.sock" }
+#
+# Why off by default: an agent that can `docker exec` into its own postgres
+# (or any other container) is a significant capability bump. Enable when you
+# have a specific use case (e.g., letting the agent inspect its own logs or
+# restart a stuck subagent worker), not preemptively.
