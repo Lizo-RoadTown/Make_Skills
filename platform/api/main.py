@@ -15,10 +15,12 @@ from __future__ import annotations
 import json
 import logging
 import asyncio
+import os
 from contextlib import asynccontextmanager
 from uuid import uuid4
 
 from fastapi import BackgroundTasks, FastAPI, HTTPException, Query
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
@@ -41,6 +43,26 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="Make_Skills agent API", lifespan=lifespan)
+
+# Allow the Vercel-hosted UI (humancensys.com), local Next.js dev, and Vercel
+# preview deploys to call this API from the browser.
+# CORS_EXTRA_ORIGINS env var can add more (comma-separated) without code change.
+_default_origins = [
+    "http://localhost:3000",
+    "https://humancensys.com",
+    "https://www.humancensys.com",
+]
+_extra_origins = [
+    o.strip() for o in os.environ.get("CORS_EXTRA_ORIGINS", "").split(",") if o.strip()
+]
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=_default_origins + _extra_origins,
+    allow_origin_regex=r"https://.*\.vercel\.app",  # any vercel preview
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 class ChatRequest(BaseModel):
