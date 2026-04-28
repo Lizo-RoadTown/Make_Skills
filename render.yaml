@@ -7,7 +7,7 @@ services:
     name: make-skills-api
     runtime: docker
     dockerfilePath: ./platform/deploy/Dockerfile
-    dockerContext: .
+    dockerContext: ./
     plan: starter            # $7/mo — required for persistent disks
     region: oregon           # change if you prefer another region
     healthCheckPath: /healthz
