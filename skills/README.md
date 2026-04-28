@@ -51,6 +51,9 @@ These skills are loaded automatically by deepagents when the agent runs from thi
 | [deep-research-pattern/](deep-research-pattern/) | Architectural pattern for multi-agent deep research (5-role decomposition + context isolation). Drawn from open_deep_research and NVIDIA AI-Q. |
 | [eval-deep-research/](eval-deep-research/) | Run the deep_research_bench (DRB) harness against the research subagents — RACE + FACT scores. |
 | [document-parsing/](document-parsing/) | Convert PDFs / DOCX / PPTX / scanned images into LLM-friendly markdown (LlamaParse, Claude native PDFs, Marker, Docling, Unstructured). |
+| [web-app-scaffold/](web-app-scaffold/) | Scaffold a deployable web app for a specified stack (frontend host + framework + API + DB + domain). Agentic — probes, decides, executes. Has an [intake form](web-app-scaffold/intake.md) and stack [presets](web-app-scaffold/references/). |
+| [agentic-skill-design/](agentic-skill-design/) | Meta-skill for designing skills that DECIDE and EXECUTE rather than ask the user permission for every choice. Captures the PROBE → DECIDE → ACT → REPORT pattern. |
+| [lessons-learned/](lessons-learned/) | Walk back through prior chat transcripts to find systematic friction patterns (recurring info needs, corrections, negotiations) and crystallize them into intake forms + memory updates. |
 
 ## Refreshing the upstream library
 
