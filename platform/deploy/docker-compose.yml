@@ -1,0 +1,77 @@
+# Three-service stack: postgres + api + ui
+#
+# Run from this directory:
+#   cp .env.template .env    # fill in keys
+#   docker compose up -d
+#   docker compose logs -f
+#
+# The api and ui mount the repo's skills/, subagents/, AGENTS.md, and
+# deepagents.toml as READ-ONLY volumes — edit them in your editor and the
+# running services see the changes (no rebuild). Only the API needs a
+# restart if you change deepagents.toml itself.
+
+name: make-skills
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-make_skills}
+      # Trust mode: no password required. Safe because port 5432 is not exposed
+      # to the host — only the api container on the private docker network can
+      # reach postgres. If you ever uncomment the `ports:` line below, switch
+      # back to POSTGRES_PASSWORD with a real value.
+      POSTGRES_HOST_AUTH_METHOD: trust
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-make_skills}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    # Postgres is internal — not exposed to host. Uncomment to expose for psql access.
+    # ports:
+    #   - "5432:5432"
+
+  api:
+    build:
+      context: ../..              # repo root, so the Dockerfile can COPY platform/
+      dockerfile: platform/deploy/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:?must be set in .env}
+      LLAMA_CLOUD_API_KEY: ${LLAMA_CLOUD_API_KEY:-}
+      TAVILY_API_KEY: ${TAVILY_API_KEY:-}
+      LANGSMITH_API_KEY: ${LANGSMITH_API_KEY:-}
+      LANGSMITH_PROJECT: ${LANGSMITH_PROJECT:-make-skills}
+      LANGSMITH_TRACING: ${LANGSMITH_TRACING:-false}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}@postgres:5432/${POSTGRES_DB:-make_skills}
+      AGENT_CONFIG_PATH: /repo/deepagents.toml
+      AGENT_REPO_ROOT: /repo
+    volumes:
+      # Mount the repo (read-only) so the agent reads skills, subagents, AGENTS.md, deepagents.toml
+      - ../..:/repo:ro
+    ports:
+      - "${API_PORT:-8001}:8001"
+    command: ["uvicorn", "api.main:app", "--host", "0.0.0.0", "--port", "8001"]
+
+  ui:
+    build:
+      context: ../..
+      dockerfile: platform/deploy/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      - api
+    environment:
+      API_URL: http://api:8001
+    ports:
+      - "${UI_PORT:-8000}:8000"
+    command: ["chainlit", "run", "ui/app.py", "--host", "0.0.0.0", "--port", "8000", "--headless"]
+
+volumes:
+  postgres-data:

@@ -2,7 +2,12 @@
 Thumbs.db
 *.swp
 *.swo
-.vscode/
+# VS Code: ignore personal preferences, but commit workspace-shared config
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+!.vscode/tasks.json
+!.vscode/launch.json
 .idea/
 __pycache__/
 *.py[cod]
@@ -10,3 +15,18 @@ __pycache__/
 *.env
 !.env.template
 node_modules/
+
+# Upstream skill libraries — cloned locally, not vendored.
+# Re-create with: scripts/sync-upstream.sh
+skills/_upstream/
+
+# Eval harnesses — cloned on demand under platform/eval/, never vendored.
+# E.g. deep_research_bench: clone into platform/eval/deep_research_bench/ when scoring a run.
+platform/eval/
+
+# Architectural reference clones — read-only patterns, not runtime deps.
+# Refresh with scripts/sync-references.sh
+platform/_reference/
+
+# Heavy reference PDFs the user keeps locally — not vendored
+Docs/

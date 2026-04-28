@@ -1,0 +1,29 @@
+# researcher subagent — see ../../skills/deep-research-pattern/SKILL.md
+# Loaded by the root agent when the orchestrator delegates research work.
+
+[agent]
+name = "researcher"
+description = "Executes a structured research plan and returns raw findings with citations. Does not summarize or write."
+memory = ["./AGENTS.md"]
+# Skills are scoped: this subagent does NOT inherit the root's skills.
+# It only sees what's listed here.
+skills = []
+
+[model]
+provider = "anthropic"
+name = "claude-sonnet-4-6"        # Sonnet for cost-efficient extraction; orchestrator stays on Opus
+
+[sandbox]
+type = "filesystem"
+root = "."
+read_only = true                  # researcher never writes files
+
+# ---------- ToolUniverse MCP (commented — uncomment to activate) ----------
+# Install: pip install tooluniverse
+# Then uncomment the block below. Compact Mode is critical — without it,
+# the LLM sees 1000+ tool definitions and the context budget is gone.
+#
+# [mcp.tooluniverse]
+# command = "uvx"
+# args = ["--refresh", "tooluniverse", "--mode", "compact"]
+# env = { TOOLUNIVERSE_CACHE_DIR = "~/.cache/tooluniverse" }

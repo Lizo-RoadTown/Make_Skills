@@ -1,0 +1,19 @@
+{
+  // Point VS Code's Python extension at the platform .env file so integrated
+  // terminals (and Python "Run File") pick up ANTHROPIC_API_KEY, LLAMA_CLOUD_API_KEY,
+  // etc. automatically. Lets you smoke-test from a VS Code terminal without exporting
+  // anything manually.
+  "python.envFile": "${workspaceFolder}/platform/deploy/.env",
+  "python.terminal.useEnvFile": true,
+
+  // Files explorer: don't hide the dotfiles we care about (mirrors the canonical
+  // VS Code defaults but shows .env / .env.template / .mcp.json / .gitignore).
+  "files.exclude": {
+    "**/__pycache__": true,
+    "**/.pytest_cache": true,
+    "**/node_modules": true
+  },
+
+  // Markdown: respect the repo's .markdownlint.json (already at root).
+  "markdownlint.run": "onType"
+}
