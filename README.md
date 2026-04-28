@@ -1,35 +1,34 @@
 # Make_Skills
 
-A collection of agent skills, each in its own folder following the deepagent
-[SKILL.md specification](https://github.com/langchain-ai/deepagents).
+A collection of agent skills, prompts, and editor configurations,
+organized by platform. Each platform's folder has its own README explaining
+the format and how to install.
 
-## Skills
+## Platforms
 
-| Skill | Purpose |
-|-------|---------|
-| [documentation/](documentation/) | Plan, write, and audit project documentation using Diátaxis, ADRs, and docs-as-code |
+| Folder | What goes there |
+|--------|-----------------|
+| [claude/](claude/) | Skills (SKILL.md), agents, slash commands, hooks for Claude Code |
+| [copilot/](copilot/) | Custom instructions, prompt files, and skillsets for GitHub Copilot |
+| [chatgpt/](chatgpt/) | Custom GPTs, project instructions, and account-wide instructions |
+| [vs_code/](vs_code/) | Workspace settings, tasks, snippets, recommended extensions |
 
-## Skill format
+## Cross-platform skills
 
-Each skill is a folder:
+Some skills work across multiple platforms because the underlying format
+(SKILL.md, markdown prompt, etc.) is shared. These live at the repo root:
 
-```
-skill-name/
-├── SKILL.md         # YAML frontmatter + instructions (required)
-├── references/      # Long-form docs the skill links into (optional)
-├── scripts/         # Executable helpers the skill can call (optional)
-└── assets/          # Templates, snippets, prompts (optional)
-```
-
-Folder names are lowercase-kebab-case. Keep `SKILL.md` under ~500 lines —
-push detail into `references/`.
+| Skill | Compatible with |
+|-------|-----------------|
+| [documentation/](documentation/) | Claude Code, deepagents, any SKILL.md runner |
 
 ## Adding a new skill
 
-1. Copy `documentation/` as a template
-2. Rewrite `SKILL.md` (frontmatter + instructions)
-3. Replace `references/`, `scripts/`, `assets/` with your skill's content
-4. Update this README's table
+1. Decide which platform(s) it targets
+2. If platform-specific: create a folder under that platform's directory
+3. If cross-platform: create at the repo root and list it in the table above
+4. Follow the format conventions in the relevant platform README
+5. Update this README's tables
 
 ## Author
 
