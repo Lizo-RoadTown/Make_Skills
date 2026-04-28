@@ -56,6 +56,8 @@ services:
     volumes:
       # Mount the repo (read-only) so the agent reads skills, subagents, AGENTS.md, deepagents.toml
       - ../..:/repo:ro
+      # Persistent semantic memory store (LanceDB directory)
+      - memory-data:/data/memory
     ports:
       - "${API_PORT:-8001}:8001"
     command: ["uvicorn", "api.main:app", "--host", "0.0.0.0", "--port", "8001"]
@@ -99,3 +101,4 @@ services:
 volumes:
   postgres-data:
   grafana-data:
+  memory-data:

@@ -16,6 +16,11 @@ chainlit>=2.0
 psycopg[binary]>=3.2
 psycopg_pool>=3.2
 
+# Semantic memory (LanceDB) — embedded vector store, no separate service
+lancedb>=0.18
+fastembed>=0.5               # ONNX-based embeddings, ~10x lighter than sentence-transformers (no torch dep)
+pyarrow>=18.0                # LanceDB depends on this; pin explicitly
+
 # Optional: tool & search providers
 # Uncomment per-tool only when you wire it into deepagents.toml MCP block.
 

@@ -14,14 +14,19 @@ from __future__ import annotations
 
 import json
 import logging
+import asyncio
 from contextlib import asynccontextmanager
 from uuid import uuid4
 
-from fastapi import FastAPI, HTTPException
+from fastapi import BackgroundTasks, FastAPI, HTTPException, Query
 from fastapi.responses import StreamingResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from api.agent import build_agent
+from api.memory.lance import count as memory_count
+from api.memory.lance import list_records as memory_list
+from api.memory.lance import search as memory_search
+from api.memory.recorder import record_turn
 
 log = logging.getLogger("api")
 logging.basicConfig(level=logging.INFO)
@@ -54,7 +59,7 @@ def healthz():
 
 
 @app.post("/chat", response_model=ChatResponse)
-async def chat(req: ChatRequest):
+async def chat(req: ChatRequest, background: BackgroundTasks):
     """Single-shot chat. Returns the full final response."""
     thread_id = req.thread_id or str(uuid4())
     config = {"configurable": {"thread_id": thread_id}}
@@ -70,6 +75,10 @@ async def chat(req: ChatRequest):
     # The deepagents response shape may vary — adapt as needed.
     final = result["messages"][-1] if isinstance(result, dict) and "messages" in result else result
     response_text = getattr(final, "content", None) or str(final)
+
+    # Fire-and-forget: extract memory records from this turn after the response is sent.
+    background.add_task(record_turn, thread_id, req.message, response_text)
+
     return ChatResponse(thread_id=thread_id, response=response_text)
 
 
@@ -81,19 +90,85 @@ async def chat_stream(req: ChatRequest):
 
     async def gen():
         yield _sse({"event": "thread", "thread_id": thread_id})
+        accumulated = []
         try:
             async for chunk in app.state.agent.astream(
                 {"messages": [{"role": "user", "content": req.message}]},
                 config=config,
                 stream_mode="messages",
             ):
-                yield _sse({"event": "chunk", "data": _serialize_chunk(chunk)})
+                serialized = _serialize_chunk(chunk)
+                accumulated.append(serialized)
+                yield _sse({"event": "chunk", "data": serialized})
         except Exception as e:
             log.exception("Stream failed")
             yield _sse({"event": "error", "detail": str(e)})
         yield _sse({"event": "done"})
 
+        # Fire-and-forget memory extraction. Run as a detached task so we don't
+        # block this generator's cleanup.
+        full_response = "".join(accumulated)
+        if full_response.strip():
+            asyncio.create_task(record_turn(thread_id, req.message, full_response))
+
     return StreamingResponse(gen(), media_type="text/event-stream")
+
+
+# ----- Memory endpoints -----
+
+
+class MemorySearchRequest(BaseModel):
+    query: str
+    limit: int = Field(default=10, ge=1, le=50)
+    record_type: str | None = None
+    project_tag: str | None = None
+
+
+@app.post("/memory/search")
+async def memory_search_endpoint(req: MemorySearchRequest):
+    """Semantic search across memory. Returns records ranked by relevance."""
+    try:
+        rows = memory_search(
+            query=req.query,
+            limit=req.limit,
+            record_type=req.record_type,
+            project_tags=[req.project_tag] if req.project_tag else None,
+        )
+        return {"query": req.query, "count": len(rows), "results": rows}
+    except Exception as e:
+        log.exception("Memory search failed")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/memory/records")
+async def memory_records_endpoint(
+    limit: int = Query(50, ge=1, le=200),
+    offset: int = Query(0, ge=0),
+    record_type: str | None = None,
+    project_tag: str | None = None,
+):
+    """List records, newest first. Non-semantic; for browsing."""
+    try:
+        rows = memory_list(
+            limit=limit,
+            offset=offset,
+            record_type=record_type,
+            project_tag=project_tag,
+        )
+        return {"count": len(rows), "results": rows}
+    except Exception as e:
+        log.exception("Memory list failed")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/memory/stats")
+async def memory_stats_endpoint():
+    """Quick stats — total record count, by type."""
+    try:
+        return {"total": memory_count()}
+    except Exception as e:
+        log.exception("Memory stats failed")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.get("/threads/{thread_id}/state")

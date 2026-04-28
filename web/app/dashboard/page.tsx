@@ -17,11 +17,11 @@ export default function DashboardPage() {
           </p>
         </div>
         <div className="flex items-center gap-3 text-xs">
-          <a
-            href="/"
-            className="text-blue-400 hover:underline"
-          >
+          <a href="/" className="text-blue-400 hover:underline">
             ← Chat
+          </a>
+          <a href="/memory" className="text-blue-400 hover:underline">
+            Memory
           </a>
           <a
             href={GRAFANA_URL}
