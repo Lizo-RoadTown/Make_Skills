@@ -28,5 +28,15 @@ platform/eval/
 # Refresh with scripts/sync-references.sh
 platform/_reference/
 
-# Heavy reference PDFs the user keeps locally — not vendored
-Docs/
+# Heavy reference PDFs the user keeps locally — not vendored.
+# (Originally `Docs/` matched case-insensitively on Windows and hid the
+#  documentation tree at docs/; now scoped to PDFs in a sub-folder.)
+docs/_pdfs/
+*.pdf
+
+# ROADMAP.md is a per-tenant artifact — each user's roadmap is theirs.
+# The roadmap-maintenance skill writes here; gitignored so the platform
+# repo doesn't carry one user's status tracking. Public project planning
+# (the "what does Make_Skills aim to be" doc, separate from "where is
+# Liz right now") will live elsewhere — TBD per the open-source plan.
+/ROADMAP.md

@@ -55,6 +55,7 @@ These skills are loaded automatically by deepagents when the agent runs from thi
 | [agentic-skill-design/](agentic-skill-design/) | Meta-skill for designing skills that DECIDE and EXECUTE rather than ask the user permission for every choice. Captures the PROBE → DECIDE → ACT → REPORT pattern. |
 | [lessons-learned/](lessons-learned/) | Walk back through prior chat transcripts to find systematic friction patterns (recurring info needs, corrections, negotiations) and crystallize them into intake forms + memory updates. |
 | [roadmap-maintenance/](roadmap-maintenance/) | Keep `ROADMAP.md` current as work ships. Agents flip statuses via `update_roadmap_status`; users amend manually anytime. File-backed, rendered at `/roadmap` in the UI. |
+| [open-source-documentation/](open-source-documentation/) | Maintain the `docs/` tree (concepts/how-to/reference/decisions/proposals/per-pillar) for the open-source project. Defines the ADR pattern, the two-mode discipline for every doc, and the freshness rules for keeping docs current. |
 
 ## Refreshing the upstream library
 
