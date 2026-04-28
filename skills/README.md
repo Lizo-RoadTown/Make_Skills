@@ -54,6 +54,7 @@ These skills are loaded automatically by deepagents when the agent runs from thi
 | [web-app-scaffold/](web-app-scaffold/) | Scaffold a deployable web app for a specified stack (frontend host + framework + API + DB + domain). Agentic — probes, decides, executes. Has an [intake form](web-app-scaffold/intake.md) and stack [presets](web-app-scaffold/references/). |
 | [agentic-skill-design/](agentic-skill-design/) | Meta-skill for designing skills that DECIDE and EXECUTE rather than ask the user permission for every choice. Captures the PROBE → DECIDE → ACT → REPORT pattern. |
 | [lessons-learned/](lessons-learned/) | Walk back through prior chat transcripts to find systematic friction patterns (recurring info needs, corrections, negotiations) and crystallize them into intake forms + memory updates. |
+| [roadmap-maintenance/](roadmap-maintenance/) | Keep `ROADMAP.md` current as work ships. Agents flip statuses via `update_roadmap_status`; users amend manually anytime. File-backed, rendered at `/roadmap` in the UI. |
 
 ## Refreshing the upstream library
 

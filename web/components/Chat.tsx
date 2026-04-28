@@ -81,6 +81,9 @@ export function Chat({ threadId, onThreadChange }: Props) {
       <header className="flex items-center justify-between border-b border-zinc-800 bg-zinc-900 px-6 py-3">
         <h1 className="text-sm font-semibold text-zinc-300">Make_Skills agent</h1>
         <nav className="flex items-center gap-3 text-xs">
+          <a href="/roadmap" className="text-blue-400 hover:underline">
+            Roadmap
+          </a>
           <a href="/memory" className="text-blue-400 hover:underline">
             Memory
           </a>
