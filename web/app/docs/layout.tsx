@@ -6,13 +6,37 @@ import { RootProvider } from "fumadocs-ui/provider/next";
 
 export default function Layout({ children }: { children: ReactNode }) {
   return (
-    <RootProvider>
+    <RootProvider
+      theme={{
+        defaultTheme: "dark",
+        enableSystem: false,
+        forcedTheme: "dark",
+      }}
+    >
       <DocsLayout
         tree={source.pageTree}
         nav={{
           title: "Make_Skills",
-          url: "/docs",
+          url: "/",
         }}
+        links={[
+          {
+            text: "Chat",
+            url: "/",
+          },
+          {
+            text: "Memory",
+            url: "/memory",
+          },
+          {
+            text: "Roadmap",
+            url: "/roadmap",
+          },
+          {
+            text: "Skills",
+            url: "/skills",
+          },
+        ]}
       >
         {children}
       </DocsLayout>
