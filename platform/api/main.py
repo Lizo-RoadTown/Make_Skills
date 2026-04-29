@@ -36,7 +36,7 @@ from api.roadmap.file import (
     read_roadmap,
     write_roadmap,
 )
-from api import fileviewer
+from api import fileviewer, observability
 
 log = logging.getLogger("api")
 logging.basicConfig(level=logging.INFO)
@@ -259,6 +259,44 @@ class IngestRequest(BaseModel):
     user_message: str
     agent_response: str
     source_thread_id: str = "backfill"
+
+
+# ----- Observability endpoints -----
+
+
+@app.get("/observability/summary")
+async def observability_summary_endpoint():
+    """Top-of-dashboard KPIs."""
+    try:
+        return observability.summary()
+    except Exception as e:
+        log.exception("observability summary failed")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/observability/records-by-type")
+async def observability_records_by_type_endpoint():
+    return {"data": observability.memory_records_by_type()}
+
+
+@app.get("/observability/records-by-day")
+async def observability_records_by_day_endpoint(days: int = Query(30, ge=1, le=365)):
+    return {"data": observability.memory_records_by_day(days)}
+
+
+@app.get("/observability/records-by-tag")
+async def observability_records_by_tag_endpoint(top: int = Query(10, ge=1, le=50)):
+    return {"data": observability.memory_records_by_tag(top)}
+
+
+@app.get("/observability/recent")
+async def observability_recent_endpoint(limit: int = Query(10, ge=1, le=50)):
+    return {"data": observability.recent_records(limit)}
+
+
+@app.get("/observability/threads-by-day")
+async def observability_threads_by_day_endpoint(days: int = Query(30, ge=1, le=365)):
+    return {"data": observability.threads_by_day(days)}
 
 
 # ----- Roadmap endpoints -----
