@@ -14,3 +14,4 @@ Pre-decision design documents. A proposal lives here while it's being shaped —
 | Proposal | Status |
 |----------|--------|
 | [`byo-claude-code-via-mcp.md`](byo-claude-code-via-mcp.md) | Open — needs Liz's call on auth + scope |
+| [`agent-creatures-ui.md`](agent-creatures-ui.md) | Open — direction set (Tomagotchi/Spore-style, not humanoid); mechanics TBD |
