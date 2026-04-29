@@ -50,6 +50,13 @@ services:
       LANGSMITH_API_KEY: ${LANGSMITH_API_KEY:-}
       LANGSMITH_PROJECT: ${LANGSMITH_PROJECT:-make-skills}
       LANGSMITH_TRACING: ${LANGSMITH_TRACING:-false}
+      # Pillar 1 model providers — all optional; lazy-loaded
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      GOOGLE_API_KEY: ${GOOGLE_API_KEY:-}
+      HUGGINGFACEHUB_API_TOKEN: ${HUGGINGFACEHUB_API_TOKEN:-}
+      TOGETHER_API_KEY: ${TOGETHER_API_KEY:-}
+      GROQ_API_KEY: ${GROQ_API_KEY:-}
+      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
       DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}@postgres:5432/${POSTGRES_DB:-make_skills}
       AGENT_CONFIG_PATH: /repo/deepagents.toml
       AGENT_REPO_ROOT: /repo
