@@ -1,0 +1,84 @@
+---
+title: Agents, subagents, skills, tools
+description: The mental model. Four concepts that often get conflated; getting them straight is half the battle.
+---
+
+# Agents, subagents, skills, tools
+
+Four concepts. They're all related but distinct. Confusing them is the most common reason contributors ship the wrong thing.
+
+## The mental model in one diagram
+
+```
+┌─ Your AGENT (the orchestrator) ──────────────────────────────┐
+│                                                               │
+│   has TOOLS (functions it can call):                          │
+│      query_db(sql)        recall(query)                       │
+│      update_roadmap(...)  parse_document(...)                 │
+│                                                               │
+│   loads SKILLS (markdown wisdom about HOW to work):           │
+│      agentic-skill-design   roadmap-maintenance               │
+│      lessons-learned        deep-research-pattern             │
+│                                                               │
+│   delegates to SUBAGENTS (specialist agents with their own    │
+│      personas, tools, and skills):                            │
+│      planner       researcher       writer                    │
+│                                                               │
+└───────────────────────────────────────────────────────────────┘
+```
+
+## Skill vs tool — the distinction that matters most
+
+| Skill | Tool |
+|-------|------|
+| Markdown file (`SKILL.md`) loaded into the agent's context | Python function decorated with `@tool` that runs as code |
+| Captures **wisdom** — when, why, what discipline | Captures **mechanics** — inputs, outputs, side effects |
+| Stays useful even when the implementation changes | Tightly coupled to its implementation |
+| Free to write; "expensive" in context tokens every turn it's loaded | "Free" in context (just signature); does work when called |
+
+Some skills naturally **graduate** into tools when they meet the promotion criteria: invoked 3+ times the same way, mechanical, output-stable, interfaces with an external system. The [`agentic-upskilling`](https://github.com/Lizo-RoadTown/Make_Skills/blob/main/skills/agentic-upskilling/SKILL.md) skill defines the loop.
+
+## Agent vs subagent
+
+The **orchestrator** is your top-level agent. Its persona is at [`AGENTS.md`](https://github.com/Lizo-RoadTown/Make_Skills/blob/main/AGENTS.md), its config at [`deepagents.toml`](https://github.com/Lizo-RoadTown/Make_Skills/blob/main/deepagents.toml).
+
+**Subagents** are specialists the orchestrator delegates to. Each lives in its own folder:
+
+```
+subagents/
+├── planner/
+│   ├── AGENTS.md          its persona
+│   └── deepagents.toml    its model + skills
+├── researcher/
+│   ├── AGENTS.md
+│   └── deepagents.toml
+└── ...
+```
+
+Subagents have **scoped context** — they read only the artifact the orchestrator hands them, not full conversation history. This is the [NVIDIA AI-Q](https://developer.nvidia.com/blog/how-to-build-deep-agents-for-enterprise-search-with-nvidia-ai-q-and-langchain/) discipline: per their analysis, researchers degrade when they see orchestrator-level context.
+
+## The 3-role research topology
+
+For deep-research-style work, the canonical pattern is three roles:
+
+| Role | Reads | Produces |
+|------|-------|----------|
+| **Orchestrator** | User request | Routes to planner; assembles final |
+| **Planner** | User request only | Structured JSON plan |
+| **Researcher** | Planner's plan only | Findings + citations |
+
+Skills like [`deep-research-pattern`](https://github.com/Lizo-RoadTown/Make_Skills/blob/main/skills/deep-research-pattern/SKILL.md) document this discipline.
+
+## When to add what
+
+| You want to... | Add a... |
+|----------------|----------|
+| Teach the agent a recurring pattern or discipline | **Skill** (markdown in `skills/<name>/`) |
+| Give the agent a callable function | **Tool** (Python `@tool` in `platform/api/.../tools.py`) |
+| Add a specialist persona for delegated work | **Subagent** (folder in `subagents/<name>/`) |
+| Give the orchestrator new high-level instructions | Edit root `AGENTS.md` |
+
+## What's next
+
+- [Memory](/docs/concepts/memory) — how the agent remembers across sessions
+- [Architecture](/docs/architecture) — where all this lives in the layered model

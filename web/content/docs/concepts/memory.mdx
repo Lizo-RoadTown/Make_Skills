@@ -1,0 +1,84 @@
+---
+title: Memory
+description: How the agent remembers across sessions. LanceDB-backed semantic memory, the recorder pattern, and the recall tool.
+---
+
+# Memory
+
+The agent doesn't carry conversation history in its context. The database does.
+
+## Why this exists
+
+Long Claude Code sessions get slow because the model re-processes the entire transcript on every turn. Your insight: the agent shouldn't have to remember everything; the database should. Memory is queried on demand, not loaded preemptively.
+
+This pattern is implemented with three pieces: a **recorder** that extracts structured records from each chat turn, a **store** (LanceDB with local embeddings) that holds them, and a **recall tool** the agent calls when it needs prior context.
+
+## The pieces
+
+### LanceDB store
+
+Embedded vector database. Lives at `/data/memory` inside the api container (volume-mounted so data persists across rebuilds). Embeddings computed locally via `fastembed` (ONNX, ~80MB model, no external API key, no torch dependency).
+
+Schema:
+
+```python
+{
+  "id": str,           # uuid
+  "type": str,         # decision | lesson | preference | skill_idea | topic | fact
+  "content": str,      # 1-3 sentences
+  "vector": float[384], # auto-computed from content
+  "project_tags": list[str],
+  "source_thread_id": str,
+  "ts": float,
+  "why": str           # one-line rationale
+}
+```
+
+### The recorder
+
+After every chat call, FastAPI fires a `BackgroundTask` that:
+
+1. Sends `(user_message, agent_response)` to Claude Haiku 4.5
+2. Haiku extracts 0-3 typed records per turn (preferences, decisions, lessons, etc.)
+3. Records inserted into LanceDB with embeddings
+
+Cheap (Haiku is fast and inexpensive), non-blocking (fire-and-forget), failure-tolerant (errors are logged, not raised).
+
+### The recall tool
+
+Exposed to the agent as `recall(query, limit, record_type, project_tag)`. The agent calls it when it might benefit from prior context:
+
+```
+> recall("how should I respond to this user")
+[preference] User prefers terse responses with no trailing summaries.
+   - tags: agents, workflow
+   - why: Guides how the agent should format all future responses.
+```
+
+The agent decides WHEN to recall; the schema decides WHAT comes back.
+
+## Backfill from existing transcripts
+
+The recorder only sees new chats. To populate memory from prior Claude Code sessions:
+
+```bash
+python scripts/backfill-claude-code.py
+python scripts/backfill-claude-code.py --project c--Users-Liz-Make-Skills --limit 50
+python scripts/backfill-claude-code.py --dry-run
+```
+
+It reads JSONL transcripts at `~/.claude/projects/<project>/<session>.jsonl`, pairs user→agent turns, posts each pair to `/memory/ingest`. Re-extraction via Haiku, fresh records inserted. Costs about $0.05 per 50-turn session.
+
+## What you see in the UI
+
+`humancensys.com/memory` (and `localhost:3000/memory` in self-host) renders memory as a search-first page. Type a query, get records ranked by semantic similarity. Filter by type or project_tag. Color-coded badges per record type.
+
+## Two-mode notes
+
+- **Self-host:** memory lives in your local LanceDB volume. Single user, no scoping needed.
+- **Hosted-multitenant:** memory is `tenant_id`-scoped. Two users with the same query get different results — their own records only. Public knowledge commons (when 3c lands) is a separate, opt-in shared store.
+
+## What's next
+
+- [Two modes](/docs/concepts/two-modes) — how isolation works in hosted mode
+- [Architecture](/docs/architecture) — the layered model
