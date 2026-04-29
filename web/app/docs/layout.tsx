@@ -17,8 +17,26 @@ export default function Layout({ children }: { children: ReactNode }) {
         tree={source.pageTree}
         nav={{
           title: "Make_Skills",
-          url: "/docs",
+          url: "/",
         }}
+        links={[
+          {
+            text: "Chat",
+            url: "/",
+          },
+          {
+            text: "Memory",
+            url: "/memory",
+          },
+          {
+            text: "Roadmap",
+            url: "/roadmap",
+          },
+          {
+            text: "Skills",
+            url: "/skills",
+          },
+        ]}
       >
         {children}
       </DocsLayout>
