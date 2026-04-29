@@ -5,7 +5,7 @@
 
 **An academic agentic-AI multiplayer world-building tool.** Students build their own AI and carry it through their studies, leveling it up over time, taking it on real-world quests (build a website for a local business, reproduce a published methodology, compose music with an AI co-pilot), and eventually contributing to online neural network building with their classmates.
 
-Open-source first and hosted.
+Open-source and hosted.
 
 ---
 
