@@ -1,0 +1,73 @@
+---
+title: Model providers — pick your creature's brain
+description: Each subagent picks its own model. Anthropic, OpenAI, Google, Hugging Face, Together, Groq, or local Ollama — same agent code, different brain. The unlock for the Pillar 1 agent builder.
+---
+
+Different creatures in your clan can run on different models. A budget researcher on a free Hugging Face open-weight model. A precision writer on Claude Opus. A local-only privacy-first creature on Ollama. Same `agent.py`, same `deepagents` runtime — just a `[model]` block per subagent.
+
+## How it's configured
+
+Each subagent's `deepagents.toml` declares its model:
+
+```toml
+[model]
+provider = "anthropic"   # which provider
+name = "claude-sonnet-4-6"  # which model
+```
+
+The orchestrator's `deepagents.toml` at the repo root sets the default; each subagent overrides as needed.
+
+## Supported providers
+
+| Provider | Where it gets the API key | Best starter model | When to pick |
+|----------|---------------------------|---------------------|--------------|
+| `anthropic` | `ANTHROPIC_API_KEY` | `claude-sonnet-4-6` | Default. Smart, cost-efficient. |
+| `openai` | `OPENAI_API_KEY` | `gpt-5.2` | When you need OpenAI-specific features |
+| `google` | `GOOGLE_API_KEY` | `gemini-2.5-flash` | Generous free tier, great for high-volume work |
+| `huggingface` (alias `hf`) | `HUGGINGFACEHUB_API_TOKEN` | `Qwen/Qwen3-32B-Instruct` | Free-tier friendly, open-weight access |
+| `together` | `TOGETHER_API_KEY` | `meta-llama/Meta-Llama-3.1-70B-Instruct-Turbo` | Fast inference of open models |
+| `groq` | `GROQ_API_KEY` | `llama-3.3-70b-versatile` | Extremely fast (lowest latency provider) |
+| `ollama` | none (`OLLAMA_BASE_URL`) | `llama3.1:8b` | Local, private, no API key, requires local Ollama |
+
+## Lazy loading
+
+Provider packages are imported only when a subagent actually requests that provider. Missing keys don't break agent startup — they just mean that provider is unavailable until you set the key.
+
+If you only ever use Anthropic, you don't need to set the other keys. If a subagent's config asks for a provider whose key isn't set, the agent build logs a warning and that subagent inherits the orchestrator's model instead of crashing.
+
+## Adding a new provider
+
+Two steps:
+
+1. Add the LangChain integration package to `platform/requirements.txt` (e.g. `langchain-fireworks`).
+2. Extend `_RESOLVERS` in `platform/api/model_registry.py` with a new entry.
+
+```python
+def _fireworks(name: str, **kwargs) -> BaseChatModel:
+    from langchain_fireworks import ChatFireworks
+    return ChatFireworks(model=name, **kwargs)
+
+_RESOLVERS = {
+    ...,
+    "fireworks": _fireworks,
+}
+```
+
+Done. Subagents can now use `provider = "fireworks"`.
+
+## Two-mode notes
+
+| Mode | Where API keys live |
+|------|---------------------|
+| Self-host | `platform/deploy/.env` on your machine |
+| Hosted-multitenant | Per-tenant config (TBD as part of Pillar 0 tenant abstraction). Each tenant brings their own keys; never shared with other tenants. |
+
+## Connection to Pillar 1
+
+The agent-builder UI (Step 3 of the [agent-builder flow](https://github.com/Lizo-RoadTown/Make_Skills/blob/main/docs/proposals/agent-builder-flow.md)) lets students pick a provider visually:
+
+- **BYO subscription** — Anthropic / OpenAI / Google
+- **Open-weight hosted** — Hugging Face / Together / Groq (free-tier paths for students without budgets)
+- **Local** — Ollama (privacy + no quota)
+
+This page is the underlying capability that UI is built on.

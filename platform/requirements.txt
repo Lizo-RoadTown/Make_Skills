@@ -27,6 +27,16 @@ pyarrow>=18.0                # LanceDB depends on this; pin explicitly
 # tavily-python>=0.5           # Tavily search (default for open_deep_research)
 # anthropic                    # if not already pulled by deepagents
 
+# Model providers — Pillar 1 "pick your brain" choice
+# Anthropic comes via deepagents already. Add the others to enable per-subagent
+# model selection. Each is lazy-imported in api/model_registry.py.
+langchain-openai>=0.2          # OpenAI / GPT
+langchain-google-genai>=2.0    # Google Gemini
+langchain-huggingface>=0.1     # HF Inference Providers (free-tier friendly)
+langchain-ollama>=0.2          # Local Ollama
+# langchain-together>=0.3      # Together AI — uncomment to enable
+# langchain-groq>=0.2          # Groq (extremely fast inference) — uncomment to enable
+
 # Document parsing — see skills/document-parsing/SKILL.md for guidance on which to use
 # llama-parse>=0.5             # LlamaParse (hosted, best for complex tables/charts/scans)
 # llama-index-tools-mcp>=0.2   # LlamaIndex MCP client (if writing LlamaIndex-native agents)

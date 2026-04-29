@@ -84,8 +84,10 @@ async def build_agent(config_path: str | Path | None = None, repo_root: str | Pa
         add_roadmap_item,
     ]
 
+    from api.model_registry import resolve_model
+
     agent = create_deep_agent(
-        model=_resolve_model_id(model_cfg),
+        model=resolve_model(model_cfg),
         tools=builtin_tools,
         memory=memory,
         skills=skills,
@@ -93,13 +95,6 @@ async def build_agent(config_path: str | Path | None = None, repo_root: str | Pa
         checkpointer=checkpointer,
     )
     return agent
-
-
-def _resolve_model_id(model_cfg: dict[str, Any]) -> str:
-    """Convert [model] provider+name into deepagents' 'provider:name' string format."""
-    provider = model_cfg.get("provider", "anthropic")
-    name = model_cfg.get("name", "claude-opus-4-7")
-    return f"{provider}:{name}"
 
 
 def load_subagents(subagents_dir: Path, repo_root: Path) -> list[dict[str, Any]]:
@@ -130,10 +125,20 @@ def load_subagents(subagents_dir: Path, repo_root: Path) -> list[dict[str, Any]]
         skill_paths = agent_block.get("skills", [])
         if skill_paths:
             sub["skills"] = [str((repo_root / p).resolve()) for p in skill_paths]
-        if model_block:
-            provider = model_block.get("provider", "anthropic")
-            name = model_block.get("name")
-            if name:
-                sub["model"] = f"{provider}:{name}"
+        if model_block and model_block.get("name"):
+            from api.model_registry import resolve_model
+
+            try:
+                sub["model"] = resolve_model(model_block)
+            except Exception as e:
+                # Don't crash the agent build if one subagent has a misconfigured
+                # model — log and let the subagent inherit the orchestrator's model.
+                import logging
+
+                logging.getLogger("agent").warning(
+                    "subagent %s: model resolve failed (%s); inheriting orchestrator model",
+                    sub.get("name"),
+                    e,
+                )
         subagents.append(sub)
     return subagents
