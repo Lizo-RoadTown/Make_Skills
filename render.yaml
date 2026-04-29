@@ -45,6 +45,10 @@ services:
         fromDatabase:
           name: make-skills-db
           property: connectionString
+      # Pillar 0 — auth backend selector. Stays self_host until a hosted
+      # JWT auth provider is chosen (open question in the proposal).
+      - key: PLATFORM_MODE
+        value: self_host
       # Static config — these are baked-in paths (no volume mount on Render).
       - key: AGENT_CONFIG_PATH
         value: /app/deepagents.toml

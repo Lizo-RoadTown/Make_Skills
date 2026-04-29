@@ -20,6 +20,10 @@ lancedb>=0.18
 fastembed>=0.5               # ONNX-based embeddings, ~10x lighter than sentence-transformers (no torch dep)
 pyarrow>=18.0                # LanceDB depends on this; pin explicitly
 
+# Testing — Pillar 0 isolation tests live at platform/tests/
+pytest>=8.0
+pytest-asyncio>=0.24
+
 # Optional: tool & search providers
 # Uncomment per-tool only when you wire it into deepagents.toml MCP block.
 

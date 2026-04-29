@@ -15,6 +15,7 @@ Pre-decision design documents. A proposal lives here while it's being shaped —
 |----------|--------|
 | [`byo-claude-code-via-mcp.md`](byo-claude-code-via-mcp.md) | Open — needs Liz's call on auth + scope |
 | [`byo-personal-ollama.md`](byo-personal-ollama.md) | Open — Stage 1 (docs only) doable now; Stage 2 blocked on Pillar 0 tenant abstraction |
+| [`pillar-0-tenant-abstraction.md`](pillar-0-tenant-abstraction.md) | Open — synthesized from 4 research agents; ready to execute in 7 phases |
 | [`agent-creatures-ui.md`](agent-creatures-ui.md) | Open — direction set (Tomagotchi/Spore-style 3D, multiplayer clan); mechanics TBD |
 | [`agent-builder-flow.md`](agent-builder-flow.md) | Open — six-step character creation; HuggingFace as default free path |
 | [`quest-system.md`](quest-system.md) | Open — gamified skill acquisition (music / make-money / science / social-impact) |

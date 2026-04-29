@@ -47,11 +47,17 @@ Output ONLY the JSON array, no prose, no markdown fences."""
 
 
 async def record_turn(
+    tenant_id: str,
     thread_id: str,
     user_message: str,
     agent_response: str,
 ) -> int:
     """Extract records from one (user, agent) pair and insert them.
+
+    `tenant_id` is the first positional arg by Pillar 0 background-task
+    discipline: never read tenant from ambient context in a background
+    task — FastAPI's BackgroundTasks runs after the request scope tears
+    down and ContextVars cannot be relied on across that boundary.
 
     Returns count inserted. Errors are logged and swallowed.
     """
@@ -86,7 +92,7 @@ async def record_turn(
         return 0
 
     try:
-        return insert_records(rows)
+        return insert_records(rows, tenant_id=tenant_id)
     except Exception as e:
         log.warning("recorder insert failed: %s", e)
         return 0

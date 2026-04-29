@@ -3,14 +3,22 @@ Tools and helpers for the agent to query semantic memory.
 
 The agent gets a `recall(query, ...)` tool. It pulls relevant prior
 records into context on demand instead of loading full chat history.
+
+Pillar 0: tenant_id flows through the LangGraph RunnableConfig
+(`configurable.tenant_id`) — every chat call sets it on the config that
+gets passed into ainvoke. Tools read it from there so memory queries
+are scoped to the calling tenant without the agent's prompt mentioning
+tenancy at all.
 """
 from __future__ import annotations
 
 from typing import Optional
 
+from langchain_core.runnables import RunnableConfig
 from langchain_core.tools import tool
 
 from api.memory.lance import search
+from api.migrations import DEFAULT_TENANT_ID
 
 
 @tool
@@ -19,6 +27,7 @@ def recall(
     limit: int = 5,
     record_type: Optional[str] = None,
     project_tag: Optional[str] = None,
+    config: RunnableConfig = None,
 ) -> str:
     """Recall prior records from semantic memory matching a natural-language
     query. Use this BEFORE answering a question that might benefit from prior
@@ -40,8 +49,13 @@ def recall(
         "why this matters" line, or "(no matching records)".
     """
     limit = max(1, min(int(limit or 5), 20))
+    tenant_id = (
+        (config or {}).get("configurable", {}).get("tenant_id")
+        or DEFAULT_TENANT_ID
+    )
     rows = search(
         query=query,
+        tenant_id=tenant_id,
         limit=limit,
         record_type=record_type,
         project_tags=[project_tag] if project_tag else None,

@@ -25,6 +25,9 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
 from api.agent import build_agent
+from api.auth import TenantContext, get_current_tenant
+from api.db import close_pool, init_pool
+from api.tenant_context import current_tenant
 from api.memory.lance import count as memory_count
 from api.memory.lance import list_records as memory_list
 from api.memory.lance import search as memory_search
@@ -37,6 +40,7 @@ from api.roadmap.file import (
     write_roadmap,
 )
 from api import fileviewer, observability
+from fastapi import Depends
 
 log = logging.getLogger("api")
 logging.basicConfig(level=logging.INFO)
@@ -47,7 +51,11 @@ async def lifespan(app: FastAPI):
     log.info("Building deepagents agent...")
     app.state.agent = await build_agent()
     log.info("Agent ready.")
+    # Application connection pool for tenant-scoped queries (separate from
+    # the LangGraph checkpointer's pool — see api/db.py docstring).
+    await init_pool()
     yield
+    await close_pool()
 
 
 app = FastAPI(title="Make_Skills agent API", lifespan=lifespan)
@@ -88,11 +96,48 @@ def healthz():
     return {"status": "ok"}
 
 
+async def _ensure_thread_belongs_to_tenant(thread_id: str, ctx: TenantContext) -> None:
+    """Insert the conversations row on first use; reject if the thread
+    already exists under a different tenant. RLS enforces the rejection at
+    the DB level — even if an attacker knows another tenant's thread_id
+    UUID, the SELECT returns 0 rows."""
+    from api.db import tenant_conn  # local import to keep startup order clean
+    async with tenant_conn(ctx) as conn:
+        await conn.execute(
+            """
+            INSERT INTO conversations (thread_id, tenant_id, user_id)
+            VALUES (%s, %s, %s::uuid)
+            ON CONFLICT (thread_id) DO NOTHING
+            """,
+            (thread_id, ctx.tenant_id, ctx.user_id if _looks_like_uuid(ctx.user_id) else None),
+        )
+        cur = await conn.execute(
+            "SELECT 1 FROM conversations WHERE thread_id = %s",
+            (thread_id,),
+        )
+        row = await cur.fetchone()
+        if not row:
+            raise HTTPException(status_code=403, detail="thread does not belong to this tenant")
+
+
+def _looks_like_uuid(s: str | None) -> bool:
+    if not s or not isinstance(s, str):
+        return False
+    return len(s) == 36 and s.count("-") == 4
+
+
 @app.post("/chat", response_model=ChatResponse)
-async def chat(req: ChatRequest, background: BackgroundTasks):
+async def chat(
+    req: ChatRequest,
+    background: BackgroundTasks,
+    ctx: TenantContext = Depends(get_current_tenant),
+):
     """Single-shot chat. Returns the full final response."""
     thread_id = req.thread_id or str(uuid4())
-    config = {"configurable": {"thread_id": thread_id}}
+    await _ensure_thread_belongs_to_tenant(thread_id, ctx)
+
+    current_tenant.set(ctx.tenant_id)
+    config = {"configurable": {"thread_id": thread_id, "tenant_id": ctx.tenant_id}}
     try:
         result = await app.state.agent.ainvoke(
             {"messages": [{"role": "user", "content": req.message}]},
@@ -107,16 +152,23 @@ async def chat(req: ChatRequest, background: BackgroundTasks):
     response_text = getattr(final, "content", None) or str(final)
 
     # Fire-and-forget: extract memory records from this turn after the response is sent.
-    background.add_task(record_turn, thread_id, req.message, response_text)
+    # tenant_id is the FIRST positional arg by Pillar 0 background-task discipline.
+    background.add_task(record_turn, ctx.tenant_id, thread_id, req.message, response_text)
 
     return ChatResponse(thread_id=thread_id, response=response_text)
 
 
 @app.post("/chat/stream")
-async def chat_stream(req: ChatRequest):
+async def chat_stream(
+    req: ChatRequest,
+    ctx: TenantContext = Depends(get_current_tenant),
+):
     """Streamed chat. Emits SSE-style JSON lines, one per chunk."""
     thread_id = req.thread_id or str(uuid4())
-    config = {"configurable": {"thread_id": thread_id}}
+    await _ensure_thread_belongs_to_tenant(thread_id, ctx)
+
+    current_tenant.set(ctx.tenant_id)
+    config = {"configurable": {"thread_id": thread_id, "tenant_id": ctx.tenant_id}}
 
     async def gen():
         yield _sse({"event": "thread", "thread_id": thread_id})
@@ -136,10 +188,12 @@ async def chat_stream(req: ChatRequest):
         yield _sse({"event": "done"})
 
         # Fire-and-forget memory extraction. Run as a detached task so we don't
-        # block this generator's cleanup.
+        # block this generator's cleanup. tenant_id passed explicitly.
         full_response = "".join(accumulated)
         if full_response.strip():
-            asyncio.create_task(record_turn(thread_id, req.message, full_response))
+            asyncio.create_task(
+                record_turn(ctx.tenant_id, thread_id, req.message, full_response)
+            )
 
     return StreamingResponse(gen(), media_type="text/event-stream")
 
@@ -155,11 +209,18 @@ class MemorySearchRequest(BaseModel):
 
 
 @app.post("/memory/search")
-async def memory_search_endpoint(req: MemorySearchRequest):
-    """Semantic search across memory. Returns records ranked by relevance."""
+async def memory_search_endpoint(
+    req: MemorySearchRequest,
+    ctx: TenantContext = Depends(get_current_tenant),
+):
+    """Semantic search across memory. Returns records ranked by relevance.
+
+    Tenant-scoped: returns the caller's records plus any rows marked
+    visibility='public' (the future Pillar 3c commons)."""
     try:
         rows = memory_search(
             query=req.query,
+            tenant_id=ctx.tenant_id,
             limit=req.limit,
             record_type=req.record_type,
             project_tags=[req.project_tag] if req.project_tag else None,
@@ -176,10 +237,14 @@ async def memory_records_endpoint(
     offset: int = Query(0, ge=0),
     record_type: str | None = None,
     project_tag: str | None = None,
+    ctx: TenantContext = Depends(get_current_tenant),
 ):
-    """List records, newest first. Non-semantic; for browsing."""
+    """List records, newest first. Non-semantic; for browsing.
+
+    Tenant-scoped: caller's rows plus visibility='public'."""
     try:
         rows = memory_list(
+            tenant_id=ctx.tenant_id,
             limit=limit,
             offset=offset,
             record_type=record_type,
@@ -246,10 +311,12 @@ async def skills_file_endpoint(path: str = Query(..., description="Relative path
 
 
 @app.get("/memory/stats")
-async def memory_stats_endpoint():
-    """Quick stats — total record count, by type."""
+async def memory_stats_endpoint(
+    ctx: TenantContext = Depends(get_current_tenant),
+):
+    """Quick stats — total record count for the calling tenant."""
     try:
-        return {"total": memory_count()}
+        return {"total": memory_count(tenant_id=ctx.tenant_id)}
     except Exception as e:
         log.exception("Memory stats failed")
         raise HTTPException(status_code=500, detail=str(e))
@@ -265,38 +332,54 @@ class IngestRequest(BaseModel):
 
 
 @app.get("/observability/summary")
-async def observability_summary_endpoint():
-    """Top-of-dashboard KPIs."""
+async def observability_summary_endpoint(
+    ctx: TenantContext = Depends(get_current_tenant),
+):
+    """Top-of-dashboard KPIs for the calling tenant."""
     try:
-        return observability.summary()
+        return observability.summary(ctx.tenant_id)
     except Exception as e:
         log.exception("observability summary failed")
         raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.get("/observability/records-by-type")
-async def observability_records_by_type_endpoint():
-    return {"data": observability.memory_records_by_type()}
+async def observability_records_by_type_endpoint(
+    ctx: TenantContext = Depends(get_current_tenant),
+):
+    return {"data": observability.memory_records_by_type(ctx.tenant_id)}
 
 
 @app.get("/observability/records-by-day")
-async def observability_records_by_day_endpoint(days: int = Query(30, ge=1, le=365)):
-    return {"data": observability.memory_records_by_day(days)}
+async def observability_records_by_day_endpoint(
+    days: int = Query(30, ge=1, le=365),
+    ctx: TenantContext = Depends(get_current_tenant),
+):
+    return {"data": observability.memory_records_by_day(ctx.tenant_id, days)}
 
 
 @app.get("/observability/records-by-tag")
-async def observability_records_by_tag_endpoint(top: int = Query(10, ge=1, le=50)):
-    return {"data": observability.memory_records_by_tag(top)}
+async def observability_records_by_tag_endpoint(
+    top: int = Query(10, ge=1, le=50),
+    ctx: TenantContext = Depends(get_current_tenant),
+):
+    return {"data": observability.memory_records_by_tag(ctx.tenant_id, top)}
 
 
 @app.get("/observability/recent")
-async def observability_recent_endpoint(limit: int = Query(10, ge=1, le=50)):
-    return {"data": observability.recent_records(limit)}
+async def observability_recent_endpoint(
+    limit: int = Query(10, ge=1, le=50),
+    ctx: TenantContext = Depends(get_current_tenant),
+):
+    return {"data": observability.recent_records(ctx.tenant_id, limit)}
 
 
 @app.get("/observability/threads-by-day")
-async def observability_threads_by_day_endpoint(days: int = Query(30, ge=1, le=365)):
-    return {"data": observability.threads_by_day(days)}
+async def observability_threads_by_day_endpoint(
+    days: int = Query(30, ge=1, le=365),
+    ctx: TenantContext = Depends(get_current_tenant),
+):
+    return {"data": observability.threads_by_day(ctx.tenant_id, days)}
 
 
 # ----- Roadmap endpoints -----
@@ -365,15 +448,18 @@ async def roadmap_overwrite_endpoint(req: RoadmapOverwrite):
 
 
 @app.post("/memory/ingest")
-async def memory_ingest_endpoint(req: IngestRequest):
+async def memory_ingest_endpoint(
+    req: IngestRequest,
+    ctx: TenantContext = Depends(get_current_tenant),
+):
     """Run the recorder on a single (user, agent) pair without going through the
     chat loop. Used by backfill scripts that ingest historical transcripts
     (Claude Code sessions, Copilot logs, etc.) into the same memory store the
-    live agent uses.
+    live agent uses. Records land under the calling tenant.
     """
     try:
         count_inserted = await record_turn(
-            req.source_thread_id, req.user_message, req.agent_response
+            ctx.tenant_id, req.source_thread_id, req.user_message, req.agent_response
         )
         return {"ingested": count_inserted}
     except Exception as e:
@@ -382,9 +468,15 @@ async def memory_ingest_endpoint(req: IngestRequest):
 
 
 @app.get("/threads/{thread_id}/state")
-async def thread_state(thread_id: str):
-    """Fetch the persisted state for a thread (debugging aid)."""
-    config = {"configurable": {"thread_id": thread_id}}
+async def thread_state(
+    thread_id: str,
+    ctx: TenantContext = Depends(get_current_tenant),
+):
+    """Fetch the persisted state for a thread. Tenant-scoped: callers cannot
+    read another tenant's thread even if they know the UUID."""
+    await _ensure_thread_belongs_to_tenant(thread_id, ctx)
+    current_tenant.set(ctx.tenant_id)
+    config = {"configurable": {"thread_id": thread_id, "tenant_id": ctx.tenant_id}}
     try:
         snapshot = await app.state.agent.aget_state(config)
     except Exception as e:

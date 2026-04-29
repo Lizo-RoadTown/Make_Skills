@@ -31,9 +31,33 @@ async def build_agent(config_path: str | Path | None = None, repo_root: str | Pa
     call should pass a thread_id in the config so the AsyncPostgresSaver
     can persist state per conversation.
     """
+    from contextlib import asynccontextmanager
+
     from deepagents import create_deep_agent
+    from langgraph.checkpoint.postgres import _ainternal
     from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
+    from psycopg.rows import dict_row
     from psycopg_pool import AsyncConnectionPool
+
+    from api.tenant_context import current_tenant
+
+    class TenantScopedSaver(AsyncPostgresSaver):
+        """Wrap _cursor() to inject `SET LOCAL app.tenant_id` on every
+        connection acquire. Defense-in-depth: even if a forged thread_id
+        bypasses the gateway check on /chat, RLS on the checkpoint tables
+        (when added — currently the conversations sidecar carries the policy)
+        sees `app.tenant_id` set to the calling tenant only."""
+
+        @asynccontextmanager
+        async def _cursor(self, *, pipeline: bool = False):
+            tid = current_tenant.get()
+            async with self.lock, _ainternal.get_connection(self.conn) as conn:
+                await conn.execute(
+                    "SELECT set_config('app.tenant_id', %s, true)",
+                    (str(tid),),
+                )
+                async with conn.cursor(binary=True, row_factory=dict_row) as cur:
+                    yield cur
 
     config_path = Path(config_path or os.environ["AGENT_CONFIG_PATH"])
     repo_root = Path(repo_root or os.environ.get("AGENT_REPO_ROOT", config_path.parent))
@@ -63,7 +87,14 @@ async def build_agent(config_path: str | Path | None = None, repo_root: str | Pa
         open=False,
     )
     await pool.open()
-    checkpointer = AsyncPostgresSaver(pool)
+
+    # Pillar 0 — tenant abstraction. Run before checkpointer.setup() so
+    # the conversations sidecar table (which gates checkpoint access via
+    # RLS) is in place before any chat traffic.
+    from api import migrations
+    await migrations.run_all(pool)
+
+    checkpointer = TenantScopedSaver(pool)
     await checkpointer.setup()  # idempotent — creates the checkpoint tables on first run
 
     subagents = load_subagents(subagents_dir, repo_root) if subagents_dir else []
