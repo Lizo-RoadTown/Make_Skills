@@ -1,16 +1,16 @@
 ---
 title: Installation (self-host)
-description: Get the Make_Skills platform running on your machine in about five minutes.
+description: Run the Make_Skills platform on your own machine.
 ---
-This is the path for running Make_Skills on your own machine — your data, your API keys, your stack. The hosted multi-tenant variant lives at humancensys.com (different setup, see [Two modes](/docs/concepts/two-modes)).
+Self-host instructions. The hosted multi-tenant variant lives at humancensys.com — see [Two modes](/docs/concepts/two-modes).
 
 ## Prerequisites
 
 - **Docker Desktop** (or Docker Engine + Compose v2)
 - **Node.js 20+** for the web UI dev server
 - **An Anthropic API key** — get one at [console.anthropic.com](https://console.anthropic.com)
-- (Optional) **LlamaParse API key** — for document parsing, free tier at [cloud.llamaindex.ai](https://cloud.llamaindex.ai)
-- (Optional) **Tavily API key** — for web search, free tier at [tavily.com](https://tavily.com)
+- (Optional) **LlamaParse API key** — document parsing, [cloud.llamaindex.ai](https://cloud.llamaindex.ai)
+- (Optional) **Tavily API key** — web search, [tavily.com](https://tavily.com)
 
 ## Clone and configure
 
@@ -82,7 +82,7 @@ If you want to reach your local stack from a different machine, see [Remote acce
 
 ## Optional: cloud-host this stack on Render
 
-The included `render.yaml` provisions the full stack on Render — useful if you want it always-on without your machine running. Walkthrough at [`platform/RENDER.md`](https://github.com/Lizo-RoadTown/Make_Skills/blob/main/platform/RENDER.md). Costs about $7/month.
+`render.yaml` provisions the stack on Render. Walkthrough at [`platform/RENDER.md`](https://github.com/Lizo-RoadTown/Make_Skills/blob/main/platform/RENDER.md). Approximately $7/month.
 
 ## Stop / restart / nuke
 

@@ -14,6 +14,7 @@ Pre-decision design documents. A proposal lives here while it's being shaped —
 | Proposal | Status |
 |----------|--------|
 | [`byo-claude-code-via-mcp.md`](byo-claude-code-via-mcp.md) | Open — needs Liz's call on auth + scope |
+| [`byo-personal-ollama.md`](byo-personal-ollama.md) | Open — Stage 1 (docs only) doable now; Stage 2 blocked on Pillar 0 tenant abstraction |
 | [`agent-creatures-ui.md`](agent-creatures-ui.md) | Open — direction set (Tomagotchi/Spore-style 3D, multiplayer clan); mechanics TBD |
 | [`agent-builder-flow.md`](agent-builder-flow.md) | Open — six-step character creation; HuggingFace as default free path |
 | [`quest-system.md`](quest-system.md) | Open — gamified skill acquisition (music / make-money / science / social-impact) |
@@ -33,4 +34,5 @@ agent-builder-flow      ──→  quest-system  ──→  observability  ─�
 
 agent-creatures-ui   ──→  the visual layer all of the above produce/consume
 byo-claude-code-via-mcp ──→ the path for power users to skip the chat UI entirely
+byo-personal-ollama     ──→ the path for power users to plug their own GPU/laptop Ollama into the hosted site
 ```

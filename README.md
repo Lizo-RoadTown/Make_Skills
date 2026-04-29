@@ -9,18 +9,16 @@ Open-source and hosted.
 
 ---
 
-## What it is, concretely
+## What it is
 
-- **A multi-agent platform.** You build one orchestrator + a clan of specialist subagents (planner, researcher, writer, custom). Each is configurable separately.
-- **A semantic memory layer.** Conversations, decisions, and lessons are extracted and stored in LanceDB. Future sessions recall what mattered without re-loading full transcripts.
-- **A skill library.** Markdown files that codify how the agents work. Some skills graduate into hard-coded tools as you use them more.
-- **An observability dashboard.** Token cost, latency, agent activity, recorder volume — visible in the UI.
-- **A docs site.** Real software documentation at [humancensys.com/docs](https://humancensys.com/docs).
-- **Pillar 1 (in design):** a Tomagotchi-meets-Spore character builder for your agent clan, with simple emotions, evolution as they gain skills, and a 3D viewport.
-- **Pillar 2 (in design):** a quest system with curated and AI-generated tasks across music, business, science, social impact.
-- **Phase 2 (post-MVP):** group quests, shared knowledge graphs, student-formed organizations, collective neural network design.
-
-It's an **academic tool** — not a productivity assistant, not a chatbot. It teaches engineering through play.
+- A multi-agent platform: one orchestrator plus a clan of specialist subagents (planner, researcher, writer, custom). Each subagent is configured separately.
+- A semantic memory layer: conversations, decisions, and lessons are extracted and stored in LanceDB. Future sessions recall what mattered without re-loading transcripts.
+- A skill library: markdown files that codify how the agents work. Skills can graduate into hard-coded tools.
+- An observability dashboard: token cost, latency, agent activity, recorder volume.
+- A documentation site at [humancensys.com/docs](https://humancensys.com/docs).
+- Pillar 1 (in design): character builder for the agent clan, with simple emotions, evolution as agents gain skills, and a 3D viewport.
+- Pillar 2 (in design): a quest system covering music, business, science, and social impact.
+- Phase 2 (post-MVP): group quests, shared knowledge graphs, student-formed organizations, collective neural network design.
 
 ---
 
@@ -42,7 +40,7 @@ npm install
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000). Full docs at [`docs/`](docs/) or [humancensys.com/docs](https://humancensys.com/docs).
+Open [http://localhost:3000](http://localhost:3000). Documentation at [`docs/`](docs/) or [humancensys.com/docs](https://humancensys.com/docs).
 
 ---
 
@@ -67,33 +65,33 @@ Open [http://localhost:3000](http://localhost:3000). Full docs at [`docs/`](docs
    └────────────────────────────────────────────────────┘
 ```
 
-Two deployment modes (always supported, parallel):
+Two deployment modes:
 
 | | Self-host | Hosted-multitenant |
 |---|---|---|
 | Who runs it | You, on your machine or VPS | Liz, at humancensys.com |
 | Auth | None | OAuth (TBD) |
-| Data | All yours, local | Tenant-scoped, shared infrastructure |
+| Data | Local | Tenant-scoped, shared infrastructure |
 
-See [`ARCHITECTURE.md`](ARCHITECTURE.md) for the layered model + container topology decisions.
+See [`ARCHITECTURE.md`](ARCHITECTURE.md) for the layered model and container topology.
 
 ---
 
-## Model providers (Pillar 1 — pick your creature's brain)
+## Model providers
 
-Each subagent picks its own model. Currently supported:
+Each subagent picks its own model.
 
-| Provider | Best for |
-|----------|----------|
-| **Anthropic** (Claude) | Default; smart and cost-efficient |
-| **OpenAI** (GPT) | OpenAI-specific features |
-| **Google** (Gemini) | Generous free tier |
-| **Hugging Face** (Inference Providers) | **Free tier path for students** |
-| **Together AI** | Fast inference of open models |
-| **Groq** | Lowest-latency inference |
-| **Ollama** | Local, no API key, privacy |
+| Provider | Notes |
+|----------|-------|
+| Anthropic (Claude) | Default |
+| OpenAI (GPT) | |
+| Google (Gemini) | Free tier available |
+| Hugging Face (Inference Providers) | Free tier available |
+| Together AI | |
+| Groq | |
+| Ollama | Local, no API key |
 
-Adding a new provider is ~10 lines in [`platform/api/model_registry.py`](platform/api/model_registry.py). See [`docs/concepts/model-providers.mdx`](web/content/docs/concepts/model-providers.mdx).
+Adding a new provider is roughly ten lines in [`platform/api/model_registry.py`](platform/api/model_registry.py). See [`web/content/docs/concepts/model-providers.mdx`](web/content/docs/concepts/model-providers.mdx).
 
 ---
 
@@ -104,15 +102,15 @@ Make_Skills/
 ├── README.md, ARCHITECTURE.md, CONTRIBUTING.md, LICENSE
 ├── AGENTS.md                    Root orchestrator persona
 ├── deepagents.toml              Agent runtime config
-├── skills/                      The skill library (10+ skills)
+├── skills/                      Skill library
 ├── subagents/                   Specialist subagents (planner, researcher, ...)
-├── platform/                    The Docker stack (api + postgres + grafana + lancedb)
+├── platform/                    Docker stack (api + postgres + grafana + lancedb)
 │   └── api/                       FastAPI + deepagents runtime
 ├── web/                         Next.js UI (Vercel-deployed)
 │   ├── app/                       Routes (chat, memory, roadmap, docs, agents, ...)
 │   └── content/docs/              MDX docs (Fumadocs-rendered)
 ├── docs/                        Repo-side docs: ADRs, design proposals
-│   ├── decisions/                 Architecture decisions (audit trail)
+│   ├── decisions/                 Architecture decisions
 │   └── proposals/                 Pre-decision design docs
 ├── render.yaml                  Render Blueprint for cloud deploy
 └── scripts/                     sync-upstream, backfill, smoke-tests
@@ -120,36 +118,35 @@ Make_Skills/
 
 ---
 
-## Status & roadmap
+## Status
 
-**Live and working today:**
+Today:
 
-- ✓ Multi-agent runtime (orchestrator + planner + researcher subagents)
-- ✓ Semantic memory (LanceDB + Haiku-powered recorder + recall tool)
-- ✓ Memory backfill from Claude Code transcripts
-- ✓ Custom observability dashboard (Recharts)
-- ✓ File-backed roadmap with agent-update tooling
-- ✓ Fumadocs documentation site
-- ✓ Mobile-responsive nav
-- ✓ Render + Vercel wired end-to-end
-- ✓ Apache 2.0 license
+- Multi-agent runtime (orchestrator + planner + researcher subagents)
+- Semantic memory (LanceDB + Haiku-powered recorder + recall tool)
+- Memory backfill from Claude Code transcripts
+- Observability dashboard (Recharts)
+- File-backed roadmap with agent-update tooling
+- Fumadocs documentation site
+- Mobile-responsive nav
+- Render + Vercel deploy
+- Apache 2.0 license
 
-**In design (proposals open for review):**
+In design:
 
-- ⚠ Pillar 1 — agent builder UI + 3D creature clan ([builder flow](docs/proposals/agent-builder-flow.md), [creature UI](docs/proposals/agent-creatures-ui.md))
-- ⚠ Pillar 2 — quest system ([quest system](docs/proposals/quest-system.md))
-- ⚠ Agent retirement & clan optimization ([retirement](docs/proposals/agent-retirement-and-clan-optimization.md))
-- ⚠ Knowledge observatory (Pillar 3c, multiplayer)
-- ⚠ Tenant abstraction for hosted-multitenant
-- ⚠ BYO Claude Code via MCP ([proposal](docs/proposals/byo-claude-code-via-mcp.md))
+- Pillar 1 — agent builder UI and 3D creature clan ([builder flow](docs/proposals/agent-builder-flow.md), [creature UI](docs/proposals/agent-creatures-ui.md))
+- Pillar 2 — quest system ([quest system](docs/proposals/quest-system.md))
+- Agent retirement and clan optimization ([retirement](docs/proposals/agent-retirement-and-clan-optimization.md))
+- Knowledge observatory (Pillar 3c, multiplayer)
+- Tenant abstraction for hosted-multitenant
+- BYO Claude Code via MCP ([proposal](docs/proposals/byo-claude-code-via-mcp.md))
+- BYO personal Ollama — point the hosted site at your own Ollama endpoint ([proposal](docs/proposals/byo-personal-ollama.md), [docs](web/content/docs/concepts/byo-ollama.mdx))
 
 ---
 
 ## Contributing
 
-See [`CONTRIBUTING.md`](CONTRIBUTING.md). Every PR considers both deployment modes (self-host AND hosted-multitenant), with documentation and tests for both.
-
-We're open-source. You can fork, modify, run. Contributions welcome.
+See [`CONTRIBUTING.md`](CONTRIBUTING.md). Every PR considers both deployment modes (self-host and hosted-multitenant), with documentation and tests for both.
 
 ---
 

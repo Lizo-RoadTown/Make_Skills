@@ -6,15 +6,15 @@ export default function UpskillingPage() {
     <StubPage
       title="Quests & Upskilling"
       pillar="Pillar 2 — Make skills together"
-      blurb="Skill acquisition through real work. Each quest is a self-contained mini-project (build a landing page for a real local business, compose a 30-second loop, reproduce a published methodology) that grants skills to your creature and quietly teaches engineering. Curated library + AI-generated personalized quests + your own user-defined quests. After several completed quests, the observability layer surfaces who's earning their keep — that's where the retirement mechanic kicks in."
+      blurb="Quests are self-contained mini-projects (a landing page for a local business, a 30-second music loop, a reproduction of a published methodology) that grant skills to a creature. Three sources: a curated library, AI-generated personalized quests, and user-defined quests. Quest completion data feeds the observability layer and the clan-cap retirement mechanic."
       bullets={[
-        "Quest categories: music · make money (business) · contribute to science · social impact · custom",
-        "Three sources: curated library (20-30 launch quests) / AI-generated personalized / user-defined",
-        "Live mechanics: accept → work in chat → progress milestones at 25/50/75% with guidance prompts → verify → reward (XP, skills, body parts, occasional creature evolution)",
-        "Skill→tool promotion happens NATURALLY as quest completion repeats the same skill",
-        "After ~3-5 quests, Pillar 3 observability becomes meaningful — token cost / speed / quality data per creature, with system guidance on what to optimize",
-        "Hardest mechanic: at clan-cap, retire underperformers vs your declared goals. Archive (not delete) — the lifelong-companion promise.",
-        "Phase 2 unlocks after solo loop mastery: group quests, shared knowledge observatories, organizations, collective neural networks",
+        "Quest categories: music, business, science, social impact, custom",
+        "Three sources: curated library (20-30 launch quests), AI-generated, user-defined",
+        "Mechanics: accept → work in chat → progress milestones at 25/50/75% → verify → reward (XP, skills, body parts, occasional evolution)",
+        "Skill→tool promotion fires when a skill is repeated across quests",
+        "After ~3-5 quests, Pillar 3 observability has enough data per creature for optimization guidance",
+        "At clan-cap, retire underperformers against declared goals. Archive, not delete.",
+        "Phase 2 (post-MVP): group quests, shared knowledge observatories, organizations, collective neural networks",
       ]}
       references={[
         {
@@ -26,7 +26,7 @@ export default function UpskillingPage() {
           href: "/docs",
         },
         {
-          label: "Skill — agentic-upskilling (the skill→tool loop quests drive)",
+          label: "Skill — agentic-upskilling",
           href: "/skills",
         },
         {

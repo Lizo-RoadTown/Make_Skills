@@ -6,27 +6,27 @@ export default function AgentsPage() {
     <StubPage
       title="Your clan"
       pillar="Pillar 1 — Build agents"
-      blurb="The character-creation flow for your AI. Six guided steps that double as STEM education in disguise: pick a starter creature, name it, choose a brain (Anthropic/OpenAI/Google subscriptions OR Hugging Face/Together/Groq for free open-weight access OR local Ollama), pick a class (researcher / builder / tutor / generalist / custom), select starter skills, and have your first guided conversation. Each subagent in your clan goes through the same creation flow when you spawn it later. The creature is yours for years — exportable, portable, upgradable like a phone."
+      blurb="A six-step character-creation flow: pick a species, name the creature, pick a model provider (Anthropic, OpenAI, Google, Hugging Face, Together, Groq, or Ollama), pick a class, select starter skills, and complete a first guided conversation. The same flow runs for each subagent added later. Agents are exportable and portable across deployments."
       bullets={[
-        "Step 1 — Pick your starter species (4 to start: slime, fern, sea-cucumber, mossy-stone)",
-        "Step 2 — Name your creature (the agent suggests names based on species)",
-        "Step 3 — Pick the brain — three paths: BYO subscription / open-weight hosted (HuggingFace Inference Providers default for students) / local Ollama",
-        "Step 4 — Pick a class (researcher / builder / tutor / generalist / custom)",
-        "Step 5 — Pick 3-5 starter skills from the library",
+        "Step 1 — Pick a starter species (slime, fern, sea-cucumber, mossy-stone)",
+        "Step 2 — Name the creature (suggestions based on species)",
+        "Step 3 — Pick a model provider: BYO subscription, open-weight hosted (HuggingFace default), or local Ollama",
+        "Step 4 — Pick a class (researcher, builder, tutor, generalist, custom)",
+        "Step 5 — Pick 3-5 starter skills",
         "Step 6 — First conversation with three suggested prompts; creature stats update live",
-        "After onboarding: add more skills, switch models, multi-class, spawn clan members, export/import",
+        "Post-onboarding: add skills, switch models, multi-class, spawn clan members, export/import",
       ]}
       references={[
         {
-          label: "Design proposal — agent-builder-flow.md (the map)",
+          label: "Design proposal — agent-builder-flow.md",
           href: "/docs",
         },
         {
-          label: "Design proposal — agent-creatures-ui.md (the visual layer)",
+          label: "Design proposal — agent-creatures-ui.md",
           href: "/docs",
         },
         {
-          label: "Skill — agentic-upskilling (lifelong skill growth)",
+          label: "Skill — agentic-upskilling",
           href: "/skills",
         },
         {

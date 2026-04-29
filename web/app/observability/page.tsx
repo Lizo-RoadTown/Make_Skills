@@ -81,8 +81,8 @@ export default function ObservabilityPage() {
           System observability
         </h1>
         <p className="mt-1 text-sm text-zinc-500">
-          Custom dashboards over the same data Grafana would query —
-          Make_Skills&apos;s own surface, no Grafana iframe.
+          Memory records, conversation threads, and recorder activity over the
+          last 30 days.
         </p>
       </header>
 
@@ -275,9 +275,9 @@ export default function ObservabilityPage() {
       </div>
 
       <footer className="px-8 pb-8 text-xs text-zinc-600">
-        Same data source as Grafana (Postgres + LanceDB) · custom UI in
-        Make_Skills aesthetic · agent-comms tracing (3a) and knowledge graph
-        (3c) panels arrive when those pillars land
+        Sources: Postgres (threads) and LanceDB (memory records). Agent-comms
+        tracing (Pillar 3a) and knowledge graph (3c) panels are not yet
+        available.
       </footer>
     </div>
   );

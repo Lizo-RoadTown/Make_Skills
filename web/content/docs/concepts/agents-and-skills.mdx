@@ -1,10 +1,10 @@
 ---
 title: Agents, subagents, skills, tools
-description: The mental model. Four concepts that often get conflated; getting them straight is half the battle.
+description: Four related concepts in Make_Skills and how they fit together.
 ---
-Four concepts. They're all related but distinct. Confusing them is the most common reason contributors ship the wrong thing.
+Four related concepts: agents, subagents, skills, and tools.
 
-## The mental model in one diagram
+## How they fit together
 
 ```
 ┌─ Your AGENT (the orchestrator) ──────────────────────────────┐
@@ -24,7 +24,7 @@ Four concepts. They're all related but distinct. Confusing them is the most comm
 └───────────────────────────────────────────────────────────────┘
 ```
 
-## Skill vs tool — the distinction that matters most
+## Skill vs tool
 
 | Skill | Tool |
 |-------|------|
@@ -52,11 +52,11 @@ subagents/
 └── ...
 ```
 
-Subagents have **scoped context** — they read only the artifact the orchestrator hands them, not full conversation history. This is the [NVIDIA AI-Q](https://developer.nvidia.com/blog/how-to-build-deep-agents-for-enterprise-search-with-nvidia-ai-q-and-langchain/) discipline: per their analysis, researchers degrade when they see orchestrator-level context.
+Subagents read only the artifact the orchestrator hands them, not full conversation history. This follows the [NVIDIA AI-Q](https://developer.nvidia.com/blog/how-to-build-deep-agents-for-enterprise-search-with-nvidia-ai-q-and-langchain/) pattern: researchers degrade when they see orchestrator-level context.
 
 ## The 3-role research topology
 
-For deep-research-style work, the canonical pattern is three roles:
+For deep-research-style work, three roles:
 
 | Role | Reads | Produces |
 |------|-------|----------|
@@ -64,7 +64,7 @@ For deep-research-style work, the canonical pattern is three roles:
 | **Planner** | User request only | Structured JSON plan |
 | **Researcher** | Planner's plan only | Findings + citations |
 
-Skills like [`deep-research-pattern`](https://github.com/Lizo-RoadTown/Make_Skills/blob/main/skills/deep-research-pattern/SKILL.md) document this discipline.
+See [`deep-research-pattern`](https://github.com/Lizo-RoadTown/Make_Skills/blob/main/skills/deep-research-pattern/SKILL.md).
 
 ## When to add what
 

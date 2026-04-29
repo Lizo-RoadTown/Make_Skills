@@ -2,19 +2,15 @@
 title: Memory
 description: How the agent remembers across sessions. LanceDB-backed semantic memory, the recorder pattern, and the recall tool.
 ---
-The agent doesn't carry conversation history in its context. The database does.
+The agent doesn't carry conversation history in its context. The database does. Memory is queried on demand.
 
-## Why this exists
-
-Long Claude Code sessions get slow because the model re-processes the entire transcript on every turn. Your insight: the agent shouldn't have to remember everything; the database should. Memory is queried on demand, not loaded preemptively.
-
-This pattern is implemented with three pieces: a **recorder** that extracts structured records from each chat turn, a **store** (LanceDB with local embeddings) that holds them, and a **recall tool** the agent calls when it needs prior context.
+Three pieces: a recorder that extracts structured records from each chat turn, a LanceDB store with local embeddings, and a recall tool the agent calls when it needs prior context.
 
 ## The pieces
 
 ### LanceDB store
 
-Embedded vector database. Lives at `/data/memory` inside the api container (volume-mounted so data persists across rebuilds). Embeddings computed locally via `fastembed` (ONNX, ~80MB model, no external API key, no torch dependency).
+Embedded vector database at `/data/memory` inside the api container, volume-mounted for persistence. Embeddings computed locally via `fastembed` (ONNX, ~80MB model).
 
 Schema:
 
@@ -39,7 +35,7 @@ After every chat call, FastAPI fires a `BackgroundTask` that:
 2. Haiku extracts 0-3 typed records per turn (preferences, decisions, lessons, etc.)
 3. Records inserted into LanceDB with embeddings
 
-Cheap (Haiku is fast and inexpensive), non-blocking (fire-and-forget), failure-tolerant (errors are logged, not raised).
+Errors are logged, not raised — recorder failures don't block the chat response.
 
 ### The recall tool
 
@@ -64,16 +60,16 @@ python scripts/backfill-claude-code.py --project c--Users-Liz-Make-Skills --limi
 python scripts/backfill-claude-code.py --dry-run
 ```
 
-It reads JSONL transcripts at `~/.claude/projects/<project>/<session>.jsonl`, pairs user→agent turns, posts each pair to `/memory/ingest`. Re-extraction via Haiku, fresh records inserted. Costs about $0.05 per 50-turn session.
+Reads JSONL transcripts at `~/.claude/projects/<project>/<session>.jsonl`, pairs user→agent turns, posts each pair to `/memory/ingest` for re-extraction via Haiku. Approximately $0.05 per 50-turn session.
 
-## What you see in the UI
+## In the UI
 
-`humancensys.com/memory` (and `localhost:3000/memory` in self-host) renders memory as a search-first page. Type a query, get records ranked by semantic similarity. Filter by type or project_tag. Color-coded badges per record type.
+`humancensys.com/memory` (and `localhost:3000/memory` in self-host) is a search page. Queries return records ranked by semantic similarity. Filters: type, project_tag.
 
 ## Two-mode notes
 
 - **Self-host:** memory lives in your local LanceDB volume. Single user, no scoping needed.
-- **Hosted-multitenant:** memory is `tenant_id`-scoped. Two users with the same query get different results — their own records only. Public knowledge commons (when 3c lands) is a separate, opt-in shared store.
+- **Hosted-multitenant:** memory is `tenant_id`-scoped — each user sees only their own records. Public knowledge commons (Pillar 3c) will be a separate, opt-in shared store.
 
 ## What's next
 

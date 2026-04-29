@@ -57,6 +57,7 @@ services:
       TOGETHER_API_KEY: ${TOGETHER_API_KEY:-}
       GROQ_API_KEY: ${GROQ_API_KEY:-}
       OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
+      OLLAMA_AUTH_HEADER: ${OLLAMA_AUTH_HEADER:-}  # e.g. "Bearer <secret>" when pointing at Docker Cloud / VPS
       DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}@postgres:5432/${POSTGRES_DB:-make_skills}
       AGENT_CONFIG_PATH: /repo/deepagents.toml
       AGENT_REPO_ROOT: /repo

@@ -2,7 +2,7 @@
 title: Contributing
 description: How to contribute to Make_Skills. The four-question discipline, where to add what, and what gets rejected at review.
 ---
-Thanks for considering it. This is the contributor-facing version of [`CONTRIBUTING.md`](https://github.com/Lizo-RoadTown/Make_Skills/blob/main/CONTRIBUTING.md) at the repo root — same rules, same anti-patterns.
+The contributor-facing version of [`CONTRIBUTING.md`](https://github.com/Lizo-RoadTown/Make_Skills/blob/main/CONTRIBUTING.md) at the repo root.
 
 ## Quick start
 
@@ -16,7 +16,7 @@ docker compose up -d --build
 cd ../../web && npm install && npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000). You're talking to a fully-functional agent.
+Open [http://localhost:3000](http://localhost:3000).
 
 ## Where to add what
 
@@ -27,7 +27,7 @@ Open [http://localhost:3000](http://localhost:3000). You're talking to a fully-f
 | A FastAPI endpoint | `platform/api/main.py` (or a sub-module) |
 | An agent tool (`@tool` function) | `platform/api/<area>/tools.py` then wire into `builtin_tools` |
 | A web UI page | `web/app/<route>/page.tsx` |
-| Real software docs | `web/content/docs/<name>.mdx` (or `concepts/`, `tutorials/`, etc.) |
+| Public docs | `web/content/docs/<name>.mdx` (or `concepts/`, `tutorials/`, etc.) |
 | An ADR or design proposal | `docs/decisions/` or `docs/proposals/` (audit trail, separate from `web/content/docs`) |
 
 ## The four-question PR template

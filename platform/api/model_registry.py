@@ -78,9 +78,21 @@ def _groq(name: str, **kwargs: Any) -> BaseChatModel:
 
 
 def _ollama(name: str, **kwargs: Any) -> BaseChatModel:
+    """Local OR remote Ollama. Set OLLAMA_BASE_URL to a tunneled / Docker Cloud /
+    VPS endpoint to point a hosted clan at your own hardware. If the endpoint is
+    auth-protected (recommended for any non-localhost URL), set OLLAMA_AUTH_HEADER
+    (e.g. "Bearer <secret>") and it'll be sent on every request via client_kwargs.
+    See: docs concept "BYO personal Ollama"."""
     from langchain_ollama import ChatOllama
 
     base_url = kwargs.pop("base_url", os.environ.get("OLLAMA_BASE_URL", "http://localhost:11434"))
+    auth_header = kwargs.pop("auth_header", os.environ.get("OLLAMA_AUTH_HEADER"))
+    if auth_header:
+        client_kwargs = kwargs.pop("client_kwargs", {}) or {}
+        headers = dict(client_kwargs.get("headers") or {})
+        headers.setdefault("Authorization", auth_header)
+        client_kwargs["headers"] = headers
+        kwargs["client_kwargs"] = client_kwargs
     return ChatOllama(model=name, base_url=base_url, **kwargs)
 
 

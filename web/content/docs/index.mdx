@@ -1,37 +1,32 @@
 ---
 title: Make_Skills
-description: Personal multi-agent platform that grows with you. Open-source first, hosted SaaS second, both modes from day one.
+description: A multi-agent platform for building, raising, and running personal AI agents. Open-source first, hosted second.
 ---
-A platform for building, raising, and running personal AI agents — not as faceless chatbots, but as a clan of specialized creatures that learn from how you work.
+A multi-agent platform for building, raising, and running personal AI agents. Each user has a clan of specialized agents that learn from how they work.
 
-## The problem this solves
+## What it does
 
-You're working with multiple AI agents — Claude in VS Code, Copilot, ChatGPT, custom deepagents. Each holds context only for its own session. Each forgets when the conversation ends. Skills you teach one don't transfer to another. Your time is spent re-explaining what you've already explained.
+- Memory persists across sessions and across agents (LanceDB-backed semantic memory).
+- Skills accumulate as you work — markdown files agents read, sometimes promoted to tools.
+- Subagents specialize: orchestrator, planner, researcher, plus custom specialists. Each has its own role and contract.
+- Observability covers agent communication tracing, decision audit trails, and Grafana dashboards.
+- Self-host on your machine, or use a hosted instance.
 
-Make_Skills is the unification layer. One place where:
-
-- **Memory persists** across sessions and across agents (LanceDB-backed semantic memory)
-- **Skills accumulate** as you work — markdown files agents read, sometimes promoted to tools
-- **Agents specialize** — orchestrator + planner + researcher + custom specialists, each with its own role and contract
-- **Observability is real** — Grafana dashboards, agent communication tracing, decision audit trails
-- **It's yours** — self-host on your machine, or use a hosted instance, or both
-
-## How to think about it
-
-Three top-level pillars sit on a foundational pillar:
+## Pillars
 
 ```
 Pillar 0 — Foundational
-   Open-source-ready + dual-mode (self-host AND hosted-multitenant)
+   Open-source-ready and dual-mode (self-host AND hosted-multitenant)
    from day one. Tenant abstraction, auth interface, repo strategy.
 
 Pillar 1 — Build agents
-   Create a clan of 3D creatures (Tomagotchi-meets-Spore-meets-MMO).
-   Each subagent has its own board, evolves as it gains skills.
+   Create a clan of 3D creatures. Each subagent has its own board
+   and evolves as it gains skills.
 
 Pillar 2 — Make skills together
-   Collaborative human-agent skill-building. Recorder extracts patterns;
-   curator proposes new skills; user approves; agents grow sharper.
+   Collaborative human-agent skill-building. The recorder extracts
+   patterns; the curator proposes new skills; users approve;
+   agents grow sharper.
 
 Pillar 3 — Observability
    3a. Agent comms (multi-agent flow tracing, cost per skill)
@@ -42,14 +37,14 @@ Pillar 3 — Observability
 
 ## Where to go next
 
-- **Just want to run it?** → [Installation](/docs/installation)
-- **Want to understand the architecture?** → [Architecture](/docs/architecture)
-- **Building or contributing skills?** → [Concepts: agents, skills, tools](/docs/concepts/agents-and-skills)
-- **Curious about the dual-mode discipline?** → [Two-mode commitment](/docs/concepts/two-modes)
-- **Want to contribute code?** → [Contributing](/docs/contributing)
+- [Installation](/docs/installation)
+- [Architecture](/docs/architecture)
+- [Agents, subagents, skills, tools](/docs/concepts/agents-and-skills)
+- [Two-mode commitment](/docs/concepts/two-modes)
+- [Contributing](/docs/contributing)
 
 ## Status
 
-The platform is in active development. Self-host works end-to-end today; hosted-multitenant infrastructure (auth, tenant abstraction) is in progress. Track the live roadmap at [/roadmap](/roadmap) on humancensys.com.
+Self-host runs end-to-end today. Hosted-multitenant infrastructure (auth, tenant abstraction) is in progress. Roadmap at [/roadmap](/roadmap) on humancensys.com.
 
 License: Apache 2.0.

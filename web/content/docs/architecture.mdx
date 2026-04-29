@@ -1,10 +1,10 @@
 ---
 title: Architecture
-description: The clean lines — what's shared, what's per-user, what's per-tenant; and how that maps to Docker containers in self-host vs hosted modes.
+description: What's shared, what's per-user, what's per-tenant, and how that maps to Docker containers in self-host vs hosted modes.
 ---
-This document draws the lines. Every contribution from 2026-04-28 onward respects these layers.
+The layered model and container topology. Contributions from 2026-04-28 onward respect these layers.
 
-## Two deployment modes (always supported, parallel)
+## Two deployment modes
 
 | | Self-host | Hosted-multitenant |
 |---|---|---|
@@ -46,9 +46,9 @@ LAYER 5: Publishable content (opt-in shared)
   └─ Knowledge graph contributions to a public commons (when 3c lands)
 ```
 
-## Container topology — the line you keep asking me to draw
+## Container topology
 
-**This is the question that matters for both modes.** Three real options:
+Three options:
 
 ### Option X — One Docker stack, multi-tenant via `tenant_id`
 
@@ -63,8 +63,8 @@ LAYER 5: Publishable content (opt-in shared)
 └────────────────────────────────────────────────────────┘
 ```
 
-**Pros:** cheap, simple, one thing to operate, what most SaaS does.
-**Cons:** noisy-neighbor risk, one bug can leak data, harder to give users full control.
+**Pros:** cheap, simple, one thing to operate.
+**Cons:** noisy-neighbor risk, a single bug can leak data, less user control.
 
 ### Option Y — Per-user Docker stack (each user = their own deployment)
 
@@ -79,8 +79,8 @@ User A:  ┌─ Docker stack ──┐    User B:  ┌─ Docker stack ──┐
          their Render service             their Render service
 ```
 
-**Pros:** complete data isolation (their data on their infra), user owns it all, simpler legal/regulatory story, matches the "open-source self-host" pillar literally.
-**Cons:** more $$ if Liz hosts (one Render service per user), harder to operate at scale, no cross-tenant features.
+**Pros:** complete data isolation, user owns the infra, simpler legal/regulatory posture.
+**Cons:** more cost if Liz hosts (one Render service per user), harder to operate at scale, no cross-tenant features.
 
 ### Option Z — Hybrid: shared platform, per-user data containers
 
@@ -96,23 +96,19 @@ User A:  ┌─ Docker stack ──┐    User B:  ┌─ Docker stack ──┐
    └──────────────────────┘    └──────────────────────┘
 ```
 
-**Pros:** best of both — shared platform code + isolated user data.
-**Cons:** most complex to operate, requires per-user containers + a routing layer.
+**Pros:** shared platform code with isolated user data.
+**Cons:** highest operational complexity; requires per-user containers and a routing layer.
 
-## What we have today, what's planned, where the gaps are
+## Today vs planned
 
-| Mode | Topology today | Topology planned |
-|------|----------------|------------------|
-| **Self-host** | ✓ Option X with tenant_id="default" — one Docker stack on user's machine, single user. Already shipped. | Stay on this — it's the right choice. |
-| **Hosted (humancensys.com)** | ⚠ Same single-stack as self-host but UI on Vercel, agent backend not yet on Render. NO multi-tenancy yet. | **Choice needed:** X (shared with tenant_id), Y (per-user instances), or Z (hybrid). |
+| Mode | Topology today | Planned |
+|------|----------------|---------|
+| **Self-host** | Option X with `tenant_id="default"` — one Docker stack on the user's machine, single user. | Same. |
+| **Hosted (humancensys.com)** | Single-stack with UI on Vercel; agent backend on Render. No multi-tenancy yet. | Choice: X (shared with tenant_id), Y (per-user instances), or Z (hybrid). |
 
-## The right framing — engine + commons + personal toolkit
+## Engine, commons, personal toolkit
 
-The user's actual vision (clarified 2026-04-28):
-
-> "Some of the architecture is things that should be individual to a user, period — whether we are all using the same engine for something else, some larger organizational thing. I want to build out a larger organizational thing and have something that allows everyone to create their own personal agents and agentic toolkit."
-
-This maps cleanly to a three-tier model that's how most modern multi-user platforms actually work (GitHub, HuggingFace, Notion, Linear):
+A three-tier model:
 
 ```
 ┌─ ENGINE — the larger organizational thing (shared by everyone) ──────────┐
@@ -136,31 +132,31 @@ This maps cleanly to a three-tier model that's how most modern multi-user platfo
 └────────────────┘  └─────────────────┘  └─────────────────────────────┘
 ```
 
-**The engine is the shared organizational thing.** Everyone runs on the same FastAPI, the same deepagents, the same LanceDB binary, the same Grafana — that's "the engine."
+**Engine:** the shared runtime. FastAPI, deepagents, LanceDB, Grafana — same code for every user.
 
-**The commons is the shared *content* layer.** Public skills people can browse and install; public agent templates (specialist creatures); a public knowledge commons users opt into. This is what makes the project a *platform* and not just a *runtime*.
+**Commons:** the shared content layer. Public skills, public agent templates, opt-in public knowledge contributions.
 
-**The personal toolkit is everything individual to a user, period.** Their conversations, their memory, their clan, their roadmap, their private knowledge canon — these never share with another user without explicit publish.
+**Personal toolkit:** per-user data. Conversations, memory, clan, roadmap, private knowledge. Never shared with another user without explicit publish.
 
 ## Recommendation: Option X with explicit commons
 
-**Single shared Docker stack** (the engine), with `tenant_id` partitioning all user-private data. The commons is just data marked `public = true` (or in a special namespace) that any tenant can read.
+A single shared Docker stack (the engine) with `tenant_id` partitioning all user-private data. The commons is data marked `public = true` (or in a separate namespace) that any tenant can read.
 
 | Layer | Container topology | Data isolation |
 |-------|--------------------|----------------|
-| **Engine** | One shared Docker stack (FastAPI + Postgres + LanceDB + Grafana) | n/a — it's code |
-| **Commons** | Lives in shared services | Public namespace; everyone can read; publish requires user consent |
-| **Personal toolkit** | Lives in shared services | `tenant_id` scoped — every query, every read, every write |
+| **Engine** | One shared Docker stack (FastAPI + Postgres + LanceDB + Grafana) | n/a — code |
+| **Commons** | Shared services | Public namespace; readable by everyone; publish requires user consent |
+| **Personal toolkit** | Shared services | `tenant_id`-scoped on every query |
 
-Why this beats Options Y / Z:
+Tradeoffs against the alternatives:
 
-- **Option Y (per-user Docker stacks)** turns this into "we'll deploy your stack on Render for you" — fine, but loses the commons. There's no shared knowledge graph if every user is in their own isolated container. The "larger organizational thing" disappears.
-- **Option Z (hybrid: shared platform + per-user data containers)** is operationally complex with no clear win over Option X for this use case. You only need it when individual tenant data volumes are too big for shared infra (we're nowhere near that).
-- **Option X** is what GitHub, HuggingFace, Notion, Linear, Stripe, and basically every modern multi-tenant SaaS does. It's the proven pattern.
+- **Option Y (per-user Docker stacks)** loses the commons. With every user in an isolated container, there is no shared knowledge graph or cross-user collaboration.
+- **Option Z (hybrid)** adds operational complexity. Justified when per-tenant data volumes outgrow shared infra, which is not the case here.
+- **Option X** matches the pattern used by most multi-tenant platforms (GitHub, HuggingFace, Notion, Linear).
 
-## Open work (the Pillar 0 items)
+## Open work (Pillar 0)
 
-To execute Option X for hosted mode, the foundational work in [`ROADMAP.md`](/roadmap) Pillar 0:
+For Option X in hosted mode, the foundational work in [`ROADMAP.md`](/roadmap) Pillar 0:
 
 - **Tenant abstraction** — `tenant_id` column on every personal-toolkit table, scoped queries everywhere, isolation tests
 - **Auth interface** — `NoAuthBackend` (self-host) and `OAuthBackend` (hosted)
@@ -168,48 +164,47 @@ To execute Option X for hosted mode, the foundational work in [`ROADMAP.md`](/ro
 - **`PLATFORM_MODE` env var** — single switch determines auth backend
 - **Commons table partitioning** — public namespace for skills, agents, KG nodes that opted in to publish
 
-Self-host stays exactly as it is today (Option X with `tenant_id="default"` — equivalently no multi-tenancy code path runs).
+Self-host runs as Option X with `tenant_id="default"` — no multi-tenancy code path executes.
 
-## What this means for the codebase
+## Codebase status
 
-Already done:
+Done:
 
-- ✓ Single Docker stack (`platform/deploy/docker-compose.yml`) — works for self-host AND for "hosted = your own instance"
-- ✓ render.yaml — deploys ONE instance per user trivially
-- ✓ Web UI on Vercel (separate from agent backend) — this part IS shared across users; calls each user's own agent backend via `NEXT_PUBLIC_AGENT_URL`
+- Single Docker stack (`platform/deploy/docker-compose.yml`) for both self-host and "hosted = your own instance"
+- `render.yaml` deploys one instance per user
+- Web UI on Vercel, calling each user's agent backend via `NEXT_PUBLIC_AGENT_URL`
 
-Open work (Option X path, only if/when we add the shared sandbox):
+Open (Option X path):
 
-- Tenant abstraction (`tenant_id` column on data, scoped queries)
+- Tenant abstraction (`tenant_id` column, scoped queries)
 - Auth interface
 - Config loader abstraction
 - `PLATFORM_MODE=multitenant` env var
 
-Open work (Option Y path, the recommended one):
+Open (Option Y path):
 
-- A "deploy to Render" landing flow on humancensys.com that walks users through creating their instance
-- Documentation explaining "your stack, your data, your bill"
-- Optional: a thin routing layer that maps `<username>.humancensys.com` to the user's Render URL
+- A "deploy to Render" flow on humancensys.com
+- Optional: a routing layer mapping `<username>.humancensys.com` to the user's Render URL
 
-## Two-mode discipline (the rule, regardless of topology)
+## Two-mode discipline
 
 Every change considers:
 
-1. What does this look like for a self-host user?
-2. What does this look like for a hosted-multitenant user (when that exists)?
-3. Tests for both modes.
-4. Docs for both modes.
+1. Self-host user impact
+2. Hosted-multitenant user impact (when that mode exists)
+3. Tests for both modes
+4. Docs for both modes
 
-## Anti-patterns to reject
+## Anti-patterns
 
-- Hardcoded paths or queries without tenant scoping (in Option X path)
-- "Multi-tenancy can come later" — once data is being written, retrofitting is a migration nightmare
-- Mixing platform code and tenant data in the same git repo (tenant data NEVER lives in this repo)
+- Hardcoded paths or queries without tenant scoping (in the Option X path)
+- "Multi-tenancy can come later" — retrofitting after data is being written is a migration cost
+- Mixing platform code and tenant data in the same repo
 
-## What this means concretely
+## Concretely
 
-**Self-host:** clone the repo, `docker compose up`, you have the engine running locally for you alone. `tenant_id="default"` is hardcoded in the no-auth path. Same code as hosted, just with auth disabled.
+**Self-host:** `docker compose up` runs the engine locally. `tenant_id="default"` is hardcoded in the no-auth path.
 
-**Hosted (humancensys.com):** Liz operates one Docker stack as the engine. Users sign up, get tenant identities, share infrastructure but never share each other's personal toolkit data. Public skill library and public knowledge commons live in the shared services with a `public = true` marker.
+**Hosted (humancensys.com):** Liz operates one Docker stack as the engine. Users get tenant identities and share infrastructure; personal toolkit data is never shared. Public skill library and knowledge commons live in shared services with a `public = true` marker.
 
-This is the topology. The discipline that protects it: **every PR, every query, every write goes through the tenant abstraction.** Tests verify isolation. Anti-pattern catalog in [`/docs/contributing`](/docs/contributing).
+Every PR, query, and write goes through the tenant abstraction. Tests verify isolation. Anti-patterns at [`/docs/contributing`](/docs/contributing).

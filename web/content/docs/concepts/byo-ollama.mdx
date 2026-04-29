@@ -1,0 +1,137 @@
+---
+title: BYO personal Ollama
+description: Point a Make_Skills subagent at a model running on your own hardware. Laptop tunnel, Docker Cloud, VPS, or AWS/GCP GPU.
+---
+
+By default the `ollama` provider points at `host.docker.internal:11434`, which works for self-host and not for the hosted site at humancensys.com. Setting `OLLAMA_BASE_URL` (and optionally `OLLAMA_AUTH_HEADER`) sends the subagent's traffic to your own endpoint instead.
+
+The per-tenant "register your endpoint" UI on humancensys.com is part of Pillar 0 (tenant abstraction). Until then, set the env var on your own deployment.
+
+## What you need
+
+1. A base URL the api container can reach over HTTPS (e.g. `https://my-ollama.example.com`).
+2. An auth header to protect the endpoint (e.g. `Authorization: Bearer <secret>`).
+
+## Deployment options
+
+| Option | Cost | Always-on | Notes |
+|--------|------|-----------|-------|
+| Tunnel from a laptop | Free | No (laptop sleeps) | Local development, single-user |
+| Docker Cloud / Docker Offload | Pay-per-second | On demand | Per-second container runtime |
+| Small VPS (Hetzner / Fly / Render) | $5–20/mo | Yes | CPU-only models |
+| AWS / GCP GPU instance | Variable (spot or on-demand) | Yes | 70B+ weights, multiple users |
+
+---
+
+## Option 1 — Tunnel from a laptop
+
+[Cloudflare Tunnel](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/) provides a free HTTPS endpoint on `*.trycloudflare.com`.
+
+```bash
+# install cloudflared (mac: brew install cloudflared, win: winget install Cloudflare.cloudflared)
+ollama serve &  # if not already running
+cloudflared tunnel --url http://localhost:11434
+# → outputs https://random-words-1234.trycloudflare.com
+```
+
+Add bearer-token auth via a [Caddy](https://caddyserver.com/) reverse proxy in front of Ollama, or use Cloudflare Access on the tunnel.
+
+In `platform/deploy/.env`:
+
+```bash
+OLLAMA_BASE_URL=https://random-words-1234.trycloudflare.com
+OLLAMA_AUTH_HEADER=Bearer your-long-random-secret
+```
+
+When the laptop sleeps, the tunnel goes down and the subagent falls back to the orchestrator's model.
+
+---
+
+## Option 2 — Docker Cloud (Docker Offload)
+
+Docker Offload runs containers in Docker's cloud, billed per-second. The standard `ollama/ollama` image runs there with a persistent volume for model weights.
+
+```yaml
+# Sketch — exact Docker Cloud syntax may vary; consult docs.docker.com
+services:
+  ollama:
+    image: ollama/ollama:latest
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama-models:/root/.ollama
+    # Recommended: put a Caddy/Traefik sidecar in front for bearer-token auth
+    # so port 11434 is never publicly unauthenticated.
+
+volumes:
+  ollama-models: {}
+```
+
+Pull weights once (`ollama pull llama3.1:8b`), then point Make_Skills at the container's public URL.
+
+---
+
+## Option 3 — AWS / GCP GPU
+
+For 70B+ models or multi-user deployments, run Ollama or [vLLM](https://docs.vllm.ai/) on a `g5.xlarge` / `g6.xlarge` (AWS) or `g2-standard-4` (GCP) with an HTTPS-fronted endpoint and an auth header.
+
+```bash
+# AWS — Deep Learning AMI on a g5.xlarge
+ssh ec2-user@your-instance
+docker run -d --gpus all -p 11434:11434 \
+  -v ollama:/root/.ollama \
+  --name ollama \
+  ollama/ollama:latest
+
+# Front with Caddy or Cloudflare Tunnel for HTTPS + auth
+```
+
+For multi-user setups: an Application Load Balancer with Cognito auth, or Cloudflare Tunnel + Access groups. Sleep the instance when idle (EventBridge cron) to control costs.
+
+vLLM is an alternative to Ollama on GPU hosts — it serves the OpenAI-compatible API and batches requests for higher throughput.
+
+---
+
+## Configuring the subagent
+
+With a URL and token, point a subagent at the endpoint:
+
+```toml
+# subagents/researcher/deepagents.toml
+[model]
+provider = "ollama"
+name = "llama3.1:8b"
+```
+
+Restart the api container.
+
+For OpenAI-compatible endpoints (vLLM, LM Studio, llama.cpp server):
+
+```toml
+[model]
+provider = "openai"
+name = "your-model-name"
+base_url = "https://your-endpoint.example.com/v1"
+```
+
+The `openai` provider in `langchain-openai` honors `base_url`.
+
+## Two-mode notes
+
+| Mode | URL configuration |
+|------|-------------------|
+| Self-host | `OLLAMA_BASE_URL` + `OLLAMA_AUTH_HEADER` in `platform/deploy/.env`. |
+| Hosted-multitenant | Per-tenant; registered via a planned UI, stored encrypted in `tenant_model_endpoints`. Tracked in [Pillar 0](https://github.com/Lizo-RoadTown/Make_Skills/blob/main/ROADMAP.md). |
+
+## Security checklist
+
+- Endpoint requires an auth header. Public Ollama URLs without auth are scraped quickly.
+- Rotate the auth secret if it has been shared in tunnel URLs or logs.
+- Rate-limit at the proxy.
+- Keep the auth header out of logs. `model_registry.py` passes it as a header, not a URL parameter.
+
+## See also
+
+- [Model providers](./model-providers.mdx)
+- [Two modes](./two-modes.mdx)
+- [`docs/proposals/byo-personal-ollama.md`](https://github.com/Lizo-RoadTown/Make_Skills/blob/main/docs/proposals/byo-personal-ollama.md) — design proposal

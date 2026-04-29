@@ -1,20 +1,18 @@
 ---
 title: Two modes — self-host and hosted
-description: The dual-mode commitment. Why every change considers both deployment paths, and what stays the same vs differs across them.
+description: The dual-mode commitment. What stays the same and what differs across self-host and hosted-multitenant deployments.
 ---
-Make_Skills runs in two deployment modes from day one. The same codebase, the same commands, the same architecture — only auth and tenant-scoping differ.
+Make_Skills runs in two deployment modes. The codebase, commands, and architecture are the same; auth and tenant-scoping differ.
 
 ## The commitment
 
-> **Two-mode commitment (2026-04-28):** Every change from this point forward considers both deployment modes (self-host AND hosted-multitenant), with documentation and tests for both.
+> **Two-mode commitment (2026-04-28):** Every change considers both deployment modes (self-host and hosted-multitenant), with documentation and tests for both.
 
-This is captured as [ADR-002](https://github.com/Lizo-RoadTown/Make_Skills/blob/main/docs/decisions/002-two-mode-commitment.md) and enforced through the four-question PR template in [`CONTRIBUTING.md`](https://github.com/Lizo-RoadTown/Make_Skills/blob/main/CONTRIBUTING.md).
+Captured as [ADR-002](https://github.com/Lizo-RoadTown/Make_Skills/blob/main/docs/decisions/002-two-mode-commitment.md). Enforced via the four-question PR template in [`CONTRIBUTING.md`](https://github.com/Lizo-RoadTown/Make_Skills/blob/main/CONTRIBUTING.md).
 
 ## What's the same
 
-Both modes run **the same Docker stack** — same FastAPI, same Postgres, same LanceDB, same skills, same subagents, same UI. The platform code is identical. The skill library is identical. The deepagents runtime is identical.
-
-This isn't a marketing claim. It's enforced by repo structure: there's no `platform-self-host/` and `platform-hosted/`. There's `platform/`, and it works for both.
+Both modes run the same Docker stack: same FastAPI, Postgres, LanceDB, skills, subagents, UI. The repo has one `platform/` directory, not separate self-host and hosted variants.
 
 ## What's different
 
@@ -36,9 +34,7 @@ A single env var:
 PLATFORM_MODE=self_host        # or "multitenant"
 ```
 
-`platform/api/auth.py` (when implemented) reads this at startup and selects the auth backend. All other tenant-aware code calls `get_current_tenant()` and gets the right thing back regardless of mode.
-
-In self-host mode, `get_current_tenant()` returns `"default"`. In hosted, it returns the auth-derived value. Code paths are identical; only the dependency wires differ.
+`platform/api/auth.py` (when implemented) reads this at startup and selects the auth backend. Tenant-aware code calls `get_current_tenant()`; in self-host mode it returns `"default"`, in hosted it returns the auth-derived value.
 
 ## What this means for contributors
 
@@ -55,16 +51,16 @@ Anti-patterns rejected:
 - "Multi-tenancy can come later" — once data is being written without scoping, retrofitting is a migration nightmare
 - Tests that only exercise one mode
 
-## What's open
+## Open work
 
-The hosted-multitenant variant of Make_Skills isn't fully wired yet. Open work tracked under [Pillar 0](/docs/architecture):
+Hosted-multitenant is not yet wired. Tracked under [Pillar 0](/docs/architecture):
 
 - Tenant abstraction (`tenant_id` column, scoped queries, isolation tests)
 - Auth interface (`NoAuthBackend` + stub `OAuthBackend`)
 - Config loader abstraction (filesystem ↔ multi-tenant config store)
 - Mode-aware startup wiring `PLATFORM_MODE`
 
-Self-host works end-to-end today. Hosted lights up incrementally as Pillar 0 ships.
+Self-host runs end-to-end today.
 
 ## What's next
 

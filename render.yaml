@@ -34,6 +34,12 @@ services:
         sync: false
       - key: GROQ_API_KEY
         sync: false
+      # BYO personal Ollama — point at your Docker Cloud / tunneled / VPS endpoint.
+      # Leave unset to disable. Auth header is sent on every request when set.
+      - key: OLLAMA_BASE_URL
+        sync: false
+      - key: OLLAMA_AUTH_HEADER
+        sync: false
       # Auto-wired from the managed Postgres below.
       - key: DATABASE_URL
         fromDatabase:
