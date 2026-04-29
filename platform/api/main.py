@@ -29,6 +29,14 @@ from api.memory.lance import count as memory_count
 from api.memory.lance import list_records as memory_list
 from api.memory.lance import search as memory_search
 from api.memory.recorder import record_turn
+from api.roadmap.file import (
+    VALID_STATUSES,
+    append_under_section,
+    apply_status_update,
+    read_roadmap,
+    write_roadmap,
+)
+from api import fileviewer
 
 log = logging.getLogger("api")
 logging.basicConfig(level=logging.INFO)
@@ -183,6 +191,60 @@ async def memory_records_endpoint(
         raise HTTPException(status_code=500, detail=str(e))
 
 
+# ----- File viewers (docs + skills) -----
+
+
+@app.get("/docs/tree")
+async def docs_tree_endpoint():
+    """Walk docs/ and return a nested tree of markdown files."""
+    try:
+        return {"tree": fileviewer.docs_tree()}
+    except Exception as e:
+        log.exception("docs tree failed")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/docs/file")
+async def docs_file_endpoint(path: str = Query(..., description="Relative path under docs/")):
+    """Return the markdown content of one doc file."""
+    try:
+        return {"path": path, "content": fileviewer.docs_file(path)}
+    except FileNotFoundError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except PermissionError as e:
+        raise HTTPException(status_code=403, detail=str(e))
+    except Exception as e:
+        log.exception("docs file failed")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/skills/list")
+async def skills_list_endpoint():
+    """List skills with their name + description from SKILL.md frontmatter."""
+    try:
+        return {"skills": fileviewer.skills_tree()}
+    except Exception as e:
+        log.exception("skills list failed")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/skills/file")
+async def skills_file_endpoint(path: str = Query(..., description="Relative path under skills/")):
+    """Return the markdown content of a SKILL.md or skill resource."""
+    try:
+        return {"path": path, "content": fileviewer.skills_file(path)}
+    except FileNotFoundError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except PermissionError as e:
+        raise HTTPException(status_code=403, detail=str(e))
+    except Exception as e:
+        log.exception("skills file failed")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ----- Memory stats / search / ingest -----
+
+
 @app.get("/memory/stats")
 async def memory_stats_endpoint():
     """Quick stats — total record count, by type."""
@@ -197,6 +259,71 @@ class IngestRequest(BaseModel):
     user_message: str
     agent_response: str
     source_thread_id: str = "backfill"
+
+
+# ----- Roadmap endpoints -----
+
+
+@app.get("/roadmap")
+async def roadmap_get_endpoint():
+    """Return the raw markdown of ROADMAP.md."""
+    return {"content": read_roadmap()}
+
+
+class RoadmapStatusUpdate(BaseModel):
+    item_title: str
+    new_status: str
+    why: str | None = None
+
+
+@app.post("/roadmap/update_item")
+async def roadmap_update_item_endpoint(req: RoadmapStatusUpdate):
+    """Update a roadmap item's status by matching its first-column title."""
+    if req.new_status not in VALID_STATUSES:
+        raise HTTPException(
+            status_code=400,
+            detail=f"invalid status {req.new_status!r}; must be one of {sorted(VALID_STATUSES)}",
+        )
+    res = apply_status_update(req.item_title, req.new_status, req.why)
+    if not res["ok"]:
+        raise HTTPException(status_code=404, detail=res["error"])
+    return res
+
+
+class RoadmapAppendItem(BaseModel):
+    section_heading: str
+    item_title: str
+    status: str
+    why: str | None = None
+
+
+@app.post("/roadmap/add_item")
+async def roadmap_add_item_endpoint(req: RoadmapAppendItem):
+    """Append a new row under the given roadmap section."""
+    if req.status not in VALID_STATUSES:
+        raise HTTPException(status_code=400, detail=f"invalid status {req.status!r}")
+    from api.roadmap.file import STATUS_EMOJI
+
+    block = f"| {req.item_title} | {STATUS_EMOJI[req.status]} | {req.why or ''} |"
+    res = append_under_section(req.section_heading, block)
+    if not res["ok"]:
+        raise HTTPException(status_code=404, detail=res["error"])
+    return res
+
+
+class RoadmapOverwrite(BaseModel):
+    content: str
+
+
+@app.post("/roadmap/overwrite")
+async def roadmap_overwrite_endpoint(req: RoadmapOverwrite):
+    """Replace the entire ROADMAP.md content. Used by the human-edit path
+    in the UI when she wants to make broader changes than table rows."""
+    write_roadmap(req.content)
+    return {"ok": True, "bytes": len(req.content)}
+
+
+# ----- Memory ingest -----
 
 
 @app.post("/memory/ingest")

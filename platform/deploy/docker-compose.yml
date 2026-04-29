@@ -54,8 +54,10 @@ services:
       AGENT_CONFIG_PATH: /repo/deepagents.toml
       AGENT_REPO_ROOT: /repo
     volumes:
-      # Mount the repo (read-only) so the agent reads skills, subagents, AGENTS.md, deepagents.toml
-      - ../..:/repo:ro
+      # Mount the repo (read-write) so the agent reads skills/subagents/AGENTS.md/deepagents.toml
+      # AND can update ROADMAP.md as it ships work. (On Render, no volume mount; the
+      # baked-in /app copy is read-only there until a future git-commit-from-container path.)
+      - ../..:/repo
       # Persistent semantic memory store (LanceDB directory)
       - memory-data:/data/memory
     ports:

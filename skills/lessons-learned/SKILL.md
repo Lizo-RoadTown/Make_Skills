@@ -116,7 +116,19 @@ The schema is intentionally rigid. Skills that consume intake forms expect this 
 - Periodically as a scheduled background task (via `/schedule`)
 - Before starting a new project that overlaps with old territory (catch up the system on what it should already know)
 
+## Cross-cutting: surface skill→tool promotion candidates
+
+When walking transcripts, also note patterns where the user repeatedly invoked the same skill in the same way (3+ times). Those are inputs to the [`agentic-upskilling`](../agentic-upskilling/SKILL.md) practice — flag them in the report's "Promotion candidates" section so the user can decide whether to promote skill → tool.
+
+The output schema gains an optional section:
+
+```
+Promotion candidates (skill → tool):
+- <skill-name>: invoked N times across M sessions; mechanical sub-step is <description>
+```
+
 ## See also
 
 - [`agentic-skill-design`](../agentic-skill-design/SKILL.md) — the operating pattern this skill (and the skills it produces) follow.
+- [`agentic-upskilling`](../agentic-upskilling/SKILL.md) — the active practice that consumes this skill's "promotion candidates" output.
 - [`web-app-scaffold/intake.md`](../web-app-scaffold/intake.md) — first concrete example, extracted from this repo's setup conversation.

@@ -71,7 +71,18 @@ async def build_agent(config_path: str | Path | None = None, repo_root: str | Pa
     # Built-in tools — what the agent gets without uncommenting any MCPs.
     from api.tools.db import query_db
     from api.memory.recall import recall
-    builtin_tools = [query_db, recall]
+    from api.roadmap.tools import (
+        add_roadmap_item,
+        roadmap_overview,
+        update_roadmap_status,
+    )
+    builtin_tools = [
+        query_db,
+        recall,
+        roadmap_overview,
+        update_roadmap_status,
+        add_roadmap_item,
+    ]
 
     agent = create_deep_agent(
         model=_resolve_model_id(model_cfg),

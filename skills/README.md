@@ -54,6 +54,9 @@ These skills are loaded automatically by deepagents when the agent runs from thi
 | [web-app-scaffold/](web-app-scaffold/) | Scaffold a deployable web app for a specified stack (frontend host + framework + API + DB + domain). Agentic — probes, decides, executes. Has an [intake form](web-app-scaffold/intake.md) and stack [presets](web-app-scaffold/references/). |
 | [agentic-skill-design/](agentic-skill-design/) | Meta-skill for designing skills that DECIDE and EXECUTE rather than ask the user permission for every choice. Captures the PROBE → DECIDE → ACT → REPORT pattern. |
 | [lessons-learned/](lessons-learned/) | Walk back through prior chat transcripts to find systematic friction patterns (recurring info needs, corrections, negotiations) and crystallize them into intake forms + memory updates. |
+| [roadmap-maintenance/](roadmap-maintenance/) | Keep `ROADMAP.md` current as work ships. Agents flip statuses via `update_roadmap_status`; users amend manually anytime. File-backed, rendered at `/roadmap` in the UI. |
+| [open-source-documentation/](open-source-documentation/) | Maintain the `docs/` tree (concepts/how-to/reference/decisions/proposals/per-pillar) for the open-source project. Defines the ADR pattern, the two-mode discipline for every doc, and the freshness rules for keeping docs current. |
+| [agentic-upskilling/](agentic-upskilling/) | **Active practice (not a static doc).** Each user's tool library grows over time as repeatedly-invoked skills get promoted to tools. Defines the promotion criteria, the mechanics, the reverse-direction (tool → skill demotion), and the eventual Pillar 2 site page. |
 
 ## Refreshing the upstream library
 
