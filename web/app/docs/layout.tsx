@@ -6,7 +6,13 @@ import { RootProvider } from "fumadocs-ui/provider/next";
 
 export default function Layout({ children }: { children: ReactNode }) {
   return (
-    <RootProvider>
+    <RootProvider
+      theme={{
+        defaultTheme: "dark",
+        enableSystem: false,
+        forcedTheme: "dark",
+      }}
+    >
       <DocsLayout
         tree={source.pageTree}
         nav={{
