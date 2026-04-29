@@ -1,0 +1,103 @@
+---
+title: Installation (self-host)
+description: Get the Make_Skills platform running on your machine in about five minutes.
+---
+
+# Installation (self-host)
+
+This is the path for running Make_Skills on your own machine — your data, your API keys, your stack. The hosted multi-tenant variant lives at humancensys.com (different setup, see [Two modes](/docs/concepts/two-modes)).
+
+## Prerequisites
+
+- **Docker Desktop** (or Docker Engine + Compose v2)
+- **Node.js 20+** for the web UI dev server
+- **An Anthropic API key** — get one at [console.anthropic.com](https://console.anthropic.com)
+- (Optional) **LlamaParse API key** — for document parsing, free tier at [cloud.llamaindex.ai](https://cloud.llamaindex.ai)
+- (Optional) **Tavily API key** — for web search, free tier at [tavily.com](https://tavily.com)
+
+## Clone and configure
+
+```bash
+git clone https://github.com/Lizo-RoadTown/Make_Skills.git
+cd Make_Skills/platform/deploy
+cp .env.template .env
+```
+
+Open `.env` in your editor and fill in:
+
+```bash
+ANTHROPIC_API_KEY=sk-ant-...           # required
+LLAMA_CLOUD_API_KEY=llx-...            # optional but recommended
+TAVILY_API_KEY=ydc-sk-...              # optional
+```
+
+Postgres runs in trust mode (no password) since the port isn't exposed to the host. If you ever expose port 5432, set a real `POSTGRES_PASSWORD`.
+
+## Bring up the stack
+
+```bash
+docker compose up -d --build
+docker compose logs -f api    # watch the agent build
+```
+
+You'll see:
+```
+INFO:api:Building deepagents agent...
+INFO:api:Agent ready.
+INFO: Uvicorn running on http://0.0.0.0:8001
+```
+
+Three services are now running:
+
+| Service | Port | What |
+|---------|------|------|
+| `api` | 8001 | FastAPI agent backend |
+| `postgres` | (internal) | LangGraph checkpoints + analytics |
+| `grafana` | 3001 | Dashboards (anonymous editor mode) |
+
+LanceDB runs embedded inside the api container.
+
+## Run the web UI
+
+In a separate terminal:
+
+```bash
+cd ../../web
+npm install
+npm run dev
+```
+
+Open [http://localhost:3000](http://localhost:3000). The chat UI talks to the agent at `http://localhost:8001`.
+
+## Verify
+
+```bash
+curl http://localhost:8001/healthz
+# {"status":"ok"}
+
+curl http://localhost:8001/memory/stats
+# {"total":0}  (until you have a chat — recorder fills this)
+```
+
+## Optional: get to humancensys.com from your laptop
+
+If you want to reach your local stack from a different machine, see [Remote access](https://github.com/Lizo-RoadTown/Make_Skills/blob/main/platform/REMOTE_ACCESS.md). Tailscale is the simplest path — works for "my desktop is at home, I'm on my laptop somewhere else."
+
+## Optional: cloud-host this stack on Render
+
+The included `render.yaml` provisions the full stack on Render — useful if you want it always-on without your machine running. Walkthrough at [`platform/RENDER.md`](https://github.com/Lizo-RoadTown/Make_Skills/blob/main/platform/RENDER.md). Costs about $7/month.
+
+## Stop / restart / nuke
+
+```bash
+docker compose stop                # pause; data preserved
+docker compose start               # resume
+docker compose down                # remove containers; volumes preserved
+docker compose down -v             # nuke volumes too (lose conversations + memory)
+```
+
+## What's next
+
+- [Agents and skills](/docs/concepts/agents-and-skills) — the mental model
+- [Memory](/docs/concepts/memory) — how the recorder + LanceDB work
+- [Architecture](/docs/architecture) — the layered model + container topology

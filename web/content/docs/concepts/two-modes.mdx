@@ -1,0 +1,75 @@
+---
+title: Two modes — self-host and hosted
+description: The dual-mode commitment. Why every change considers both deployment paths, and what stays the same vs differs across them.
+---
+
+# Two modes — self-host and hosted
+
+Make_Skills runs in two deployment modes from day one. The same codebase, the same commands, the same architecture — only auth and tenant-scoping differ.
+
+## The commitment
+
+> **Two-mode commitment (2026-04-28):** Every change from this point forward considers both deployment modes (self-host AND hosted-multitenant), with documentation and tests for both.
+
+This is captured as [ADR-002](https://github.com/Lizo-RoadTown/Make_Skills/blob/main/docs/decisions/002-two-mode-commitment.md) and enforced through the four-question PR template in [`CONTRIBUTING.md`](https://github.com/Lizo-RoadTown/Make_Skills/blob/main/CONTRIBUTING.md).
+
+## What's the same
+
+Both modes run **the same Docker stack** — same FastAPI, same Postgres, same LanceDB, same skills, same subagents, same UI. The platform code is identical. The skill library is identical. The deepagents runtime is identical.
+
+This isn't a marketing claim. It's enforced by repo structure: there's no `platform-self-host/` and `platform-hosted/`. There's `platform/`, and it works for both.
+
+## What's different
+
+| | Self-host | Hosted-multitenant |
+|---|---|---|
+| Who runs the stack | The user, locally or on their VPS | Liz, on humancensys.com |
+| Auth | None — single user | OAuth (provider TBD — Pillar 0 open question) |
+| Data isolation | Trivial — one user | `tenant_id` column on every personal-toolkit row, scoped queries everywhere |
+| API keys | User's own keys in their `.env` | User brings their own keys (BYO) |
+| Cost | User pays compute + their inference | Liz pays infra; user pays their inference |
+| Visibility | Localhost only (or Tailscale-shared) | Public via humancensys.com |
+| Other users | n/a | Shared infrastructure, isolated data, optional public commons |
+
+## Mode detection
+
+A single env var:
+
+```bash
+PLATFORM_MODE=self_host        # or "multitenant"
+```
+
+`platform/api/auth.py` (when implemented) reads this at startup and selects the auth backend. All other tenant-aware code calls `get_current_tenant()` and gets the right thing back regardless of mode.
+
+In self-host mode, `get_current_tenant()` returns `"default"`. In hosted, it returns the auth-derived value. Code paths are identical; only the dependency wires differ.
+
+## What this means for contributors
+
+Every PR is reviewed against four questions:
+
+1. What changes for a self-host user?
+2. What changes for the hosted-multitenant deployment?
+3. **Tests:** unit + integration for both modes (at minimum: a test with `tenant_id="default"` AND a test with a synthetic non-default `tenant_id` verifying isolation)
+4. **Docs:** the relevant doc explains how the change appears in both modes
+
+Anti-patterns rejected:
+
+- Hardcoded paths or queries without tenant scoping (outside the no-auth self-host path)
+- "Multi-tenancy can come later" — once data is being written without scoping, retrofitting is a migration nightmare
+- Tests that only exercise one mode
+
+## What's open
+
+The hosted-multitenant variant of Make_Skills isn't fully wired yet. Open work tracked under [Pillar 0](/docs/architecture):
+
+- Tenant abstraction (`tenant_id` column, scoped queries, isolation tests)
+- Auth interface (`NoAuthBackend` + stub `OAuthBackend`)
+- Config loader abstraction (filesystem ↔ multi-tenant config store)
+- Mode-aware startup wiring `PLATFORM_MODE`
+
+Self-host works end-to-end today. Hosted lights up incrementally as Pillar 0 ships.
+
+## What's next
+
+- [Architecture](/docs/architecture) — the layered model that makes both modes possible
+- [Contributing](/docs/contributing) — the four-question discipline in detail

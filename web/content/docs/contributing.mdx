@@ -1,0 +1,79 @@
+---
+title: Contributing
+description: How to contribute to Make_Skills. The four-question discipline, where to add what, and what gets rejected at review.
+---
+
+# Contributing
+
+Thanks for considering it. This is the contributor-facing version of [`CONTRIBUTING.md`](https://github.com/Lizo-RoadTown/Make_Skills/blob/main/CONTRIBUTING.md) at the repo root — same rules, same anti-patterns.
+
+## Quick start
+
+```bash
+git clone https://github.com/Lizo-RoadTown/Make_Skills.git
+cd Make_Skills
+# Self-host the platform (full instructions in /docs/installation)
+cd platform/deploy && cp .env.template .env  # fill in ANTHROPIC_API_KEY
+docker compose up -d --build
+# In another terminal: run the web UI
+cd ../../web && npm install && npm run dev
+```
+
+Open [http://localhost:3000](http://localhost:3000). You're talking to a fully-functional agent.
+
+## Where to add what
+
+| You're adding... | It goes... |
+|-------------------|-----------|
+| A SKILL.md (markdown wisdom) | `skills/<name>/SKILL.md` |
+| A subagent persona | `subagents/<name>/AGENTS.md` + `deepagents.toml` |
+| A FastAPI endpoint | `platform/api/main.py` (or a sub-module) |
+| An agent tool (`@tool` function) | `platform/api/<area>/tools.py` then wire into `builtin_tools` |
+| A web UI page | `web/app/<route>/page.tsx` |
+| Real software docs | `web/content/docs/<name>.mdx` (or `concepts/`, `tutorials/`, etc.) |
+| An ADR or design proposal | `docs/decisions/` or `docs/proposals/` (audit trail, separate from `web/content/docs`) |
+
+## The four-question PR template
+
+Every PR is reviewed against:
+
+1. **What changes for a self-host user?** Do they need to update env vars, rebuild, run a migration?
+2. **What changes for the hosted-multitenant deployment?** Same questions, plus: does it touch tenant scoping correctly?
+3. **Tests for both modes?** At minimum: a test with `tenant_id="default"` (self-host) AND a test with a synthetic non-default `tenant_id` (hosted) verifying isolation.
+4. **Docs for both modes?** The relevant doc explains how the change appears in both modes.
+
+A PR missing any of those four is incomplete.
+
+## Anti-patterns rejected at review
+
+- **Hardcoded `tenant_id="default"`** outside the `NoAuthBackend` self-host path
+- **Direct filesystem reads** bypassing the `config_loader` abstraction (when added)
+- **"Multi-tenancy later"** — once data is being written, retrofitting is a migration nightmare
+- **Tests that only cover one mode**
+- **A new feature without docs in the same PR**
+- **Premature tool extraction** — promoting a skill to a tool before it's been used 3+ times the same way (see [`agentic-upskilling`](https://github.com/Lizo-RoadTown/Make_Skills/blob/main/skills/agentic-upskilling/SKILL.md))
+- **ADR amended in place after acceptance** — write a superseding ADR instead, mark old one as Superseded by
+
+## Patterns we like
+
+- Use `Depends(current_tenant)` in any new FastAPI endpoint that touches tenant data
+- Filter every database query by `tenant_id` (helper functions encouraged)
+- Document the data type's tenant scope in a comment at the top of the model definition
+- Provide both a self-host smoke test (`docker compose up && curl /healthz`) and a multi-tenant test (mock auth, verify isolation)
+- New skills follow the [`agentic-skill-design`](https://github.com/Lizo-RoadTown/Make_Skills/blob/main/skills/agentic-skill-design/SKILL.md) PROBE → DECIDE → ACT → REPORT pattern
+
+## License
+
+Apache 2.0 ([`LICENSE`](https://github.com/Lizo-RoadTown/Make_Skills/blob/main/LICENSE)). Inbound = outbound: by contributing, you agree your contributions are licensed under the same terms.
+
+The license decision is captured as [ADR-001](https://github.com/Lizo-RoadTown/Make_Skills/blob/main/docs/decisions/001-license-apache-2.md) — patent grant matters in AI, highest adoption in the AI/ML ecosystem, dual-license-able later if commercial defense becomes priority.
+
+## Code of Conduct
+
+TBD. Defaulting to the [Contributor Covenant](https://www.contributor-covenant.org/) until adopted explicitly. Be kind, give credit, assume good faith, no harassment.
+
+## Questions
+
+- **Architecture questions** — open a Discussion (preferred) or a GitHub issue with the `architecture` label
+- **Bugs** — GitHub issue with reproduction steps in self-host mode (most accessible to reproduce)
+- **Feature ideas** — open a Discussion first; major features should start as a one-page design proposal in `docs/proposals/` that addresses the four discipline questions
