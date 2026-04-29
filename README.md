@@ -3,9 +3,9 @@
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 [![Live](https://img.shields.io/badge/live-humancensys.com-blue)](https://humancensys.com)
 
-**An academic agentic-AI multiplayer world-building tool.** Students build their own AI in early university and carry it through their studies, leveling it up over time, taking it on real-world quests (build a website for a local business, reproduce a published methodology, compose music with an AI co-pilot), and eventually contributing to online neural network building with their classmates.
+**An academic agentic-AI multiplayer world-building tool.** Students build their own AI and carry it through their studies, leveling it up over time, taking it on real-world quests (build a website for a local business, reproduce a published methodology, compose music with an AI co-pilot), and eventually contributing to online neural network building with their classmates.
 
-Open-source first, hosted second, both modes from day one.
+Open-source first and hosted.
 
 ---
 
