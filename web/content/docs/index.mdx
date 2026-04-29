@@ -1,0 +1,58 @@
+---
+title: Make_Skills
+description: Personal multi-agent platform that grows with you. Open-source first, hosted SaaS second, both modes from day one.
+---
+
+# Make_Skills
+
+A platform for building, raising, and running personal AI agents — not as faceless chatbots, but as a clan of specialized creatures that learn from how you work.
+
+## The problem this solves
+
+You're working with multiple AI agents — Claude in VS Code, Copilot, ChatGPT, custom deepagents. Each holds context only for its own session. Each forgets when the conversation ends. Skills you teach one don't transfer to another. Your time is spent re-explaining what you've already explained.
+
+Make_Skills is the unification layer. One place where:
+
+- **Memory persists** across sessions and across agents (LanceDB-backed semantic memory)
+- **Skills accumulate** as you work — markdown files agents read, sometimes promoted to tools
+- **Agents specialize** — orchestrator + planner + researcher + custom specialists, each with its own role and contract
+- **Observability is real** — Grafana dashboards, agent communication tracing, decision audit trails
+- **It's yours** — self-host on your machine, or use a hosted instance, or both
+
+## How to think about it
+
+Three top-level pillars sit on a foundational pillar:
+
+```
+Pillar 0 — Foundational
+   Open-source-ready + dual-mode (self-host AND hosted-multitenant)
+   from day one. Tenant abstraction, auth interface, repo strategy.
+
+Pillar 1 — Build agents
+   Create a clan of 3D creatures (Tomagotchi-meets-Spore-meets-MMO).
+   Each subagent has its own board, evolves as it gains skills.
+
+Pillar 2 — Make skills together
+   Collaborative human-agent skill-building. Recorder extracts patterns;
+   curator proposes new skills; user approves; agents grow sharper.
+
+Pillar 3 — Observability
+   3a. Agent comms (multi-agent flow tracing, cost per skill)
+   3b. Grafana dashboards
+   3c. Knowledge library (extract → review → canonical graph,
+        modeled on PROVES_LIBRARY)
+```
+
+## Where to go next
+
+- **Just want to run it?** → [Installation](/docs/installation)
+- **Want to understand the architecture?** → [Architecture](/docs/architecture)
+- **Building or contributing skills?** → [Concepts: agents, skills, tools](/docs/concepts/agents-and-skills)
+- **Curious about the dual-mode discipline?** → [Two-mode commitment](/docs/concepts/two-modes)
+- **Want to contribute code?** → [Contributing](/docs/contributing)
+
+## Status
+
+The platform is in active development. Self-host works end-to-end today; hosted-multitenant infrastructure (auth, tenant abstraction) is in progress. Track the live roadmap at [/roadmap](/roadmap) on humancensys.com.
+
+License: Apache 2.0.
