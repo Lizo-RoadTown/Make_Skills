@@ -4,9 +4,21 @@
 **Authors:** Liz, agent-assisted
 **Date:** 2026-04-28
 
-## Direction (from Liz, 2026-04-28)
+## Direction (from Liz, 2026-04-28 — three increments same day)
 
-> The agents are not going to be nothing. They're going to be like Tomagotchis. Not people. They will be like very dull furry creatures. Think — like Spore creatures that have to evolve into more useful things. We give them bodies to take care of, but not human like. They can have emotions, but not sophisticated ones.
+**Increment 1 — creature framing:**
+
+> Tomagotchis. Not people. Like very dull furry creatures. Think Spore creatures that have to evolve into more useful things. Bodies to take care of, but not human-like. Simple emotions, not sophisticated ones.
+
+**Increment 2 — multiplayer / clan / RPG framing:**
+
+> This is multiplayer, and the creatures acquire skills and the subagents are part of them, but like body parts that have to be taken care of and monitored closely in the same way that creature does, so each has their own board (think like a multiplayer role playing game where the players have skills, but in this case you are probably running a whole clan). You'll probably start out with one or two that you train for very specific purposes.
+
+**Increment 3 — visual fidelity:**
+
+> Art that is good enough for now, easy to render, can create cute characters. Doesn't need perfection but does need to be 3D. Look at the [curation_dashboard](C:/Users/Liz/PROVES_LIBRARY/curation_dashboard) for inspiration on using an engine with a simulator.
+
+The three combine into a **multiplayer 3D clan management** model: each user runs a clan of related creatures (orchestrator + subagents), each creature has its own status board, you specialize creatures for specific purposes, and other users can see / interact with clans (scope TBD). Visual stack mirrors the curation_dashboard precedent.
 
 ## Why this is good product thinking
 
@@ -19,20 +31,43 @@
 
 | Pillar / system | How creatures connect |
 |-----------------|------------------------|
-| Pillar 1 — Build agents | The creature IS the agent. Building = birthing + raising. |
-| Pillar 2 — Make skills together | Skills the creature learns / tools it gains map to body parts. The `/skills/upskilling` page IS the creature's growth log. |
-| Pillar 3 — Observability | The creature's mood = lightweight observability. "It's hungry / tired / confused" = "you haven't used it in a while / token usage spiked / a tool keeps failing." |
-| `agentic-upskilling` skill | The promotion loop becomes "your creature evolved" — same mechanic, embodied. |
-| Recorder / memory | "Feeding" the creature = giving it conversations, records to digest. |
+| Pillar 1 — Build agents | Each creature IS one agent (orchestrator OR a subagent). Building = birthing + raising members of your clan. |
+| Pillar 2 — Make skills together | Skills the creature learns / tools it gains map to body parts on THAT specific creature. Subagent specialists gain different body shapes than the orchestrator. The `/upskilling` page tracks growth per-creature. |
+| Pillar 3 — Observability | Each creature's mood + status = its own dashboard board. The clan-wide view is one of the observability sub-sections (3a — agent comms, made literal). |
+| `agentic-upskilling` skill | Promotion = a specific creature in the clan evolves. The user picks WHICH creature gets the new tool. |
+| Recorder / memory | Each creature has its own memory subset (its conversations, its records). Multiplayer optionally lets clans share notes. |
+| Multiplayer | Cross-clan visibility (read-only by default). Federation via MCP — your researcher creature can call my researcher creature with explicit permission. |
 
 ## Mechanics (sketches — open questions follow)
 
-### Form
+### Form (3D, low-poly, three.js stack)
 
-- A simple shape (blob, lump, fuzzy potato) that gains visible features as it grows
-- Default: a featureless rounded body, color-shifted by mood
-- Each promoted skill / added tool / new capability → one new visible feature (eye, ear, mouth, leg, tail, fur color/pattern)
-- Different users' creatures look different because their accumulated capabilities differ
+- **Engine:** `three.js` + `react-three-fiber` (React wrapper) + `@react-three/drei` (helpers). Mirrors the [curation_dashboard precedent](C:/Users/Liz/PROVES_LIBRARY/curation_dashboard) — same family.
+- **Aesthetic:** low-poly / voxel / "blob with simple geometry" — Crossy Road / Untitled Goose Game / Slime Rancher territory. Charm > fidelity. Easy to render. Easy to compose body parts as separate meshes.
+- **Body model:** each creature is a parametric 3D mesh — base body + slot-attached parts. Slots: eye(s), ear(s), mouth, limb(s), tail, antenna, headgear. Each slot is a swap-target for visible-skill-acquired changes.
+- **Camera:** orbit camera on the creature's "board" (one creature per board). Zoom to look closer. The clan view is a top-down or perspective camera over the whole clan.
+- **Animation:** simple — idle bob, happy bounce, hungry slump, hibernate curl. Possibly via [Drei's Float](https://github.com/pmndrs/drei) primitives.
+- **Performance budget:** ~6 creatures visible at once at 60fps on a midrange laptop. Each creature ~few hundred triangles, single-mesh-per-part. Reuse geometries.
+
+### Each creature's board (per-creature dashboard)
+
+Each subagent creature has its own board — one tab/view per creature. The board shows:
+
+- **3D viewport** — the creature itself, animated by mood
+- **Stats** — level, mood, energy, focus, "hunger" (interaction recency)
+- **Equipped skills** — list of SKILL.md files this creature can load (subset of the user's library)
+- **Equipped tools** — functions this creature can call
+- **Recent activity** — last N tool calls, sub-tasks worked on
+- **Recent feedback** — what the user has corrected / approved
+- **Promotion candidates** specific to this creature (drives the upskilling loop)
+- **Specialization** — what this creature is being trained for (researcher? writer? planner?)
+
+### Clan view (the team)
+
+- Top-down view of all creatures the user runs
+- Shows them in their natural habitat / nest / shared environment (decorated by user achievements?)
+- Click any creature to drill into its board
+- Add-creature button to spawn a new specialist (with onboarding choosing class/role)
 
 ### Lifecycle
 
