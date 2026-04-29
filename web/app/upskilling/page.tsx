@@ -4,24 +4,29 @@ import { StubPage } from "@/components/StubPage";
 export default function UpskillingPage() {
   return (
     <StubPage
-      title="Agentic upskilling"
+      title="Quests & Upskilling"
       pillar="Pillar 2 — Make skills together"
-      blurb="The active practice of personalizing your agent over time. The agent observes which skills you invoke repeatedly, surfaces promotion candidates (skill → tool), and once you approve, the function is wired in. Same interface for every user; the content (your skills, your tools, your evolution) is unique to you."
+      blurb="Skill acquisition through real work. Each quest is a self-contained mini-project (build a landing page for a real local business, compose a 30-second loop, reproduce a published methodology) that grants skills to your creature and quietly teaches engineering. Curated library + AI-generated personalized quests + your own user-defined quests. After several completed quests, the observability layer surfaces who's earning their keep — that's where the retirement mechanic kicks in."
       bullets={[
-        "Your skill library — what wisdom your agent has accumulated",
-        "Your tool library — what functions your agent can call",
-        "Promotion candidates — skills used 3+ times, ready to mechanize",
-        "Demotion candidates — tools that aren't earning their slot",
-        "Promotion log — the audit trail of decisions",
-        "Manual promotion — paste a skill name, click promote, agent generates the tool with two-mode tests",
+        "Quest categories: music · make money (business) · contribute to science · social impact · custom",
+        "Three sources: curated library (20-30 launch quests) / AI-generated personalized / user-defined",
+        "Live mechanics: accept → work in chat → progress milestones at 25/50/75% with guidance prompts → verify → reward (XP, skills, body parts, occasional creature evolution)",
+        "Skill→tool promotion happens NATURALLY as quest completion repeats the same skill",
+        "After ~3-5 quests, Pillar 3 observability becomes meaningful — token cost / speed / quality data per creature, with system guidance on what to optimize",
+        "Hardest mechanic: at clan-cap, retire underperformers vs your declared goals. Archive (not delete) — the lifelong-companion promise.",
+        "Phase 2 unlocks after solo loop mastery: group quests, shared knowledge observatories, organizations, collective neural networks",
       ]}
       references={[
         {
-          label: "Skill — agentic-upskilling/SKILL.md",
-          href: "/skills",
+          label: "Design proposal — quest-system.md",
+          href: "/docs",
         },
         {
-          label: "Skill — agentic-skill-design/SKILL.md (parent)",
+          label: "Design proposal — agent-retirement-and-clan-optimization.md",
+          href: "/docs",
+        },
+        {
+          label: "Skill — agentic-upskilling (the skill→tool loop quests drive)",
           href: "/skills",
         },
         {
