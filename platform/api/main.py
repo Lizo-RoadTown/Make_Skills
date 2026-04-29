@@ -36,6 +36,7 @@ from api.roadmap.file import (
     read_roadmap,
     write_roadmap,
 )
+from api import fileviewer
 
 log = logging.getLogger("api")
 logging.basicConfig(level=logging.INFO)
@@ -188,6 +189,60 @@ async def memory_records_endpoint(
     except Exception as e:
         log.exception("Memory list failed")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# ----- File viewers (docs + skills) -----
+
+
+@app.get("/docs/tree")
+async def docs_tree_endpoint():
+    """Walk docs/ and return a nested tree of markdown files."""
+    try:
+        return {"tree": fileviewer.docs_tree()}
+    except Exception as e:
+        log.exception("docs tree failed")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/docs/file")
+async def docs_file_endpoint(path: str = Query(..., description="Relative path under docs/")):
+    """Return the markdown content of one doc file."""
+    try:
+        return {"path": path, "content": fileviewer.docs_file(path)}
+    except FileNotFoundError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except PermissionError as e:
+        raise HTTPException(status_code=403, detail=str(e))
+    except Exception as e:
+        log.exception("docs file failed")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/skills/list")
+async def skills_list_endpoint():
+    """List skills with their name + description from SKILL.md frontmatter."""
+    try:
+        return {"skills": fileviewer.skills_tree()}
+    except Exception as e:
+        log.exception("skills list failed")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/skills/file")
+async def skills_file_endpoint(path: str = Query(..., description="Relative path under skills/")):
+    """Return the markdown content of a SKILL.md or skill resource."""
+    try:
+        return {"path": path, "content": fileviewer.skills_file(path)}
+    except FileNotFoundError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except PermissionError as e:
+        raise HTTPException(status_code=403, detail=str(e))
+    except Exception as e:
+        log.exception("skills file failed")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ----- Memory stats / search / ingest -----
 
 
 @app.get("/memory/stats")

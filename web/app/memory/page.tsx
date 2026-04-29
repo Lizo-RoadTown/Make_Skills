@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 const AGENT_URL =
   process.env.NEXT_PUBLIC_AGENT_URL || "http://localhost:8001";
 
-type Record = {
+type MemoryRecord = {
   id: string;
   type: string;
   content: string;
@@ -35,7 +35,7 @@ const TYPE_COLORS: Record<string, string> = {
 export default function MemoryPage() {
   const [query, setQuery] = useState("");
   const [activeQuery, setActiveQuery] = useState("");
-  const [records, setRecords] = useState<Record[]>([]);
+  const [records, setRecords] = useState<MemoryRecord[]>([]);
   const [loading, setLoading] = useState(false);
   const [filterType, setFilterType] = useState<string>("");
   const [filterTag, setFilterTag] = useState<string>("");
@@ -179,6 +179,8 @@ export default function MemoryPage() {
           <select
             value={filterType}
             onChange={(e) => setFilterType(e.target.value)}
+            aria-label="Filter records by type"
+            title="Filter records by type"
             className="rounded bg-zinc-800 px-2 py-1 text-zinc-300"
           >
             <option value="">all types</option>
@@ -231,6 +233,7 @@ export default function MemoryPage() {
                 {r.project_tags?.map((t) => (
                   <button
                     key={t}
+                    type="button"
                     onClick={() => setFilterTag(t)}
                     className="rounded border border-zinc-700 bg-zinc-800 px-2 py-0.5 text-zinc-400 hover:bg-zinc-700"
                   >
