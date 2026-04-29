@@ -39,9 +39,8 @@ const NAV: NavGroup[] = [
         href: "/observability",
         label: "Observability",
         pillar: "3",
-        status: "stub",
+        status: "live",
       },
-      { href: "/dashboard", label: "Grafana", pillar: "3b", status: "live" },
     ],
   },
 ];
