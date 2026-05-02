@@ -45,10 +45,15 @@ services:
         fromDatabase:
           name: make-skills-db
           property: connectionString
-      # Pillar 0 — auth backend selector. Stays self_host until a hosted
-      # JWT auth provider is chosen (open question in the proposal).
+      # Pillar 0 — auth backend selector. Set to "hosted" to enable JWT
+      # verification. Defaults here to self_host so the api boots cleanly
+      # before the Next.js Auth.js app on Vercel is wired.
       - key: PLATFORM_MODE
         value: self_host
+      # Auth.js shared secret (HS256). Required when PLATFORM_MODE=hosted.
+      # Must match the AUTH_SECRET set on Vercel for the Next.js app.
+      - key: AUTH_SECRET
+        sync: false
       # Static config — these are baked-in paths (no volume mount on Render).
       - key: AGENT_CONFIG_PATH
         value: /app/deepagents.toml

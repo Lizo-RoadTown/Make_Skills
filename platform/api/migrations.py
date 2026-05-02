@@ -99,6 +99,115 @@ async def migrate_postgres(pool: AsyncConnectionPool) -> None:
             log.info("postgres migration: tenants + conversations ready")
 
 
+async def migrate_auth_tables(pool: AsyncConnectionPool) -> None:
+    """Pillar 0 — Auth.js v5 + invite-only signup tables.
+
+    Six tables:
+      - users / accounts / sessions / verification_tokens (Auth.js Drizzle
+        adapter expects these — column casing matches the adapter's spec)
+      - invitations (our invite-only gate; signIn callback consumes atomically)
+      - tenant_users (maps users.id -> tenant_id; populated on first sign-in)
+
+    Single source of truth: this migration creates the tables, Drizzle on
+    the Next.js side just describes them in TypeScript for query
+    type-safety. No Drizzle migrations run.
+    """
+    async with pool.connection() as conn:
+        async with conn.transaction():
+            # Auth.js core: users
+            await conn.execute("""
+                CREATE TABLE IF NOT EXISTS users (
+                    id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                    name          TEXT,
+                    email         TEXT NOT NULL UNIQUE,
+                    "emailVerified" TIMESTAMPTZ,
+                    image         TEXT
+                )
+            """)
+
+            # Auth.js core: accounts (OAuth provider linkage)
+            await conn.execute("""
+                CREATE TABLE IF NOT EXISTS accounts (
+                    "userId"            UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                    type                TEXT NOT NULL,
+                    provider            TEXT NOT NULL,
+                    "providerAccountId" TEXT NOT NULL,
+                    refresh_token       TEXT,
+                    access_token        TEXT,
+                    expires_at          INTEGER,
+                    token_type          TEXT,
+                    scope               TEXT,
+                    id_token            TEXT,
+                    session_state       TEXT,
+                    PRIMARY KEY (provider, "providerAccountId")
+                )
+            """)
+            await conn.execute(
+                "CREATE INDEX IF NOT EXISTS accounts_user_idx ON accounts (\"userId\")"
+            )
+
+            # Auth.js core: sessions (unused with JWT strategy but adapter expects)
+            await conn.execute("""
+                CREATE TABLE IF NOT EXISTS sessions (
+                    "sessionToken" TEXT PRIMARY KEY,
+                    "userId"       UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                    expires        TIMESTAMPTZ NOT NULL
+                )
+            """)
+
+            # Auth.js core: verification_tokens (magic links, unused)
+            await conn.execute("""
+                CREATE TABLE IF NOT EXISTS verification_tokens (
+                    identifier TEXT NOT NULL,
+                    token      TEXT NOT NULL,
+                    expires    TIMESTAMPTZ NOT NULL,
+                    PRIMARY KEY (identifier, token)
+                )
+            """)
+
+            # Our domain: invitations
+            # Token defaults to a 48-char hex string (24 random bytes).
+            # No RLS: signIn looks up by email without a tenant context;
+            # listing for management goes through the FastAPI side which
+            # scopes to the calling tenant via the API layer.
+            await conn.execute("""
+                CREATE TABLE IF NOT EXISTS invitations (
+                    id                 UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                    email              TEXT NOT NULL,
+                    tenant_id          UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+                    invited_by_user_id UUID REFERENCES users(id) ON DELETE SET NULL,
+                    token              TEXT NOT NULL UNIQUE
+                                       DEFAULT encode(gen_random_bytes(24), 'hex'),
+                    created_at         TIMESTAMPTZ NOT NULL DEFAULT now(),
+                    consumed_at        TIMESTAMPTZ,
+                    consumed_by_email  TEXT
+                )
+            """)
+            # Partial unique index: one outstanding invite per email at a time.
+            await conn.execute("""
+                CREATE UNIQUE INDEX IF NOT EXISTS invitations_email_unconsumed
+                    ON invitations (email) WHERE consumed_at IS NULL
+            """)
+            await conn.execute(
+                "CREATE INDEX IF NOT EXISTS invitations_tenant_idx ON invitations (tenant_id)"
+            )
+
+            # Our domain: tenant_users (one row per user → tenant mapping)
+            await conn.execute("""
+                CREATE TABLE IF NOT EXISTS tenant_users (
+                    user_id    UUID PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+                    tenant_id  UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+                    role       TEXT NOT NULL DEFAULT 'member',
+                    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+                )
+            """)
+            await conn.execute(
+                "CREATE INDEX IF NOT EXISTS tenant_users_tenant_idx ON tenant_users (tenant_id)"
+            )
+
+            log.info("postgres migration: auth tables ready (users, accounts, sessions, verification_tokens, invitations, tenant_users)")
+
+
 async def migrate_lancedb() -> None:
     """Add tenant_id + visibility columns to the LanceDB records table.
 
@@ -140,4 +249,5 @@ async def run_all(pool: AsyncConnectionPool) -> None:
     """Entrypoint called from main.py lifespan. Postgres first (auth-critical),
     LanceDB second (recorder-related)."""
     await migrate_postgres(pool)
+    await migrate_auth_tables(pool)
     await migrate_lancedb()

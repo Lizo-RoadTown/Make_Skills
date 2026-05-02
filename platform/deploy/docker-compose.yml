@@ -45,9 +45,11 @@ services:
         condition: service_healthy
     environment:
       # Pillar 0 — selects auth backend at startup. self_host (default) means
-      # no auth, single tenant. hosted means JWT-verified per-request tenant
-      # (verifier wiring tied to the auth-provider decision).
+      # no auth, single tenant. hosted means JWT-verified per-request tenant.
       PLATFORM_MODE: ${PLATFORM_MODE:-self_host}
+      # Auth.js shared secret for HS256 JWT verification. Required when
+      # PLATFORM_MODE=hosted; must byte-match web/.env.local AUTH_SECRET.
+      AUTH_SECRET: ${AUTH_SECRET:-}
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:?must be set in .env}
       LLAMA_CLOUD_API_KEY: ${LLAMA_CLOUD_API_KEY:-}
       TAVILY_API_KEY: ${TAVILY_API_KEY:-}
