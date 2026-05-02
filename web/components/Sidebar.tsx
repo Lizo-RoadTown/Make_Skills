@@ -95,7 +95,7 @@ export function Sidebar() {
 
   return (
     <>
-      {/* Mobile top bar — visible below md */}
+      {/* Mobile top bar — visible below md only */}
       <div className="fixed top-0 left-0 right-0 z-30 flex items-center justify-between border-b border-zinc-800 bg-zinc-950 px-4 py-3 md:hidden">
         <button
           type="button"
@@ -120,13 +120,13 @@ export function Sidebar() {
         <Link href="/" className="text-sm font-semibold text-zinc-100">
           Make_Skills
         </Link>
-        <div className="w-7" /> {/* spacer to balance the hamburger */}
+        <div className="w-7" />
       </div>
 
       {/* Mobile-only spacer so content doesn't sit under the fixed top bar */}
-      <div className="h-12 md:hidden" />
+      <div className="h-12 shrink-0 md:hidden" />
 
-      {/* Drawer overlay (mobile only, when open) */}
+      {/* Mobile drawer overlay */}
       {open && (
         <button
           type="button"
@@ -136,110 +136,159 @@ export function Sidebar() {
         />
       )}
 
-      {/* Sidebar — fixed slide-in on mobile, static on md+ */}
+      {/* Mobile drawer — slides in/out, only renders below md */}
       <aside
-        className={`fixed top-0 bottom-0 left-0 z-50 w-64 transform flex-col border-r border-zinc-800 bg-zinc-950 transition-transform md:static md:z-0 md:flex md:w-60 md:translate-x-0 ${
-          open ? "flex translate-x-0" : "flex -translate-x-full md:translate-x-0"
+        aria-label="Mobile navigation"
+        className={`fixed top-0 bottom-0 left-0 z-50 flex w-64 flex-col border-r border-zinc-800 bg-zinc-950 transition-transform md:hidden ${
+          open ? "translate-x-0" : "-translate-x-full"
         }`}
       >
-        <div className="flex items-center justify-between border-b border-zinc-800 px-5 py-4">
-          <Link href="/" className="block">
-            <h1 className="text-sm font-semibold tracking-tight text-zinc-100">
-              Make_Skills
-            </h1>
-            <p className="text-xs text-zinc-500">humancensys.com</p>
-          </Link>
-          {/* Close button (mobile only) */}
-          <button
-            type="button"
-            onClick={() => setOpen(false)}
-            aria-label="Close navigation menu"
-            className="rounded p-1 text-zinc-400 hover:bg-zinc-800 md:hidden"
-          >
-            <svg
-              width="18"
-              height="18"
-              viewBox="0 0 18 18"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-            >
-              <line x1="4" y1="4" x2="14" y2="14" />
-              <line x1="14" y1="4" x2="4" y2="14" />
-            </svg>
-          </button>
-        </div>
-        <nav className="flex-1 overflow-y-auto px-2 py-4">
-          {visibleGroups.map((group) => (
-            <div key={group.label} className="mb-5">
-              <div className="mb-1 px-3 text-[11px] font-medium uppercase tracking-wider text-zinc-500">
-                {group.label}
-              </div>
-              {group.items.map((item) => {
-                const active =
-                  item.href === "/"
-                    ? pathname === "/"
-                    : pathname?.startsWith(item.href);
-                return (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    className={`group relative flex items-center justify-between rounded px-3 py-1.5 text-sm transition ${
-                      active
-                        ? "bg-zinc-800/80 text-zinc-50"
-                        : "text-zinc-400 hover:bg-zinc-900 hover:text-zinc-200"
-                    }`}
-                  >
-                    {active && (
-                      <span className="absolute left-0 top-1.5 bottom-1.5 w-0.5 rounded-full bg-blue-500" />
-                    )}
-                    <span className="flex items-center gap-2">
-                      {item.label}
-                      {item.pillar && (
-                        <span className="text-[10px] font-mono text-zinc-600">
-                          P{item.pillar}
-                        </span>
-                      )}
-                    </span>
-                    {item.status === "stub" && (
-                      <span className="text-[9px] uppercase tracking-wider text-zinc-600">
-                        soon
-                      </span>
-                    )}
-                  </Link>
-                );
-              })}
-            </div>
-          ))}
-        </nav>
+        <SidebarHeader onClose={() => setOpen(false)} closable />
+        <SidebarNav
+          groups={visibleGroups}
+          pathname={pathname}
+          onItemClick={() => setOpen(false)}
+        />
         <AccountSection />
-        <div className="border-t border-zinc-800 px-5 py-3 text-xs text-zinc-600">
-          <a
-            href="https://github.com/Lizo-RoadTown/Make_Skills"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="hover:text-zinc-400"
-          >
-            Apache 2.0 · GitHub →
-          </a>
-        </div>
+        <SidebarFooter />
+      </aside>
+
+      {/* Desktop sidebar — always-visible flex column, never positioned */}
+      <aside
+        aria-label="Navigation"
+        className="hidden w-60 shrink-0 flex-col border-r border-zinc-800 bg-zinc-950 md:flex"
+      >
+        <SidebarHeader />
+        <SidebarNav groups={visibleGroups} pathname={pathname} />
+        <AccountSection />
+        <SidebarFooter />
       </aside>
     </>
   );
 }
 
+function SidebarHeader({
+  onClose,
+  closable = false,
+}: {
+  onClose?: () => void;
+  closable?: boolean;
+}) {
+  return (
+    <div className="flex shrink-0 items-center justify-between border-b border-zinc-800 px-5 py-4">
+      <Link href="/" className="block">
+        <h1 className="text-sm font-semibold tracking-tight text-zinc-100">
+          Make_Skills
+        </h1>
+        <p className="text-xs text-zinc-500">humancensys.com</p>
+      </Link>
+      {closable && (
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="Close navigation menu"
+          className="rounded p-1 text-zinc-400 hover:bg-zinc-800"
+        >
+          <svg
+            width="18"
+            height="18"
+            viewBox="0 0 18 18"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+          >
+            <line x1="4" y1="4" x2="14" y2="14" />
+            <line x1="14" y1="4" x2="4" y2="14" />
+          </svg>
+        </button>
+      )}
+    </div>
+  );
+}
+
+function SidebarNav({
+  groups,
+  pathname,
+  onItemClick,
+}: {
+  groups: NavGroup[];
+  pathname: string | null;
+  onItemClick?: () => void;
+}) {
+  return (
+    <nav className="flex-1 overflow-y-auto px-2 py-4">
+      {groups.map((group) => (
+        <div key={group.label} className="mb-5">
+          <div className="mb-1 px-3 text-[11px] font-medium uppercase tracking-wider text-zinc-500">
+            {group.label}
+          </div>
+          {group.items.map((item) => {
+            const active =
+              item.href === "/"
+                ? pathname === "/"
+                : pathname?.startsWith(item.href);
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                onClick={onItemClick}
+                className={`group relative flex items-center justify-between rounded px-3 py-1.5 text-sm transition ${
+                  active
+                    ? "bg-zinc-800/80 text-zinc-50"
+                    : "text-zinc-400 hover:bg-zinc-900 hover:text-zinc-200"
+                }`}
+              >
+                {active && (
+                  <span className="absolute left-0 top-1.5 bottom-1.5 w-0.5 rounded-full bg-blue-500" />
+                )}
+                <span className="flex items-center gap-2">
+                  {item.label}
+                  {item.pillar && (
+                    <span className="text-[10px] font-mono text-zinc-600">
+                      P{item.pillar}
+                    </span>
+                  )}
+                </span>
+                {item.status === "stub" && (
+                  <span className="text-[9px] uppercase tracking-wider text-zinc-600">
+                    soon
+                  </span>
+                )}
+              </Link>
+            );
+          })}
+        </div>
+      ))}
+    </nav>
+  );
+}
+
+function SidebarFooter() {
+  return (
+    <div className="shrink-0 border-t border-zinc-800 px-5 py-3 text-xs text-zinc-600">
+      <a
+        href="https://github.com/Lizo-RoadTown/Make_Skills"
+        target="_blank"
+        rel="noopener noreferrer"
+        className="hover:text-zinc-400"
+      >
+        Apache 2.0 · GitHub →
+      </a>
+    </div>
+  );
+}
+
 /**
- * Bottom-of-sidebar account section. Renders profile + sign-out when
- * authenticated, sign-in link when not. Sits below the nav groups so
- * administrative items live consistently at the bottom.
+ * Bottom-of-sidebar account section. Profile + sign-out when authenticated,
+ * sign-in link when not.
  */
 function AccountSection() {
   const { data: session, status } = useSession();
 
   if (status === "loading") {
     return (
-      <div className="border-t border-zinc-800 px-5 py-3 text-xs text-zinc-600">
+      <div className="shrink-0 border-t border-zinc-800 px-5 py-3 text-xs text-zinc-600">
         Loading…
       </div>
     );
@@ -247,7 +296,7 @@ function AccountSection() {
 
   if (!session?.user) {
     return (
-      <div className="border-t border-zinc-800 px-2 py-3">
+      <div className="shrink-0 border-t border-zinc-800 px-2 py-3">
         <button
           type="button"
           onClick={() => signIn()}
@@ -268,18 +317,14 @@ function AccountSection() {
     .join("");
 
   return (
-    <div className="border-t border-zinc-800 px-2 py-3">
+    <div className="shrink-0 border-t border-zinc-800 px-2 py-3">
       <div className="mb-1 px-3 text-[11px] font-medium uppercase tracking-wider text-zinc-500">
         Account
       </div>
       <div className="flex items-center gap-2 px-3 py-1.5">
         {user.image ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={user.image}
-            alt=""
-            className="h-7 w-7 rounded-full"
-          />
+          <img src={user.image} alt="" className="h-7 w-7 rounded-full" />
         ) : (
           <span className="flex h-7 w-7 items-center justify-center rounded-full bg-zinc-800 text-[11px] font-medium text-zinc-300">
             {initials || "U"}
