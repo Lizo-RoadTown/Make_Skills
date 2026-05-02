@@ -39,7 +39,13 @@ from api.roadmap.file import (
     read_roadmap,
     write_roadmap,
 )
-from api import fileviewer, observability
+from api import (
+    fileviewer,
+    mcp_inspector,
+    observability,
+    sessions as sessions_inspector,
+    subagents as subagents_inspector,
+)
 from fastapi import Depends
 
 log = logging.getLogger("api")
@@ -304,6 +310,174 @@ async def skills_file_endpoint(path: str = Query(..., description="Relative path
         raise HTTPException(status_code=403, detail=str(e))
     except Exception as e:
         log.exception("skills file failed")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+class SkillRunRequest(BaseModel):
+    skill_name: str
+    user_input: str
+    thread_id: str | None = None
+
+
+@app.post("/skills/run")
+async def skills_run_endpoint(
+    req: SkillRunRequest,
+    background: BackgroundTasks,
+    ctx: TenantContext = Depends(get_current_tenant),
+):
+    """Run a skill on a user-provided context.
+
+    Loads the skill's SKILL.md verbatim, prepends it as guidance to the
+    user's input, and invokes the agent. The skill's body is concrete
+    instructions the agent follows for THIS call only — not loaded into
+    every future call (that's what `[agent].skills` in deepagents.toml
+    is for). This endpoint is the on-demand "run this skill once on
+    this topic" surface for the dashboard.
+
+    Returns the same shape as /chat: {thread_id, response}.
+    """
+    skill_path = f"{req.skill_name}/SKILL.md"
+    try:
+        skill_md = fileviewer.skills_file(skill_path)
+    except FileNotFoundError:
+        raise HTTPException(
+            status_code=404,
+            detail=f"skill not found: {req.skill_name}",
+        )
+
+    thread_id = req.thread_id or str(uuid4())
+    await _ensure_thread_belongs_to_tenant(thread_id, ctx)
+    current_tenant.set(ctx.tenant_id)
+
+    composed_message = (
+        f"Apply the **{req.skill_name}** skill (loaded inline below) to the user's task.\n"
+        f"Follow the skill's PROBE / DECIDE / ACT / REPORT structure. Save any "
+        f"artifacts the skill specifies (proposal files, plan files, memory records). "
+        f"Treat the skill body as authoritative — it's the canonical guidance.\n\n"
+        f"---\n\n"
+        f"## Skill body\n\n"
+        f"{skill_md}\n\n"
+        f"---\n\n"
+        f"## Task\n\n"
+        f"{req.user_input.strip()}"
+    )
+
+    config = {"configurable": {"thread_id": thread_id, "tenant_id": ctx.tenant_id}}
+    try:
+        result = await app.state.agent.ainvoke(
+            {"messages": [{"role": "user", "content": composed_message}]},
+            config=config,
+        )
+    except Exception as e:
+        log.exception("Skill run failed")
+        raise HTTPException(status_code=500, detail=str(e))
+
+    final = result["messages"][-1] if isinstance(result, dict) and "messages" in result else result
+    response_text = getattr(final, "content", None) or str(final)
+
+    background.add_task(record_turn, ctx.tenant_id, thread_id, composed_message, response_text)
+
+    return {"thread_id": thread_id, "response": response_text, "skill": req.skill_name}
+
+
+# ----- Subagents inspector -----
+
+
+@app.get("/subagents/list")
+async def subagents_list_endpoint():
+    """List subagents with name, description, skills, model — for the
+    /agents dashboard page. Read-only inspector; editing happens in the
+    filesystem (self-host) or in tenant_subagents (hosted, future)."""
+    try:
+        return {"subagents": subagents_inspector.list_subagents()}
+    except Exception as e:
+        log.exception("subagents list failed")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/subagents/{slug}")
+async def subagents_get_endpoint(slug: str):
+    """Full subagent detail: persona (AGENTS.md), raw deepagents.toml,
+    model + skills + description."""
+    try:
+        return subagents_inspector.get_subagent(slug)
+    except FileNotFoundError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except PermissionError as e:
+        raise HTTPException(status_code=403, detail=str(e))
+    except Exception as e:
+        log.exception("subagent get failed")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ----- Sessions (replay-with-trace) -----
+
+
+@app.get("/sessions/list")
+async def sessions_list_endpoint(
+    limit: int = Query(50, ge=1, le=200),
+    ctx: TenantContext = Depends(get_current_tenant),
+):
+    """Conversations belonging to the calling tenant, newest first,
+    with checkpoint counts. Powers the /sessions list page."""
+    try:
+        return {
+            "sessions": sessions_inspector.list_sessions(ctx.tenant_id, limit=limit)
+        }
+    except Exception as e:
+        log.exception("sessions list failed")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/sessions/{thread_id}")
+async def sessions_get_endpoint(
+    thread_id: str,
+    ctx: TenantContext = Depends(get_current_tenant),
+):
+    """Full message trace for one session. RLS on conversations enforces
+    that only the owning tenant can read; cross-tenant attempts get 403.
+
+    Two-step: (1) gate via conversations table + collect checkpoint
+    timeline metadata, (2) ask the agent for the latest state via
+    aget_state — returns properly deserialized LangChain message
+    objects (vs trying to parse the raw JSONB checkpoint).
+    """
+    try:
+        meta = sessions_inspector.get_session_metadata(ctx.tenant_id, thread_id)
+    except PermissionError as e:
+        raise HTTPException(status_code=403, detail=str(e))
+    except Exception as e:
+        log.exception("session metadata failed")
+        raise HTTPException(status_code=500, detail=str(e))
+
+    current_tenant.set(ctx.tenant_id)
+    config = {"configurable": {"thread_id": thread_id, "tenant_id": ctx.tenant_id}}
+    try:
+        snapshot = await app.state.agent.aget_state(config)
+        meta["messages"] = sessions_inspector.messages_from_state(snapshot.values)
+    except Exception as e:
+        log.exception("session message extraction failed")
+        meta["messages"] = []
+        meta["message_extraction_error"] = str(e)
+
+    return meta
+
+
+# ----- MCP servers (read-only inspector) -----
+
+
+@app.get("/mcp/list")
+async def mcp_list_endpoint():
+    """List MCP servers wired in .mcp.json (configured) and the
+    short-list of recommended-but-not-yet-wired servers. Tenant-
+    agnostic — the .mcp.json file is project-level config."""
+    try:
+        return {
+            "configured": mcp_inspector.list_mcp_servers(),
+            "recommended": mcp_inspector.list_recommended_servers(),
+        }
+    except Exception as e:
+        log.exception("mcp list failed")
         raise HTTPException(status_code=500, detail=str(e))
 
 

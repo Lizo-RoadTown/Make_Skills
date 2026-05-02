@@ -2,6 +2,14 @@
   "mcpServers": {
     "llama_index_docs": {
       "url": "https://developers.llamaindex.ai/mcp"
+    },
+    "github": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-github"]
+    },
+    "context7": {
+      "command": "npx",
+      "args": ["-y", "@upstash/context7-mcp"]
     }
   }
 }
