@@ -307,6 +307,73 @@ async def skills_file_endpoint(path: str = Query(..., description="Relative path
         raise HTTPException(status_code=500, detail=str(e))
 
 
+class SkillRunRequest(BaseModel):
+    skill_name: str
+    user_input: str
+    thread_id: str | None = None
+
+
+@app.post("/skills/run")
+async def skills_run_endpoint(
+    req: SkillRunRequest,
+    background: BackgroundTasks,
+    ctx: TenantContext = Depends(get_current_tenant),
+):
+    """Run a skill on a user-provided context.
+
+    Loads the skill's SKILL.md verbatim, prepends it as guidance to the
+    user's input, and invokes the agent. The skill's body is concrete
+    instructions the agent follows for THIS call only — not loaded into
+    every future call (that's what `[agent].skills` in deepagents.toml
+    is for). This endpoint is the on-demand "run this skill once on
+    this topic" surface for the dashboard.
+
+    Returns the same shape as /chat: {thread_id, response}.
+    """
+    skill_path = f"{req.skill_name}/SKILL.md"
+    try:
+        skill_md = fileviewer.skills_file(skill_path)
+    except FileNotFoundError:
+        raise HTTPException(
+            status_code=404,
+            detail=f"skill not found: {req.skill_name}",
+        )
+
+    thread_id = req.thread_id or str(uuid4())
+    await _ensure_thread_belongs_to_tenant(thread_id, ctx)
+    current_tenant.set(ctx.tenant_id)
+
+    composed_message = (
+        f"Apply the **{req.skill_name}** skill (loaded inline below) to the user's task.\n"
+        f"Follow the skill's PROBE / DECIDE / ACT / REPORT structure. Save any "
+        f"artifacts the skill specifies (proposal files, plan files, memory records). "
+        f"Treat the skill body as authoritative — it's the canonical guidance.\n\n"
+        f"---\n\n"
+        f"## Skill body\n\n"
+        f"{skill_md}\n\n"
+        f"---\n\n"
+        f"## Task\n\n"
+        f"{req.user_input.strip()}"
+    )
+
+    config = {"configurable": {"thread_id": thread_id, "tenant_id": ctx.tenant_id}}
+    try:
+        result = await app.state.agent.ainvoke(
+            {"messages": [{"role": "user", "content": composed_message}]},
+            config=config,
+        )
+    except Exception as e:
+        log.exception("Skill run failed")
+        raise HTTPException(status_code=500, detail=str(e))
+
+    final = result["messages"][-1] if isinstance(result, dict) and "messages" in result else result
+    response_text = getattr(final, "content", None) or str(final)
+
+    background.add_task(record_turn, ctx.tenant_id, thread_id, composed_message, response_text)
+
+    return {"thread_id": thread_id, "response": response_text, "skill": req.skill_name}
+
+
 # ----- Memory stats / search / ingest -----
 
 

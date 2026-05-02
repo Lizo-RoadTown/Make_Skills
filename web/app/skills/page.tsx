@@ -1,8 +1,25 @@
 "use client";
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import rehypeHighlight from "rehype-highlight";
 import remarkGfm from "remark-gfm";
+
+// Skills exposed as runnable in /skills/run/[name]. Other skills (like
+// web-app-scaffold) require IDE context that the dashboard doesn't have;
+// they're list-only here. The runnable list mirrors what the
+// proposal-authoring skill / design-evaluation skill / etc. need to
+// operate from a single user-input box (just a topic / question / artifact).
+const RUNNABLE_SKILLS = new Set([
+  "proposal-authoring",
+  "design-evaluation",
+  "next-actions-planning",
+  "orchestration-cataloging",
+  "lessons-learned",
+  "roadmap-maintenance",
+  "agentic-skill-design",
+  "agentic-upskilling",
+]);
 
 const AGENT_URL =
   process.env.NEXT_PUBLIC_AGENT_URL || "http://localhost:8001";
@@ -77,13 +94,23 @@ export default function SkillsPage() {
       </aside>
 
       <div className="flex flex-1 flex-col">
-        <header className="border-b border-zinc-800 bg-zinc-900 px-6 py-3">
-          <div className="text-sm font-semibold text-zinc-300">
-            {selected ? selected.split("/")[0] : "Select a skill"}
+        <header className="flex items-center justify-between border-b border-zinc-800 bg-zinc-900 px-6 py-3">
+          <div>
+            <div className="text-sm font-semibold text-zinc-300">
+              {selected ? selected.split("/")[0] : "Select a skill"}
+            </div>
+            <div className="text-xs text-zinc-500">
+              Skills are markdown wisdom. Some are paired with tools (functions); see the agentic-upskilling skill for the promotion loop.
+            </div>
           </div>
-          <div className="text-xs text-zinc-500">
-            Skills are markdown wisdom. Some are paired with tools (functions); see the agentic-upskilling skill for the promotion loop.
-          </div>
+          {selected && RUNNABLE_SKILLS.has(selected.split("/")[0]) && (
+            <Link
+              href={`/skills/run/${selected.split("/")[0]}`}
+              className="rounded bg-blue-600 px-3 py-1.5 text-xs font-medium text-white transition hover:bg-blue-500"
+            >
+              Use this skill →
+            </Link>
+          )}
         </header>
         <div className="flex-1 overflow-y-auto">
           {loading && (
