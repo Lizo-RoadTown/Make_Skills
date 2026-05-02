@@ -43,6 +43,7 @@ from api import (
     fileviewer,
     mcp_inspector,
     observability,
+    provider_inspector,
     sessions as sessions_inspector,
     subagents as subagents_inspector,
 )
@@ -461,6 +462,21 @@ async def sessions_get_endpoint(
         meta["message_extraction_error"] = str(e)
 
     return meta
+
+
+# ----- Model providers (read-only inspector) -----
+
+
+@app.get("/providers/list")
+async def providers_list_endpoint():
+    """List the model providers supported by model_registry, with their
+    starter model + key-presence detection. Powers the wizard's "pick a
+    brain" step. Tenant-agnostic — model providers are workspace-level."""
+    try:
+        return {"providers": provider_inspector.list_providers()}
+    except Exception as e:
+        log.exception("providers list failed")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 # ----- MCP servers (read-only inspector) -----
