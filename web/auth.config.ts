@@ -20,13 +20,23 @@ import Google from "next-auth/providers/google";
 import { SignJWT, jwtVerify } from "jose";
 import type { NextAuthConfig } from "next-auth";
 
-const AUTH_SECRET = process.env.AUTH_SECRET;
-if (!AUTH_SECRET) {
-  throw new Error(
-    "AUTH_SECRET is not set. Generate with `openssl rand -hex 32` and add to .env.local.",
-  );
+/**
+ * Secret resolved lazily so Next.js's build-time "collect page data"
+ * pass can import this module without AUTH_SECRET set in the build env.
+ * Throws clearly at first sign/verify call if missing at runtime.
+ */
+let _secretBytes: Uint8Array | null = null;
+function getSecret(): Uint8Array {
+  if (_secretBytes) return _secretBytes;
+  const s = process.env.AUTH_SECRET;
+  if (!s) {
+    throw new Error(
+      "AUTH_SECRET is not set. Generate with `openssl rand -hex 32` and set in Vercel project env vars (Preview + Production scopes).",
+    );
+  }
+  _secretBytes = new TextEncoder().encode(s);
+  return _secretBytes;
 }
-const secretBytes = new TextEncoder().encode(AUTH_SECRET);
 
 export default {
   providers: [
@@ -52,11 +62,11 @@ export default {
         .setProtectedHeader({ alg: "HS256" })
         .setIssuedAt()
         .setExpirationTime("30d")
-        .sign(secretBytes);
+        .sign(getSecret());
     },
     decode: async ({ token }) => {
       if (!token) return null;
-      const { payload } = await jwtVerify(token, secretBytes, {
+      const { payload } = await jwtVerify(token, getSecret(), {
         algorithms: ["HS256"],
       });
       return payload as Record<string, unknown>;

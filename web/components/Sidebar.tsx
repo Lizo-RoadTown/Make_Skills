@@ -1,6 +1,7 @@
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { signIn, signOut, useSession } from "next-auth/react";
 import { useEffect, useState } from "react";
 
 type NavItem = {
@@ -15,33 +16,47 @@ type NavGroup = {
   items: NavItem[];
 };
 
+// Workflow-oriented groupings (THINK / BUILD / TEST / OBSERVE / MANAGE).
+// See docs/proposals/sidebar-architecture.md for the rationale.
 const NAV: NavGroup[] = [
   {
-    label: "Workspace",
+    label: "Think",
     items: [
-      { href: "/", label: "Chat", status: "live" },
-      { href: "/memory", label: "Memory", status: "live" },
       { href: "/roadmap", label: "Roadmap", status: "live" },
+      { href: "/plans", label: "Plans", status: "live" },
+      { href: "/proposals", label: "Proposals", status: "live" },
     ],
   },
   {
-    label: "Library",
+    label: "Build",
     items: [
+      { href: "/", label: "Chat", status: "live" },
+      { href: "/agents", label: "Agents", pillar: "1", status: "stub" },
       { href: "/skills", label: "Skills", status: "live" },
+    ],
+  },
+  {
+    label: "Test",
+    items: [
+      { href: "/test-runs", label: "Test runs", status: "live" },
+      { href: "/sessions", label: "Sessions", status: "stub" },
+      { href: "/upskilling", label: "Quests", pillar: "2", status: "stub" },
+    ],
+  },
+  {
+    label: "Observe",
+    items: [
+      { href: "/observability", label: "Dashboard", pillar: "3", status: "live" },
+      { href: "/memory", label: "Memory", status: "live" },
       { href: "/docs", label: "Docs", status: "live" },
     ],
   },
   {
-    label: "Pillars",
+    label: "Manage",
     items: [
-      { href: "/agents", label: "Agents", pillar: "1", status: "stub" },
-      { href: "/upskilling", label: "Upskilling", pillar: "2", status: "stub" },
-      {
-        href: "/observability",
-        label: "Observability",
-        pillar: "3",
-        status: "live",
-      },
+      { href: "/credentials", label: "Credentials", status: "stub" },
+      { href: "/environments", label: "Environments", status: "stub" },
+      { href: "/settings", label: "Settings", status: "stub" },
     ],
   },
 ];
@@ -184,6 +199,7 @@ export function Sidebar() {
             </div>
           ))}
         </nav>
+        <AccountSection />
         <div className="border-t border-zinc-800 px-5 py-3 text-xs text-zinc-600">
           <a
             href="https://github.com/Lizo-RoadTown/Make_Skills"
@@ -196,5 +212,83 @@ export function Sidebar() {
         </div>
       </aside>
     </>
+  );
+}
+
+/**
+ * Bottom-of-sidebar account section. Renders profile + sign-out when
+ * authenticated, sign-in link when not. Sits below the nav groups so
+ * administrative items live consistently at the bottom.
+ */
+function AccountSection() {
+  const { data: session, status } = useSession();
+
+  if (status === "loading") {
+    return (
+      <div className="border-t border-zinc-800 px-5 py-3 text-xs text-zinc-600">
+        Loading…
+      </div>
+    );
+  }
+
+  if (!session?.user) {
+    return (
+      <div className="border-t border-zinc-800 px-2 py-3">
+        <button
+          type="button"
+          onClick={() => signIn()}
+          className="flex w-full items-center justify-center rounded px-3 py-1.5 text-sm text-zinc-300 hover:bg-zinc-900 hover:text-zinc-100"
+        >
+          Sign in
+        </button>
+      </div>
+    );
+  }
+
+  const user = session.user;
+  const initials = (user.name || user.email || "?")
+    .split(/[\s@]/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((s: string) => s[0]?.toUpperCase())
+    .join("");
+
+  return (
+    <div className="border-t border-zinc-800 px-2 py-3">
+      <div className="mb-1 px-3 text-[11px] font-medium uppercase tracking-wider text-zinc-500">
+        Account
+      </div>
+      <div className="flex items-center gap-2 px-3 py-1.5">
+        {user.image ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={user.image}
+            alt=""
+            className="h-7 w-7 rounded-full"
+          />
+        ) : (
+          <span className="flex h-7 w-7 items-center justify-center rounded-full bg-zinc-800 text-[11px] font-medium text-zinc-300">
+            {initials || "U"}
+          </span>
+        )}
+        <div className="min-w-0 flex-1">
+          <div className="truncate text-xs text-zinc-200">
+            {user.name || user.email}
+          </div>
+          {user.name && user.email && (
+            <div className="truncate text-[10px] text-zinc-500">
+              {user.email}
+            </div>
+          )}
+        </div>
+      </div>
+      <button
+        type="button"
+        onClick={() => signOut({ callbackUrl: "/auth/signin" })}
+        className="mt-1 flex w-full items-center rounded px-3 py-1.5 text-sm text-zinc-400 hover:bg-zinc-900 hover:text-zinc-200"
+      >
+        Sign out
+      </button>
+    </div>
   );
 }

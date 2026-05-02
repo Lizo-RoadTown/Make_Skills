@@ -1,19 +1,25 @@
 /**
  * Next.js 16 proxy (renamed from middleware.ts).
  *
- * Re-exports the Auth.js `auth` function as `proxy`. Auth.js v5 returns
- * a Request handler from `auth()` that runs on the edge runtime, so we
- * cannot import the Drizzle adapter or pg pool here — the partial config
- * in auth.config.ts is what runs at this layer (providers + sign-in
- * pages only). The full config in auth.ts (with the adapter and DB
- * callbacks) runs in Node when API routes execute.
+ * Default-exports the Auth.js `auth` function. Auth.js v5 returns a
+ * Request handler that runs on the edge runtime, so we cannot import
+ * the Drizzle adapter or pg pool here — the partial config in
+ * auth.config.ts is what runs at this layer (providers + sign-in
+ * pages + the HS256 jwt encode/decode override). The full config in
+ * auth.ts (with the adapter and DB callbacks) runs in Node when API
+ * routes execute.
  *
- * The matcher excludes static assets and the auth API route itself.
+ * Default export form is required for Next.js 16's static analysis
+ * to detect the function correctly. The earlier `export const { auth:
+ * proxy } = NextAuth(...)` destructuring pattern produced a
+ * "must export a function" build error.
  */
 import NextAuth from "next-auth";
 import authConfig from "./auth.config";
 
-export const { auth: proxy } = NextAuth(authConfig);
+const { auth } = NextAuth(authConfig);
+
+export default auth;
 
 export const config = {
   matcher: [
