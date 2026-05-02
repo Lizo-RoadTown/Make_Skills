@@ -16,33 +16,47 @@ type NavGroup = {
   items: NavItem[];
 };
 
+// Workflow-oriented groupings (THINK / BUILD / TEST / OBSERVE / MANAGE).
+// See docs/proposals/sidebar-architecture.md for the rationale.
 const NAV: NavGroup[] = [
   {
-    label: "Workspace",
+    label: "Think",
     items: [
-      { href: "/", label: "Chat", status: "live" },
-      { href: "/memory", label: "Memory", status: "live" },
       { href: "/roadmap", label: "Roadmap", status: "live" },
+      { href: "/plans", label: "Plans", status: "live" },
+      { href: "/proposals", label: "Proposals", status: "live" },
     ],
   },
   {
-    label: "Library",
+    label: "Build",
     items: [
+      { href: "/", label: "Chat", status: "live" },
+      { href: "/agents", label: "Agents", pillar: "1", status: "stub" },
       { href: "/skills", label: "Skills", status: "live" },
+    ],
+  },
+  {
+    label: "Test",
+    items: [
+      { href: "/test-runs", label: "Test runs", status: "live" },
+      { href: "/sessions", label: "Sessions", status: "stub" },
+      { href: "/upskilling", label: "Quests", pillar: "2", status: "stub" },
+    ],
+  },
+  {
+    label: "Observe",
+    items: [
+      { href: "/observability", label: "Dashboard", pillar: "3", status: "live" },
+      { href: "/memory", label: "Memory", status: "live" },
       { href: "/docs", label: "Docs", status: "live" },
     ],
   },
   {
-    label: "Pillars",
+    label: "Manage",
     items: [
-      { href: "/agents", label: "Agents", pillar: "1", status: "stub" },
-      { href: "/upskilling", label: "Upskilling", pillar: "2", status: "stub" },
-      {
-        href: "/observability",
-        label: "Observability",
-        pillar: "3",
-        status: "live",
-      },
+      { href: "/credentials", label: "Credentials", status: "stub" },
+      { href: "/environments", label: "Environments", status: "stub" },
+      { href: "/settings", label: "Settings", status: "stub" },
     ],
   },
 ];

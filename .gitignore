@@ -16,6 +16,10 @@ __pycache__/
 !.env.template
 node_modules/
 
+# Render CLI binary — local-only, downloaded per-machine.
+render.exe
+render
+
 # Upstream skill libraries — cloned locally, not vendored.
 # Re-create with: scripts/sync-upstream.sh
 skills/_upstream/

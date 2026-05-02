@@ -155,6 +155,44 @@ Once all five test cases pass, this PR can merge to main. Production gets:
 
 If any test case fails, the failure mode and fix go in this same file under "Issues found" (append-only — write rather than edit).
 
+## Outcome (as of 2026-05-02 ~02:30 UTC)
+
+| Test case | Status | Notes |
+|-----------|--------|-------|
+| TC-1 GitHub | not run | Liz signed in via Google instead |
+| TC-2 Google | ✅ PASSED | Liz signed in successfully on the test-auth preview, "I am in" |
+| TC-3 deny path | ✅ PASSED | Pre-invite attempts hit `/auth/error?error=NoInvite` exactly as designed — gate works |
+| TC-4 api round-trip | pending | Blocked on `PLATFORM_MODE=hosted` flip on Render api (production-affecting, awaits Liz's go) |
+| TC-5 cross-tenant | pending | Same blocker as TC-4 |
+
+## Journey log (the friction surfaces)
+
+The bare minimum to summarize: **eight sequential failures, each surfaced one diagnostic step at a time, all resolved.** The auth flow is now wired end-to-end on the preview. Each entry also indicates whether the lesson was captured as a memory or skill so the next cycle is faster.
+
+| # | Symptom | Root cause | Fix | Captured as |
+|---|---------|------------|-----|------------|
+| 1 | Vercel build error: `DATABASE_URL is not set` at build time | `web/db/index.ts` and `auth.config.ts` threw at module-import — Next.js's "Collect page data" pass imports every route to inspect metadata before runtime env exists | Defer secret resolution until first use | code |
+| 2 | Vercel build error: `Unsupported database type (object) in Auth.js Drizzle adapter` | Replaced lazy throws with a JS Proxy; DrizzleAdapter does an `instanceof PgDatabase` check at construction and rejected the Proxy | Construct the real Pool eagerly with a placeholder `DATABASE_URL` fallback for build phase | code |
+| 3 | Vercel build error: `proxy.ts must export a function` | Next.js 16's static analyzer doesn't recognize `export const { auth: proxy } = NextAuth(...)` as a function | Switched to `export default auth` | code |
+| 4 | Sign-in produced "Configuration error" silently | `DATABASE_URL` env var wasn't set in Vercel | Added it to Vercel project env vars | none — one-time setup |
+| 5 | Same "Configuration error" after env var added | URL pointed at Render's **internal** hostname (no `.render.com` suffix) — unreachable from Vercel | Switched to External Database URL | docs/test-runs and runbook implication: always External when reaching from outside Render |
+| 6 | Same "Configuration error" after URL fix | Render Postgres requires TLS; node-postgres doesn't auto-enable SSL based on hostname | Added `ssl: { rejectUnauthorized: false }` to the Pool when the hostname matches `*.render.com` | code (web/db/index.ts) |
+| 7 | "No invitation found" — gate denying the workspace owner | Chicken-and-egg of invite-only: there's nobody to invite the first user | Manual INSERT via a script that reads DATABASE_URL from a session env var; longer-term fix proposed at `docs/proposals/bootstrap-first-user-invite.md` | proposal + script |
+| 8 | PowerShell rejected `cmd1 && cmd2` | Liz's terminal is PowerShell, `&&` is bash | Used `;` separator and saved as `feedback_test_on_preview_not_local.md` and `user_env_powershell_no_amp.md` memories | memory |
+
+## What changed from the original test plan
+
+- **Local `.env.local` setup section deleted** — superseded by the "test on preview branches, not localhost" memory. AUTH_SECRET, OAuth credentials, and DATABASE_URL all live in Vercel + Render dashboards. No local sync.
+- **GitHub OAuth: two apps required**, not one with multiple callbacks — GitHub OAuth Apps only allow one callback URL each. Google supports multiple authorized redirect URIs in a single client.
+- **Manual invite-row insertion** is currently the bootstrap step. Improvement proposed.
+- **TC-4 / TC-5 require flipping the production api into `PLATFORM_MODE=hosted`** — Liz's call when she's ready.
+
 ## Issues found
 
-(empty — fill in if any test case fails)
+None catastrophic. All eight friction surfaces above were fixable in the test-auth branch without touching production. The `Configuration error` UX was correctly opaque to the user — error details only surfaced via `mcp__claude_ai_Vercel__get_runtime_logs` from the agent side. No data loss, no production outages, no rollbacks needed.
+
+## Next steps
+
+1. **Liz reviews this doc + runs TC-4/TC-5** — flip Render's `PLATFORM_MODE=hosted` only when ready for the production api to require JWT on every request.
+2. **Merge PR #10 → main** — pushes the same fixes to production. Production GitHub OAuth App needs creating before this (separate from preview).
+3. **Implement the bootstrap-first-user invite** ([proposal](../proposals/bootstrap-first-user-invite.md)) — closes the chicken-and-egg gap so future workspace owners don't need a manual SQL insert.
