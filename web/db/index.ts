@@ -28,6 +28,17 @@ declare global {
 const connectionString =
   process.env.DATABASE_URL || "postgres://placeholder@localhost:5432/placeholder";
 
+// Loud, useful runtime warning when the placeholder is in use.
+// Build phase tolerates the placeholder; runtime should never see it.
+if (!process.env.DATABASE_URL && process.env.NEXT_RUNTIME) {
+  console.error(
+    "[db] DATABASE_URL is not set in this runtime. Auth.js adapter writes" +
+      " will fail with ECONNREFUSED. Set DATABASE_URL in Vercel project" +
+      " Environment Variables (Preview AND Production scopes) to the" +
+      " EXTERNAL Render Postgres connection string.",
+  );
+}
+
 const pool =
   global.__drizzle_pool ?? new Pool({ connectionString, max: 10 });
 
