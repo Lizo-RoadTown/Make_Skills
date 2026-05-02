@@ -14,6 +14,7 @@ type NavItem = {
 type NavGroup = {
   label: string;
   items: NavItem[];
+  requiresRole?: "admin";
 };
 
 // Workflow-oriented groupings (THINK / BUILD / TEST / OBSERVE / MANAGE).
@@ -60,10 +61,22 @@ const NAV: NavGroup[] = [
       { href: "/settings", label: "Settings", status: "stub" },
     ],
   },
+  {
+    label: "Admin",
+    requiresRole: "admin",
+    items: [
+      { href: "/admin/invitations", label: "Invitations", status: "live" },
+    ],
+  },
 ];
 
 export function Sidebar() {
   const pathname = usePathname();
+  const { data: session } = useSession();
+  const userRole = session?.user?.role;
+  const visibleGroups = NAV.filter(
+    (g) => !g.requiresRole || g.requiresRole === userRole,
+  );
   const [open, setOpen] = useState(false);
 
   // Close drawer when route changes
@@ -158,7 +171,7 @@ export function Sidebar() {
           </button>
         </div>
         <nav className="flex-1 overflow-y-auto px-2 py-4">
-          {NAV.map((group) => (
+          {visibleGroups.map((group) => (
             <div key={group.label} className="mb-5">
               <div className="mb-1 px-3 text-[11px] font-medium uppercase tracking-wider text-zinc-500">
                 {group.label}

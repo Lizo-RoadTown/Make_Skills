@@ -9,6 +9,7 @@
  * `"userId"`, `"providerAccountId"`, `"emailVerified"`, `"sessionToken"`,
  * which Postgres treats as case-sensitive when quoted.
  */
+import { sql } from "drizzle-orm";
 import {
   integer,
   pgTable,
@@ -94,7 +95,12 @@ export const invitations = pgTable(
     invitedByUserId: uuid("invited_by_user_id").references(() => users.id, {
       onDelete: "set null",
     }),
-    token: text("token").notNull().unique(),
+    // Default in SQL is encode(gen_random_bytes(24), 'hex') — see migrations.py.
+    // Telling Drizzle the column has a SQL-side default so TS doesn't require it on insert.
+    token: text("token")
+      .notNull()
+      .unique()
+      .default(sql`encode(gen_random_bytes(24), 'hex')`),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     consumedAt: timestamp("consumed_at", { withTimezone: true }),
     consumedByEmail: text("consumed_by_email"),

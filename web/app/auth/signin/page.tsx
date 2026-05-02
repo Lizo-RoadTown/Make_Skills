@@ -6,8 +6,9 @@ export default function SignInPage() {
       <div className="w-full max-w-md rounded-lg border border-zinc-800 bg-zinc-900 p-8">
         <h1 className="text-2xl font-semibold text-zinc-100">Sign in</h1>
         <p className="mt-2 text-sm text-zinc-400">
-          Make_Skills is currently invite-only. You&apos;ll need an active
-          invitation matching your verified email to complete sign-in.
+          Sign in with GitHub or Google. The first user on a fresh
+          deployment becomes the workspace owner; subsequent users need
+          an invitation from an existing admin.
         </p>
 
         <div className="mt-6 flex flex-col gap-3">
@@ -41,8 +42,8 @@ export default function SignInPage() {
         </div>
 
         <p className="mt-6 text-xs text-zinc-500">
-          Without an invite, sign-in is denied and no account is created.
-          Contact the workspace owner for an invitation.
+          New sign-ins after the workspace owner have to match an active
+          invitation row, otherwise no account is created.
         </p>
       </div>
     </div>
