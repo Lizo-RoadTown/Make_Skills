@@ -12,6 +12,13 @@ services:
     region: oregon           # change if you prefer another region
     healthCheckPath: /healthz
     autoDeploy: true         # deploy automatically on git push to main
+    # Preview environments — every PR opened against main spins up a
+    # disposable copy of this service with its own URL. Used for OAuth
+    # round-trip testing without touching production. The preview shares
+    # the production database (cheaper); enable per-DB preview generation
+    # below if isolation is needed later.
+    previews:
+      generation: automatic
     envVars:
       # Secrets — set in Render dashboard, not in this file.
       - key: ANTHROPIC_API_KEY
