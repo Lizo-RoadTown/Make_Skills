@@ -39,7 +39,7 @@ from api.roadmap.file import (
     read_roadmap,
     write_roadmap,
 )
-from api import fileviewer, observability, subagents as subagents_inspector
+from api import fileviewer, observability, sessions as sessions_inspector, subagents as subagents_inspector
 from fastapi import Depends
 
 log = logging.getLogger("api")
@@ -402,6 +402,59 @@ async def subagents_get_endpoint(slug: str):
     except Exception as e:
         log.exception("subagent get failed")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# ----- Sessions (replay-with-trace) -----
+
+
+@app.get("/sessions/list")
+async def sessions_list_endpoint(
+    limit: int = Query(50, ge=1, le=200),
+    ctx: TenantContext = Depends(get_current_tenant),
+):
+    """Conversations belonging to the calling tenant, newest first,
+    with checkpoint counts. Powers the /sessions list page."""
+    try:
+        return {
+            "sessions": sessions_inspector.list_sessions(ctx.tenant_id, limit=limit)
+        }
+    except Exception as e:
+        log.exception("sessions list failed")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/sessions/{thread_id}")
+async def sessions_get_endpoint(
+    thread_id: str,
+    ctx: TenantContext = Depends(get_current_tenant),
+):
+    """Full message trace for one session. RLS on conversations enforces
+    that only the owning tenant can read; cross-tenant attempts get 403.
+
+    Two-step: (1) gate via conversations table + collect checkpoint
+    timeline metadata, (2) ask the agent for the latest state via
+    aget_state — returns properly deserialized LangChain message
+    objects (vs trying to parse the raw JSONB checkpoint).
+    """
+    try:
+        meta = sessions_inspector.get_session_metadata(ctx.tenant_id, thread_id)
+    except PermissionError as e:
+        raise HTTPException(status_code=403, detail=str(e))
+    except Exception as e:
+        log.exception("session metadata failed")
+        raise HTTPException(status_code=500, detail=str(e))
+
+    current_tenant.set(ctx.tenant_id)
+    config = {"configurable": {"thread_id": thread_id, "tenant_id": ctx.tenant_id}}
+    try:
+        snapshot = await app.state.agent.aget_state(config)
+        meta["messages"] = sessions_inspector.messages_from_state(snapshot.values)
+    except Exception as e:
+        log.exception("session message extraction failed")
+        meta["messages"] = []
+        meta["message_extraction_error"] = str(e)
+
+    return meta
 
 
 # ----- Memory stats / search / ingest -----
