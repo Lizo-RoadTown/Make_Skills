@@ -53,25 +53,40 @@ The `DATABASE_URL` on Vercel is the **external** connection string from Render P
 
 `PLATFORM_MODE` on Render's api flips to `hosted` only after the auth wiring is verified — leaving as `self_host` keeps the api answering requests without auth in the meantime.
 
-### 3. Register OAuth apps (one app each, multiple callback URLs)
+### 3. Register OAuth apps
 
-**GitHub** (https://github.com/settings/developers → New OAuth App):
+**GitHub OAuth Apps allow only ONE callback URL each**, so two apps are
+needed — one for preview, one for production. Google supports multiple
+authorized redirect URIs in a single app.
 
-- Application name: Make_Skills
-- Homepage URL: `https://humancensys.com`
-- Authorization callback URL: paste each on its own line
-  - `https://humancensys.com/api/auth/callback/github`
-  - the Vercel preview URL with `/api/auth/callback/github` appended
+**GitHub Preview** (https://github.com/settings/developers → New OAuth App):
 
-**Google** (https://console.cloud.google.com → APIs & Services → Credentials):
+- Application name: `Make_Skills Preview`
+- Homepage URL: `https://humancensys.com` (metadata only, shown on consent screen)
+- Authorization callback URL: `<vercel-preview-url>/api/auth/callback/github`
+
+After creating, copy the Client ID and generate a Client Secret. In Vercel
+project settings, add `AUTH_GITHUB_ID` + `AUTH_GITHUB_SECRET` scoped to
+**Preview only**.
+
+**GitHub Production** (created later, when ready to merge to main):
+
+- Same as above but Authorization callback URL: `https://humancensys.com/api/auth/callback/github`
+- The resulting Client ID + Secret go into Vercel scoped to **Production only**.
+
+**Google** (https://console.cloud.google.com → APIs & Services → Credentials → Create Credentials → OAuth client ID):
 
 - Application type: Web application
+- Name: `Make_Skills`
 - Authorized JavaScript origins:
   - `https://humancensys.com`
-  - the Vercel preview URL (origin only)
+  - the Vercel preview URL (origin only, no path)
 - Authorized redirect URIs:
   - `https://humancensys.com/api/auth/callback/google`
-  - the Vercel preview URL with `/api/auth/callback/google` appended
+  - `<vercel-preview-url>/api/auth/callback/google`
+
+After creating, the Client ID + Secret go into Vercel scoped to **both
+Preview and Production** (same app handles both environments).
 
 ### 4. Insert a test invitation
 
