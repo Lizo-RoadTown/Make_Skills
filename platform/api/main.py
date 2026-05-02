@@ -39,7 +39,13 @@ from api.roadmap.file import (
     read_roadmap,
     write_roadmap,
 )
-from api import fileviewer, observability, sessions as sessions_inspector, subagents as subagents_inspector
+from api import (
+    fileviewer,
+    mcp_inspector,
+    observability,
+    sessions as sessions_inspector,
+    subagents as subagents_inspector,
+)
 from fastapi import Depends
 
 log = logging.getLogger("api")
@@ -455,6 +461,24 @@ async def sessions_get_endpoint(
         meta["message_extraction_error"] = str(e)
 
     return meta
+
+
+# ----- MCP servers (read-only inspector) -----
+
+
+@app.get("/mcp/list")
+async def mcp_list_endpoint():
+    """List MCP servers wired in .mcp.json (configured) and the
+    short-list of recommended-but-not-yet-wired servers. Tenant-
+    agnostic — the .mcp.json file is project-level config."""
+    try:
+        return {
+            "configured": mcp_inspector.list_mcp_servers(),
+            "recommended": mcp_inspector.list_recommended_servers(),
+        }
+    except Exception as e:
+        log.exception("mcp list failed")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 # ----- Memory stats / search / ingest -----
