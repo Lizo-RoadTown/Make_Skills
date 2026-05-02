@@ -20,31 +20,57 @@ declare global {
  * passes the adapter's type check. The Pool only opens a real
  * connection at first query — and at runtime, DATABASE_URL will be
  * present (Vercel env vars are injected at request time).
- *
- * Runtime callers will see a clear connection-refused error if
- * DATABASE_URL is genuinely missing in production. Better than a
- * cryptic "object is not a PgDatabase" build failure.
  */
 const connectionString =
   process.env.DATABASE_URL || "postgres://placeholder@localhost:5432/placeholder";
 
-// Loud, useful runtime warning when the placeholder is in use.
-// Build phase tolerates the placeholder; runtime should never see it.
 if (!process.env.DATABASE_URL && process.env.NEXT_RUNTIME) {
   console.error(
     "[db] DATABASE_URL is not set in this runtime. Auth.js adapter writes" +
-      " will fail with ECONNREFUSED. Set DATABASE_URL in Vercel project" +
-      " Environment Variables (Preview AND Production scopes) to the" +
-      " EXTERNAL Render Postgres connection string.",
+      " will fail. Set DATABASE_URL in Vercel project Environment" +
+      " Variables (Preview AND Production scopes) to the EXTERNAL" +
+      " Render Postgres connection string.",
   );
 }
 
+/**
+ * SSL handling for Render Postgres.
+ *
+ * Render Postgres requires TLS for external connections. node-postgres
+ * does NOT auto-enable SSL based on hostname — you have to configure
+ * it. `rejectUnauthorized: false` accepts Render's certificate chain
+ * without strict CA validation; the connection is still encrypted, just
+ * not pinned to a specific public CA. This is the standard pattern for
+ * Render / Heroku / managed Postgres providers.
+ *
+ * For local Docker (no SSL), the URL doesn't include the render.com
+ * hostname, so we skip SSL entirely.
+ */
+const isRenderHost = /\.render\.com/.test(connectionString);
+
 const pool =
-  global.__drizzle_pool ?? new Pool({ connectionString, max: 10 });
+  global.__drizzle_pool ??
+  new Pool({
+    connectionString,
+    max: 10,
+    ssl: isRenderHost ? { rejectUnauthorized: false } : undefined,
+  });
 
 if (process.env.NODE_ENV !== "production") {
   global.__drizzle_pool = pool;
 }
+
+// Verbose error reporting so the AdapterError in logs has detail.
+// The Pool's "error" event fires for connection-level failures
+// (auth, SSL handshake, network) that don't surface via query throws.
+pool.on("error", (err: Error & { code?: string; detail?: string }) => {
+  console.error("[db] pool error", {
+    message: err.message,
+    code: err.code,
+    detail: err.detail,
+    stack: err.stack,
+  });
+});
 
 export const db = drizzle(pool, { schema });
 export { schema };
