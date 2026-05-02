@@ -1,0 +1,21 @@
+# schema-migrator subagent — see ./AGENTS.md
+#
+# Loaded by the root agent when the orchestrator delegates schema work after a
+# proposal has been accepted. Translates a plain-English migration intent into
+# the project's idempotent migration pattern (Postgres + RLS + Drizzle mirror +
+# isolation test).
+
+[agent]
+name = "schema-migrator"
+description = "Reads a migration intent and produces (1) idempotent Python migration code matching platform/api/migrations.py, (2) the Drizzle TypeScript schema mirror in web/db/schema.ts, (3) an isolation-test stub matching platform/tests/, and (4) a smoke-test plan. Does not run the migration — operator review/run is required."
+memory = ["./AGENTS.md"]
+# Skills are scoped: this subagent gets the proposal-authoring skill (so it
+# enforces the "must reference an accepted proposal" rule) and not much else.
+skills = ["../../skills/proposal-authoring"]
+
+[model]
+provider = "anthropic"
+name = "claude-sonnet-4-6"
+# Sonnet for cost-efficient code generation. The patterns are deterministic
+# enough that Opus's reasoning headroom isn't needed; the value is consistency
+# with the existing files.

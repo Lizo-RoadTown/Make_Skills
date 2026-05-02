@@ -20,6 +20,8 @@ Pre-decision design documents. A proposal lives here while it's being shaped —
 | [`agent-builder-flow.md`](agent-builder-flow.md) | Open — six-step character creation; HuggingFace as default free path |
 | [`quest-system.md`](quest-system.md) | Open — gamified skill acquisition (music / make-money / science / social-impact) |
 | [`agent-retirement-and-clan-optimization.md`](agent-retirement-and-clan-optimization.md) | Open — the hardest mechanic; closes the gameplay loop and unlocks Phase 2 multiplayer |
+| [`sidebar-architecture.md`](sidebar-architecture.md) | Open — workflow-oriented sidebar (THINK/BUILD/TEST/OBSERVE/MANAGE); P1 shipped on test-auth |
+| [`bootstrap-first-user-invite.md`](bootstrap-first-user-invite.md) | Open — fixes the chicken-and-egg gap surfaced during the auth test (no workspace owner exists to issue the first invite) |
 
 ## How they fit together
 

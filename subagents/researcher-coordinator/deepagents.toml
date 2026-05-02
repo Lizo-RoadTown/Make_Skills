@@ -1,0 +1,22 @@
+# researcher-coordinator subagent — see ./AGENTS.md
+#
+# Loaded by the root agent when the orchestrator delegates parallel-research
+# work. Distinct from the inner researcher subagent: this one DECOMPOSES
+# topics into briefs and SYNTHESIZES results; it does not execute the briefs
+# itself.
+
+[agent]
+name = "researcher-coordinator"
+description = "Decomposes an unfamiliar topic into 3-5 parallel research briefs, fans out to general-purpose research agents, and synthesizes findings into a structured 'research findings' section ready to drop into a design proposal."
+memory = ["./AGENTS.md"]
+# Skills are scoped: this subagent does NOT inherit the root's skills.
+# It only sees its own AGENTS.md plus the proposal-authoring skill (for
+# matching house style in synthesis output).
+skills = ["../../skills/proposal-authoring"]
+
+[model]
+provider = "anthropic"
+name = "claude-opus-4-7"
+# Opus for the coordination-level reasoning (decomposition quality is the
+# entire value of this subagent). The DELEGATED research agents can run on
+# Sonnet — that's the inner researcher's choice, not this layer's.
