@@ -39,7 +39,7 @@ from api.roadmap.file import (
     read_roadmap,
     write_roadmap,
 )
-from api import fileviewer, observability
+from api import fileviewer, observability, subagents as subagents_inspector
 from fastapi import Depends
 
 log = logging.getLogger("api")
@@ -372,6 +372,36 @@ async def skills_run_endpoint(
     background.add_task(record_turn, ctx.tenant_id, thread_id, composed_message, response_text)
 
     return {"thread_id": thread_id, "response": response_text, "skill": req.skill_name}
+
+
+# ----- Subagents inspector -----
+
+
+@app.get("/subagents/list")
+async def subagents_list_endpoint():
+    """List subagents with name, description, skills, model — for the
+    /agents dashboard page. Read-only inspector; editing happens in the
+    filesystem (self-host) or in tenant_subagents (hosted, future)."""
+    try:
+        return {"subagents": subagents_inspector.list_subagents()}
+    except Exception as e:
+        log.exception("subagents list failed")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/subagents/{slug}")
+async def subagents_get_endpoint(slug: str):
+    """Full subagent detail: persona (AGENTS.md), raw deepagents.toml,
+    model + skills + description."""
+    try:
+        return subagents_inspector.get_subagent(slug)
+    except FileNotFoundError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except PermissionError as e:
+        raise HTTPException(status_code=403, detail=str(e))
+    except Exception as e:
+        log.exception("subagent get failed")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 # ----- Memory stats / search / ingest -----
