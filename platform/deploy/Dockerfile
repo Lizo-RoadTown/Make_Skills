@@ -29,6 +29,7 @@ COPY skills /app/skills
 COPY subagents /app/subagents
 COPY AGENTS.md /app/AGENTS.md
 COPY deepagents.toml /app/deepagents.toml
+COPY .mcp.json /app/.mcp.json
 
 # Default command:
 #   - Local docker-compose: overridden by `command:` in docker-compose.yml (port 8001)
