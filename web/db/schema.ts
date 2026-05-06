@@ -11,6 +11,7 @@
  */
 import { sql } from "drizzle-orm";
 import {
+  customType,
   integer,
   pgTable,
   primaryKey,
@@ -19,6 +20,16 @@ import {
   uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
+
+// pgcrypto-encrypted column for student_secrets.encrypted_value. The
+// web side never reads/writes this column directly — encrypt + decrypt
+// happens via pgp_sym_encrypt/pgp_sym_decrypt on the FastAPI side.
+// Declared here so the schema mirror stays complete.
+const bytea = customType<{ data: Buffer; notNull: false }>({
+  dataType() {
+    return "bytea";
+  },
+});
 
 // ---- Pillar 0 base tables ----
 
@@ -123,3 +134,25 @@ export const tenantUsers = pgTable("tenant_users", {
   role: text("role").notNull().default("member"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
+
+// ---- Pillar 1B: BYO API keys ----
+
+export const studentSecrets = pgTable(
+  "student_secrets",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenants.id, { onDelete: "cascade" }),
+    providerSlug: text("provider_slug").notNull(),
+    encryptedValue: bytea("encrypted_value").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    tenantProviderIdx: uniqueIndex("student_secrets_tenant_provider").on(
+      t.tenantId,
+      t.providerSlug,
+    ),
+  }),
+);
