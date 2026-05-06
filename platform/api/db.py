@@ -73,13 +73,25 @@ async def tenant_conn(ctx: TenantContext) -> AsyncIterator[AsyncConnection]:
 
     RLS policies then enforce that only rows matching `ctx.tenant_id` are
     visible. The transaction commits on clean exit, rolls back on exception.
+
+    Also sets `app.secrets_key` from the MAKE_SKILLS_SECRETS_KEY env var
+    when present, so SQL helpers can pgp_sym_decrypt without the plaintext
+    key crossing the application boundary on read. Both GUCs are
+    transaction-scoped (third arg `true` = SET LOCAL semantics) and die
+    with the transaction — no leak across pgbouncer-pooled requests.
     """
     if _pool is None:
         raise RuntimeError("db pool not initialized; call init_pool() first")
+    secrets_key = os.environ.get("MAKE_SKILLS_SECRETS_KEY")
     async with _pool.connection() as conn:
         async with conn.transaction():
             await conn.execute(
                 "SELECT set_config('app.tenant_id', %s, true)",
                 (ctx.tenant_id,),
             )
+            if secrets_key:
+                await conn.execute(
+                    "SELECT set_config('app.secrets_key', %s, true)",
+                    (secrets_key,),
+                )
             yield conn
