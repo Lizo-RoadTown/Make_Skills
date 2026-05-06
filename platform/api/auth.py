@@ -41,11 +41,13 @@ AUTH_SECRET = os.environ.get("AUTH_SECRET")  # required when PLATFORM_MODE=hoste
 class TenantContext:
     tenant_id: str
     user_id: str | None = None
+    role: str | None = None  # "admin" | "member" | None (self-host)
 
 
 async def _self_host_tenant() -> TenantContext:
-    """No auth, deterministic context. The whole stack runs as one tenant."""
-    return TenantContext(tenant_id=DEFAULT_TENANT_ID, user_id="local")
+    """No auth, deterministic context. The whole stack runs as one tenant.
+    Self-host has no concept of admin vs member — the local user is everything."""
+    return TenantContext(tenant_id=DEFAULT_TENANT_ID, user_id="local", role="admin")
 
 
 async def _hosted_tenant(
@@ -93,13 +95,14 @@ async def _hosted_tenant(
 
     user_id = claims.get("sub")
     tenant_id = claims.get("tenant_id")
+    role = claims.get("role")  # "admin" | "member" | None
     if not user_id or not tenant_id:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Token missing required claims (sub, tenant_id)",
         )
 
-    return TenantContext(tenant_id=tenant_id, user_id=user_id)
+    return TenantContext(tenant_id=tenant_id, user_id=user_id, role=role)
 
 
 # Dispatch at import time. FastAPI introspects this function's signature

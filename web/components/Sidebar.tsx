@@ -58,7 +58,7 @@ const NAV: NavGroup[] = [
       { href: "/integrations", label: "Integrations", status: "live" },
       { href: "/credentials", label: "Credentials", status: "stub" },
       { href: "/environments", label: "Environments", status: "stub" },
-      { href: "/settings", label: "Settings", status: "stub" },
+      { href: "/settings", label: "Settings", status: "live" },
     ],
   },
   {

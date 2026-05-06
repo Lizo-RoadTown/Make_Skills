@@ -44,6 +44,7 @@ from api import (
     mcp_inspector,
     observability,
     provider_inspector,
+    secrets as secrets_module,
     sessions as sessions_inspector,
     subagents as subagents_inspector,
 )
@@ -462,6 +463,61 @@ async def sessions_get_endpoint(
         meta["message_extraction_error"] = str(e)
 
     return meta
+
+
+# ----- BYO API key management -----
+
+
+class SetSecretRequest(BaseModel):
+    provider_slug: str
+    value: str  # plaintext API key — encrypted by pgcrypto in secrets_module
+
+
+@app.post("/secrets/set", status_code=204)
+async def secrets_set_endpoint(
+    req: SetSecretRequest,
+    ctx: TenantContext = Depends(get_current_tenant),
+):
+    """Encrypt and store a provider API key for the calling tenant.
+    Admin role required — keys are tenant-level, only owners manage them."""
+    if ctx.role != "admin":
+        raise HTTPException(status_code=403, detail="admin role required")
+    if not req.provider_slug.strip() or not req.value.strip():
+        raise HTTPException(
+            status_code=400, detail="provider_slug and value are both required"
+        )
+    try:
+        await secrets_module.set_secret(ctx, req.provider_slug.strip(), req.value)
+    except RuntimeError as e:
+        # MAKE_SKILLS_SECRETS_KEY missing — operator config issue.
+        log.exception("secrets/set runtime error")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/secrets/list")
+async def secrets_list_endpoint(
+    ctx: TenantContext = Depends(get_current_tenant),
+):
+    """List which providers the calling tenant has stored keys for. Does
+    NOT return the keys themselves. Admin-gated."""
+    if ctx.role != "admin":
+        raise HTTPException(status_code=403, detail="admin role required")
+    return {
+        "providers_with_keys": await secrets_module.list_providers_with_keys(ctx)
+    }
+
+
+@app.delete("/secrets/{provider_slug}", status_code=204)
+async def secrets_delete_endpoint(
+    provider_slug: str,
+    ctx: TenantContext = Depends(get_current_tenant),
+):
+    """Delete a stored provider API key. Admin-gated."""
+    if ctx.role != "admin":
+        raise HTTPException(status_code=403, detail="admin role required")
+    deleted = await secrets_module.delete_secret(ctx, provider_slug)
+    if not deleted:
+        raise HTTPException(status_code=404, detail="no key set for that provider")
 
 
 # ----- Model providers (read-only inspector) -----
