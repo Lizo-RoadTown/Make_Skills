@@ -208,6 +208,58 @@ async def migrate_auth_tables(pool: AsyncConnectionPool) -> None:
             log.info("postgres migration: auth tables ready (users, accounts, sessions, verification_tokens, invitations, tenant_users)")
 
 
+async def migrate_student_secrets(pool: AsyncConnectionPool) -> None:
+    """Pillar 1B step 1 — student_secrets table.
+
+    Encrypted-at-rest BYO API keys for the student's chosen LLM providers
+    (and eventually OAuth tokens for MCP integrations). The runtime reads
+    these at /chat time to call the provider with the student's own key,
+    on the student's own bill.
+
+    Encryption uses pgcrypto's pgp_sym_encrypt with a deployment-level
+    key set via the MAKE_SKILLS_SECRETS_KEY env var. The key is loaded
+    into the per-connection GUC `app.secrets_key` (transaction-scoped)
+    so SQL helpers can decrypt without the plaintext key ever crossing
+    the application boundary at read time.
+
+    See docs/proposals/pillar-1b-agent-runtime.md Decision 4 for the full
+    rationale + KMS upgrade path.
+
+    RLS scope: tenant_id, same pattern as conversations. Each tenant can
+    only ever see their own secrets, even on a single shared connection.
+    """
+    async with pool.connection() as conn:
+        async with conn.transaction():
+            # pgcrypto already enabled in migrate_postgres.
+            await conn.execute("""
+                CREATE TABLE IF NOT EXISTS student_secrets (
+                    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                    tenant_id       UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+                    provider_slug   TEXT NOT NULL,
+                    encrypted_value BYTEA NOT NULL,
+                    created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
+                    updated_at      TIMESTAMPTZ NOT NULL DEFAULT now()
+                )
+            """)
+            # One row per (tenant, provider) — re-saving overwrites.
+            await conn.execute("""
+                CREATE UNIQUE INDEX IF NOT EXISTS student_secrets_tenant_provider
+                    ON student_secrets (tenant_id, provider_slug)
+            """)
+
+            # RLS — same enforcement pattern as conversations.
+            await conn.execute("ALTER TABLE student_secrets ENABLE ROW LEVEL SECURITY")
+            await conn.execute("ALTER TABLE student_secrets FORCE ROW LEVEL SECURITY")
+            await conn.execute("DROP POLICY IF EXISTS student_secrets_rls ON student_secrets")
+            await conn.execute("""
+                CREATE POLICY student_secrets_rls ON student_secrets
+                    USING (tenant_id = current_setting('app.tenant_id', true)::uuid)
+                    WITH CHECK (tenant_id = current_setting('app.tenant_id', true)::uuid)
+            """)
+
+            log.info("postgres migration: student_secrets ready (BYO provider keys)")
+
+
 async def migrate_lancedb() -> None:
     """Add tenant_id + visibility columns to the LanceDB records table.
 
@@ -250,4 +302,5 @@ async def run_all(pool: AsyncConnectionPool) -> None:
     LanceDB second (recorder-related)."""
     await migrate_postgres(pool)
     await migrate_auth_tables(pool)
+    await migrate_student_secrets(pool)
     await migrate_lancedb()
