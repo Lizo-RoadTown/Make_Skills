@@ -184,3 +184,14 @@ body {
   color: #a1a1aa;
   margin: 0.5em 0;
 }
+
+/* Docs page — small extras layered on top of .roadmap-md (which the
+   docs layout reuses). */
+.docs-back {
+  text-decoration: none;
+}
+.docs-description {
+  color: #a1a1aa;
+  font-style: italic;
+  margin-top: -0.5em;
+}

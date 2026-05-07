@@ -1,10 +1,5 @@
 import { source } from "@/lib/source";
-import {
-  DocsBody,
-  DocsDescription,
-  DocsPage,
-  DocsTitle,
-} from "fumadocs-ui/layouts/docs/page";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getMDXComponents } from "@/mdx-components";
 
@@ -16,15 +11,24 @@ export default async function Page(props: {
   if (!page) notFound();
 
   const MDXContent = page.data.body;
+  const isIndex = !params.slug || params.slug.length === 0;
 
   return (
-    <DocsPage toc={page.data.toc} full={page.data.full}>
-      <DocsTitle>{page.data.title}</DocsTitle>
-      <DocsDescription>{page.data.description}</DocsDescription>
-      <DocsBody>
-        <MDXContent components={getMDXComponents()} />
-      </DocsBody>
-    </DocsPage>
+    <article>
+      {!isIndex && (
+        <Link
+          href="/docs"
+          className="docs-back mb-4 inline-block text-xs uppercase tracking-wider text-zinc-500 hover:text-zinc-300"
+        >
+          ← all docs
+        </Link>
+      )}
+      <h1>{page.data.title}</h1>
+      {page.data.description && (
+        <p className="docs-description">{page.data.description}</p>
+      )}
+      <MDXContent components={getMDXComponents()} />
+    </article>
   );
 }
 
