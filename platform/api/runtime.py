@@ -102,7 +102,13 @@ class AgentRuntime:
                          tenant hard caps.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, default_agent: object | None = None) -> None:
+        # The singleton deepagents instance built by api/agent.build_agent
+        # at FastAPI startup. Used for the agent_id=None case (the
+        # platform-default guide-shaped agent) until step 6 wires per-
+        # (tenant, agent_id) instantiation.
+        self._default_agent = default_agent
+
         # Simple dicts for the skeleton. Step 9 swaps in TTL/LRU caches
         # (cachetools or equivalent) once we have observation data for
         # sizing.
@@ -230,7 +236,34 @@ class AgentRuntime:
         stays fresh after the wizard saves an edit."""
         self._agent_configs.pop((tenant_id, str(agent_id)), None)
 
-    # ---- Chat surface (stubs — step 5 fills these in) ----
+    # ---- Internal: resolve which deepagents instance to use ----
+
+    async def _resolve_agent(
+        self, ctx: TenantContext, agent_id: UUID | None
+    ) -> object:
+        """Returns the deepagents instance to invoke for this call.
+
+        Step 5 (this): agent_id=None returns the platform-default
+        singleton. Same instance every call; identical behavior to the
+        pre-runtime code path.
+
+        Step 6 (next): agent_id=<UUID> loads the AgentConfig + builds a
+        per-(tenant, agent) instance from cached components.
+        """
+        if agent_id is None:
+            if self._default_agent is None:
+                raise RuntimeError(
+                    "AgentRuntime has no default_agent — pass it in "
+                    "during FastAPI lifespan setup."
+                )
+            return self._default_agent
+
+        raise NotImplementedError(
+            "Per-agent_id runtime instantiation is a step-6 deliverable. "
+            f"Got agent_id={agent_id!r}; only None is supported today."
+        )
+
+    # ---- Chat surface ----
 
     async def chat(
         self,
@@ -239,12 +272,27 @@ class AgentRuntime:
         thread_id: str,
         message: str,
     ) -> dict:
-        """Single-shot chat with a student-built agent (or the platform
-        default when agent_id is None). Filled in step 5."""
-        raise NotImplementedError(
-            "AgentRuntime.chat is a step-5 deliverable; /chat still goes "
-            "through the singleton in api/agent.py."
+        """Single-shot chat. Returns {'response': str}.
+
+        Caller (the FastAPI endpoint) handles thread-belongs-to-tenant
+        gating, current_tenant ContextVar setting, and the fire-and-
+        forget memory recorder. This method only owns agent invocation.
+        """
+        agent = await self._resolve_agent(ctx, agent_id)
+        config = {
+            "configurable": {"thread_id": thread_id, "tenant_id": ctx.tenant_id}
+        }
+        result = await agent.ainvoke(  # type: ignore[attr-defined]
+            {"messages": [{"role": "user", "content": message}]},
+            config=config,
         )
+        final = (
+            result["messages"][-1]
+            if isinstance(result, dict) and "messages" in result
+            else result
+        )
+        response_text = getattr(final, "content", None) or str(final)
+        return {"response": response_text}
 
     async def stream(
         self,
@@ -252,9 +300,16 @@ class AgentRuntime:
         agent_id: UUID | None,
         thread_id: str,
         message: str,
-    ) -> AsyncIterator[dict]:
-        """Streamed chat. Filled in step 5."""
-        raise NotImplementedError(
-            "AgentRuntime.stream is a step-5 deliverable."
-        )
-        yield  # pragma: no cover  # makes this an AsyncIterator typewise
+    ) -> AsyncIterator[object]:
+        """Streamed chat. Yields raw chunks from deepagents.astream;
+        caller is responsible for serializing them into SSE."""
+        agent = await self._resolve_agent(ctx, agent_id)
+        config = {
+            "configurable": {"thread_id": thread_id, "tenant_id": ctx.tenant_id}
+        }
+        async for chunk in agent.astream(  # type: ignore[attr-defined]
+            {"messages": [{"role": "user", "content": message}]},
+            config=config,
+            stream_mode="messages",
+        ):
+            yield chunk
