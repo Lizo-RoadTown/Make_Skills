@@ -12,7 +12,9 @@
 import { sql } from "drizzle-orm";
 import {
   customType,
+  index,
   integer,
+  jsonb,
   pgTable,
   primaryKey,
   text,
@@ -154,5 +156,70 @@ export const studentSecrets = pgTable(
       t.tenantId,
       t.providerSlug,
     ),
+  }),
+);
+
+// ---- Pillar 1B: the student's stable ----
+
+export const userAgents = pgTable(
+  "user_agents",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenants.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    starter: text("starter").notNull(),
+    provider: text("provider").notNull(),
+    model: text("model"),
+    persona: text("persona"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
+  },
+  (t) => ({
+    tenantIdx: index("user_agents_tenant_idx").on(t.tenantId, t.createdAt),
+  }),
+);
+
+export const studentSkills = pgTable(
+  "student_skills",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenants.id, { onDelete: "cascade" }),
+    agentId: uuid("agent_id").references(() => userAgents.id, {
+      onDelete: "cascade",
+    }),
+    name: text("name").notNull(),
+    description: text("description").notNull(),
+    bodyMd: text("body_md").notNull(),
+    version: integer("version").notNull().default(1),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    tenantIdx: index("student_skills_tenant_idx").on(t.tenantId, t.agentId),
+  }),
+);
+
+export const studentIntegrations = pgTable(
+  "student_integrations",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenants.id, { onDelete: "cascade" }),
+    agentId: uuid("agent_id")
+      .notNull()
+      .references(() => userAgents.id, { onDelete: "cascade" }),
+    mcpServerSlug: text("mcp_server_slug").notNull(),
+    configJson: jsonb("config_json").notNull().default({}),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    agentIdx: index("student_integrations_agent_idx").on(t.agentId),
+    tenantIdx: index("student_integrations_tenant_idx").on(t.tenantId),
   }),
 );

@@ -260,6 +260,128 @@ async def migrate_student_secrets(pool: AsyncConnectionPool) -> None:
             log.info("postgres migration: student_secrets ready (BYO provider keys)")
 
 
+async def migrate_user_agents(pool: AsyncConnectionPool) -> None:
+    """Pillar 1B step 3 — user_agents + student_skills + student_integrations.
+
+    The student's stable. Each `user_agents` row is one agent the student
+    has built through the wizard (or imported from a portable identity
+    bundle). Skills + integrations are 1:N children, both keyed by
+    agent_id.
+
+    All three tables are tenant-scoped via Pillar 0 RLS. A skill's
+    agent_id can be NULL (a tenant-level skill not attached to a
+    specific agent — used by the export bundle, and as a future "skills
+    library you can attach to any agent" surface).
+
+    The wizard's Save scene posts here in step 5 (replacing localStorage).
+    The AgentRuntime (steps 4-6) reads from here to instantiate per-
+    student agents at /chat time.
+
+    See docs/proposals/portable-student-identity.md for the schema
+    rationale and docs/proposals/pillar-1b-agent-runtime.md Decision 1
+    for runtime use.
+    """
+    async with pool.connection() as conn:
+        async with conn.transaction():
+            # ---- user_agents ----
+            await conn.execute("""
+                CREATE TABLE IF NOT EXISTS user_agents (
+                    id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                    tenant_id   UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+                    name        TEXT NOT NULL,
+                    starter     TEXT NOT NULL,         -- "orb" | "cube" | "spark" | "loom"
+                    provider    TEXT NOT NULL,         -- LLM provider slug
+                    model       TEXT,                  -- model identifier (nullable for "use provider default")
+                    persona     TEXT,                  -- the "idea" — system prompt
+                    created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+                    updated_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+                    deleted_at  TIMESTAMPTZ            -- soft delete; export filters
+                )
+            """)
+            await conn.execute("""
+                CREATE INDEX IF NOT EXISTS user_agents_tenant_idx
+                    ON user_agents (tenant_id, created_at DESC)
+                    WHERE deleted_at IS NULL
+            """)
+            await conn.execute("ALTER TABLE user_agents ENABLE ROW LEVEL SECURITY")
+            await conn.execute("ALTER TABLE user_agents FORCE ROW LEVEL SECURITY")
+            await conn.execute("DROP POLICY IF EXISTS user_agents_rls ON user_agents")
+            await conn.execute("""
+                CREATE POLICY user_agents_rls ON user_agents
+                    USING (tenant_id = current_setting('app.tenant_id', true)::uuid)
+                    WITH CHECK (tenant_id = current_setting('app.tenant_id', true)::uuid)
+            """)
+
+            # ---- student_skills ----
+            # body_md is the full SKILL.md the student authored. version
+            # bumps on each edit so the runtime can cache compiled skills
+            # by (id, version).
+            await conn.execute("""
+                CREATE TABLE IF NOT EXISTS student_skills (
+                    id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                    tenant_id    UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+                    agent_id     UUID REFERENCES user_agents(id) ON DELETE CASCADE,
+                    name         TEXT NOT NULL,
+                    description  TEXT NOT NULL,
+                    body_md      TEXT NOT NULL,
+                    version      INTEGER NOT NULL DEFAULT 1,
+                    created_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
+                    updated_at   TIMESTAMPTZ NOT NULL DEFAULT now()
+                )
+            """)
+            await conn.execute("""
+                CREATE INDEX IF NOT EXISTS student_skills_tenant_idx
+                    ON student_skills (tenant_id, agent_id)
+            """)
+            await conn.execute("ALTER TABLE student_skills ENABLE ROW LEVEL SECURITY")
+            await conn.execute("ALTER TABLE student_skills FORCE ROW LEVEL SECURITY")
+            await conn.execute("DROP POLICY IF EXISTS student_skills_rls ON student_skills")
+            await conn.execute("""
+                CREATE POLICY student_skills_rls ON student_skills
+                    USING (tenant_id = current_setting('app.tenant_id', true)::uuid)
+                    WITH CHECK (tenant_id = current_setting('app.tenant_id', true)::uuid)
+            """)
+
+            # ---- student_integrations ----
+            # The connection map. mcp_server_slug references the platform's
+            # MCP registry by slug (NOT a foreign key — registry is code-
+            # owned, not table-owned). Auth tokens for OAuth-flavored MCPs
+            # live in student_secrets keyed by `mcp:<slug>` provider_slug
+            # (already supported by the existing student_secrets table).
+            await conn.execute("""
+                CREATE TABLE IF NOT EXISTS student_integrations (
+                    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                    tenant_id       UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+                    agent_id        UUID NOT NULL REFERENCES user_agents(id) ON DELETE CASCADE,
+                    mcp_server_slug TEXT NOT NULL,
+                    config_json     JSONB NOT NULL DEFAULT '{}'::jsonb,
+                    created_at      TIMESTAMPTZ NOT NULL DEFAULT now()
+                )
+            """)
+            await conn.execute("""
+                CREATE INDEX IF NOT EXISTS student_integrations_agent_idx
+                    ON student_integrations (agent_id)
+            """)
+            await conn.execute("""
+                CREATE INDEX IF NOT EXISTS student_integrations_tenant_idx
+                    ON student_integrations (tenant_id)
+            """)
+            await conn.execute("ALTER TABLE student_integrations ENABLE ROW LEVEL SECURITY")
+            await conn.execute("ALTER TABLE student_integrations FORCE ROW LEVEL SECURITY")
+            await conn.execute(
+                "DROP POLICY IF EXISTS student_integrations_rls ON student_integrations"
+            )
+            await conn.execute("""
+                CREATE POLICY student_integrations_rls ON student_integrations
+                    USING (tenant_id = current_setting('app.tenant_id', true)::uuid)
+                    WITH CHECK (tenant_id = current_setting('app.tenant_id', true)::uuid)
+            """)
+
+            log.info(
+                "postgres migration: user_agents + student_skills + student_integrations ready"
+            )
+
+
 async def migrate_lancedb() -> None:
     """Add tenant_id + visibility columns to the LanceDB records table.
 
@@ -303,4 +425,5 @@ async def run_all(pool: AsyncConnectionPool) -> None:
     await migrate_postgres(pool)
     await migrate_auth_tables(pool)
     await migrate_student_secrets(pool)
+    await migrate_user_agents(pool)
     await migrate_lancedb()
