@@ -56,27 +56,22 @@ Avoid:
 
 **Why install it:** Cross-file renames, reference lookups, "show me this function and its callers" — operations that take 8–12 careful Grep + Read steps today collapse into one atomic Serena call. Reduces token usage substantially on multi-file changes.
 
-**Install:**
+**Install:** already shipped via the `serena` plugin in `claude-plugins-official`. After installing the plugin (`/plugin` → install), run `/reload-plugins` and Serena's MCP server connects automatically.
 
-```powershell
-uv tool install -p 3.13 serena-agent@latest --prerelease=allow
-serena init
-```
-
-Then add to `.mcp.json`:
+To pin Serena project-locally (so other contributors / CI agents also get it), add to `.mcp.json`:
 
 ```json
 {
   "mcpServers": {
     "serena": {
       "command": "uvx",
-      "args": ["--from", "serena-agent", "serena-mcp-server", "--context", "ide-assistant", "--project", "${workspaceFolder}"]
+      "args": ["--from", "git+https://github.com/oraios/serena", "serena", "start-mcp-server"]
     }
   }
 }
 ```
 
-After install, reload plugins (`/reload-plugins` in Claude Code) and the Serena tools will be available.
+Requires `uv` installed locally. `uvx` fetches Serena on demand — no `uv tool install` step needed.
 
 **When to prefer Serena over Grep + Read:**
 
