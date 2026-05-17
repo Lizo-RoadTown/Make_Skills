@@ -200,6 +200,11 @@ async def chat_stream(
                 message=req.message,
             ):
                 serialized = _serialize_chunk(chunk)
+                if not serialized:
+                    # Skip non-text blocks (tool_use, thinking, empty) —
+                    # frontend's message bubble can't render them and
+                    # emitting them adds wire noise.
+                    continue
                 accumulated.append(serialized)
                 yield _sse({"event": "chunk", "data": serialized})
         except Exception as e:
@@ -748,10 +753,25 @@ def _sse(payload: dict) -> str:
 
 
 def _serialize_chunk(chunk) -> str:
-    """Best-effort: pull text out of whatever shape deepagents.astream yields."""
+    """Best-effort: pull text out of whatever shape deepagents.astream yields.
+
+    Modern LangChain/Anthropic returns content as a list of typed blocks
+    like [{"type": "text", "text": "..."}, {"type": "tool_use", ...}].
+    Older / simpler models return plain strings. Extract just the text;
+    skip tool_use / thinking / other non-text blocks since the frontend
+    bubble renders strings, not block JSON.
+    """
     if isinstance(chunk, tuple) and len(chunk) >= 1:
         chunk = chunk[0]
     content = getattr(chunk, "content", None)
-    if content is not None:
-        return content if isinstance(content, str) else json.dumps(content, default=str)
-    return json.dumps(chunk, default=str)
+    if content is None:
+        return ""
+    if isinstance(content, str):
+        return content
+    if isinstance(content, list):
+        return "".join(
+            block.get("text", "")
+            for block in content
+            if isinstance(block, dict) and block.get("type") == "text"
+        )
+    return ""
