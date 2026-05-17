@@ -27,6 +27,7 @@ from pydantic import BaseModel, Field
 from api.agent import build_agent
 from api.auth import TenantContext, get_current_tenant
 from api.db import close_pool, init_pool
+from api.runtime import AgentRuntime
 from api.tenant_context import current_tenant
 from api.memory.lance import count as memory_count
 from api.memory.lance import list_records as memory_list
@@ -59,6 +60,12 @@ async def lifespan(app: FastAPI):
     log.info("Building deepagents agent...")
     app.state.agent = await build_agent()
     log.info("Agent ready.")
+    # AgentRuntime wraps the singleton for the default-agent case +
+    # will hold per-(tenant, agent_id) instances once step 6 lands.
+    # Today /chat goes through runtime.chat/stream with agent_id=None,
+    # which delegates to the singleton — identical behavior to pre-
+    # runtime code, but the indirection is in place.
+    app.state.runtime = AgentRuntime(default_agent=app.state.agent)
     # Application connection pool for tenant-scoped queries (separate from
     # the LangGraph checkpointer's pool — see api/db.py docstring).
     await init_pool()
@@ -140,24 +147,26 @@ async def chat(
     background: BackgroundTasks,
     ctx: TenantContext = Depends(get_current_tenant),
 ):
-    """Single-shot chat. Returns the full final response."""
+    """Single-shot chat. Returns the full final response.
+
+    Routes through AgentRuntime with agent_id=None (the platform-default
+    singleton). Step 6 adds per-agent_id routing via a sibling endpoint."""
     thread_id = req.thread_id or str(uuid4())
     await _ensure_thread_belongs_to_tenant(thread_id, ctx)
 
     current_tenant.set(ctx.tenant_id)
-    config = {"configurable": {"thread_id": thread_id, "tenant_id": ctx.tenant_id}}
     try:
-        result = await app.state.agent.ainvoke(
-            {"messages": [{"role": "user", "content": req.message}]},
-            config=config,
+        result = await app.state.runtime.chat(
+            ctx=ctx,
+            agent_id=None,
+            thread_id=thread_id,
+            message=req.message,
         )
     except Exception as e:
         log.exception("Agent invocation failed")
         raise HTTPException(status_code=500, detail=str(e))
 
-    # The deepagents response shape may vary — adapt as needed.
-    final = result["messages"][-1] if isinstance(result, dict) and "messages" in result else result
-    response_text = getattr(final, "content", None) or str(final)
+    response_text = result["response"]
 
     # Fire-and-forget: extract memory records from this turn after the response is sent.
     # tenant_id is the FIRST positional arg by Pillar 0 background-task discipline.
@@ -171,21 +180,24 @@ async def chat_stream(
     req: ChatRequest,
     ctx: TenantContext = Depends(get_current_tenant),
 ):
-    """Streamed chat. Emits SSE-style JSON lines, one per chunk."""
+    """Streamed chat. Emits SSE-style JSON lines, one per chunk.
+
+    Routes through AgentRuntime.stream with agent_id=None (platform
+    default). Step 6 adds per-agent_id streaming via a sibling endpoint."""
     thread_id = req.thread_id or str(uuid4())
     await _ensure_thread_belongs_to_tenant(thread_id, ctx)
 
     current_tenant.set(ctx.tenant_id)
-    config = {"configurable": {"thread_id": thread_id, "tenant_id": ctx.tenant_id}}
 
     async def gen():
         yield _sse({"event": "thread", "thread_id": thread_id})
         accumulated = []
         try:
-            async for chunk in app.state.agent.astream(
-                {"messages": [{"role": "user", "content": req.message}]},
-                config=config,
-                stream_mode="messages",
+            async for chunk in app.state.runtime.stream(
+                ctx=ctx,
+                agent_id=None,
+                thread_id=thread_id,
+                message=req.message,
             ):
                 serialized = _serialize_chunk(chunk)
                 accumulated.append(serialized)
