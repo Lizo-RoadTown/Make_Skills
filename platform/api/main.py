@@ -17,7 +17,7 @@ import logging
 import asyncio
 import os
 from contextlib import asynccontextmanager
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 from fastapi import BackgroundTasks, FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
@@ -58,14 +58,17 @@ logging.basicConfig(level=logging.INFO)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     log.info("Building deepagents agent...")
-    app.state.agent = await build_agent()
+    agent, checkpointer = await build_agent()
+    app.state.agent = agent
     log.info("Agent ready.")
-    # AgentRuntime wraps the singleton for the default-agent case +
-    # will hold per-(tenant, agent_id) instances once step 6 lands.
-    # Today /chat goes through runtime.chat/stream with agent_id=None,
-    # which delegates to the singleton — identical behavior to pre-
-    # runtime code, but the indirection is in place.
-    app.state.runtime = AgentRuntime(default_agent=app.state.agent)
+    # AgentRuntime: default_agent for agent_id=None (the platform-default
+    # guide-shaped agent), plus per-(tenant, agent_id) instances built on
+    # demand from saved user_agents rows. Shares the checkpointer so all
+    # threads (default + per-student) persist through the same saver.
+    app.state.runtime = AgentRuntime(
+        default_agent=app.state.agent,
+        checkpointer=checkpointer,
+    )
     # Application connection pool for tenant-scoped queries (separate from
     # the LangGraph checkpointer's pool — see api/db.py docstring).
     await init_pool()
@@ -214,6 +217,289 @@ async def chat_stream(
 
         # Fire-and-forget memory extraction. Run as a detached task so we don't
         # block this generator's cleanup. tenant_id passed explicitly.
+        full_response = "".join(accumulated)
+        if full_response.strip():
+            asyncio.create_task(
+                record_turn(ctx.tenant_id, thread_id, req.message, full_response)
+            )
+
+    return StreamingResponse(gen(), media_type="text/event-stream")
+
+
+# ----- Agent CRUD (the wizard's stable persistence) -----
+
+
+class SkillCreatePayload(BaseModel):
+    name: str
+    description: str
+    body_md: str
+
+
+class IntegrationCreatePayload(BaseModel):
+    mcp_server_slug: str
+    config: dict = Field(default_factory=dict)
+
+
+class CreateAgentRequest(BaseModel):
+    name: str
+    starter: str  # "orb" | "cube" | "spark" | "loom"
+    provider: str
+    model: str | None = None
+    persona: str | None = None
+    skills: list[SkillCreatePayload] = Field(default_factory=list)
+    integrations: list[IntegrationCreatePayload] = Field(default_factory=list)
+
+
+@app.post("/agents/create", status_code=201)
+async def agents_create_endpoint(
+    req: CreateAgentRequest,
+    ctx: TenantContext = Depends(get_current_tenant),
+):
+    """Persist a freshly-built agent (from the wizard) into the student's
+    stable. Inserts user_agents + its child skill / integration rows in a
+    single transaction, all tenant-scoped via RLS."""
+    if not req.name.strip():
+        raise HTTPException(status_code=400, detail="name is required")
+    if not req.starter or not req.provider:
+        raise HTTPException(status_code=400, detail="starter and provider are required")
+
+    from api.db import tenant_conn
+    async with tenant_conn(ctx) as conn:
+        cur = await conn.execute(
+            """
+            INSERT INTO user_agents (tenant_id, name, starter, provider, model, persona)
+            VALUES (%s::uuid, %s, %s, %s, %s, %s)
+            RETURNING id, created_at
+            """,
+            (
+                ctx.tenant_id,
+                req.name.strip(),
+                req.starter,
+                req.provider,
+                req.model,
+                req.persona,
+            ),
+        )
+        row = await cur.fetchone()
+        if not row:
+            raise HTTPException(status_code=500, detail="failed to insert agent")
+        agent_id, created_at = row
+
+        for skill in req.skills:
+            await conn.execute(
+                """
+                INSERT INTO student_skills (tenant_id, agent_id, name, description, body_md)
+                VALUES (%s::uuid, %s::uuid, %s, %s, %s)
+                """,
+                (
+                    ctx.tenant_id,
+                    str(agent_id),
+                    skill.name,
+                    skill.description,
+                    skill.body_md,
+                ),
+            )
+
+        for integ in req.integrations:
+            await conn.execute(
+                """
+                INSERT INTO student_integrations (tenant_id, agent_id, mcp_server_slug, config_json)
+                VALUES (%s::uuid, %s::uuid, %s, %s::jsonb)
+                """,
+                (
+                    ctx.tenant_id,
+                    str(agent_id),
+                    integ.mcp_server_slug,
+                    json.dumps(integ.config),
+                ),
+            )
+
+    return {"id": str(agent_id), "created_at": created_at.isoformat() if created_at else None}
+
+
+@app.get("/agents/list")
+async def agents_list_endpoint(
+    ctx: TenantContext = Depends(get_current_tenant),
+):
+    """List the calling tenant's stable. RLS enforces scoping. Returns
+    newest-first; soft-deleted rows excluded."""
+    from api.db import tenant_conn
+    async with tenant_conn(ctx) as conn:
+        cur = await conn.execute(
+            """
+            SELECT
+                a.id, a.name, a.starter, a.provider, a.model, a.persona,
+                a.created_at, a.updated_at,
+                (SELECT count(*) FROM student_skills s WHERE s.agent_id = a.id) AS skill_count,
+                (SELECT count(*) FROM student_integrations i WHERE i.agent_id = a.id) AS integration_count
+            FROM user_agents a
+            WHERE a.tenant_id = %s::uuid AND a.deleted_at IS NULL
+            ORDER BY a.created_at DESC
+            """,
+            (ctx.tenant_id,),
+        )
+        rows = await cur.fetchall()
+    return {
+        "agents": [
+            {
+                "id": str(r[0]),
+                "name": r[1],
+                "starter": r[2],
+                "provider": r[3],
+                "model": r[4],
+                "persona": r[5],
+                "created_at": r[6].isoformat() if r[6] else None,
+                "updated_at": r[7].isoformat() if r[7] else None,
+                "skill_count": r[8],
+                "integration_count": r[9],
+            }
+            for r in rows
+        ]
+    }
+
+
+@app.get("/agents/get/{agent_id}")
+async def agents_get_endpoint(
+    agent_id: str,
+    ctx: TenantContext = Depends(get_current_tenant),
+):
+    """Full agent detail including the bodies of its skills. Used by the
+    chat-with-agent surface to render the agent's name + skill summary."""
+    try:
+        UUID(agent_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="agent_id must be a UUID")
+
+    from api.db import tenant_conn
+    async with tenant_conn(ctx) as conn:
+        cur = await conn.execute(
+            """
+            SELECT id, name, starter, provider, model, persona, created_at, updated_at
+            FROM user_agents
+            WHERE id = %s::uuid AND deleted_at IS NULL
+            """,
+            (agent_id,),
+        )
+        row = await cur.fetchone()
+        if not row:
+            raise HTTPException(status_code=404, detail="agent not found")
+
+        cur = await conn.execute(
+            "SELECT id, name, description FROM student_skills WHERE agent_id = %s::uuid",
+            (agent_id,),
+        )
+        skill_rows = await cur.fetchall()
+
+        cur = await conn.execute(
+            "SELECT id, mcp_server_slug FROM student_integrations WHERE agent_id = %s::uuid",
+            (agent_id,),
+        )
+        integ_rows = await cur.fetchall()
+
+    return {
+        "id": str(row[0]),
+        "name": row[1],
+        "starter": row[2],
+        "provider": row[3],
+        "model": row[4],
+        "persona": row[5],
+        "created_at": row[6].isoformat() if row[6] else None,
+        "updated_at": row[7].isoformat() if row[7] else None,
+        "skills": [
+            {"id": str(s[0]), "name": s[1], "description": s[2]}
+            for s in skill_rows
+        ],
+        "integrations": [
+            {"id": str(i[0]), "mcp_server_slug": i[1]}
+            for i in integ_rows
+        ],
+    }
+
+
+# ----- Per-agent chat (Pillar 1B step 6) -----
+
+
+@app.post("/chat/{agent_id}", response_model=ChatResponse)
+async def chat_with_agent(
+    agent_id: str,
+    req: ChatRequest,
+    background: BackgroundTasks,
+    ctx: TenantContext = Depends(get_current_tenant),
+):
+    """Single-shot chat with a student-built agent identified by its UUID.
+
+    The runtime loads the saved config (persona, provider, model, skills,
+    decrypted API key) and builds a per-(tenant, agent_id) deepagents
+    instance. Cached so subsequent calls reuse it until invalidated.
+    """
+    try:
+        agent_uuid = UUID(agent_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="agent_id must be a UUID")
+
+    thread_id = req.thread_id or str(uuid4())
+    await _ensure_thread_belongs_to_tenant(thread_id, ctx)
+
+    current_tenant.set(ctx.tenant_id)
+    try:
+        result = await app.state.runtime.chat(
+            ctx=ctx,
+            agent_id=agent_uuid,
+            thread_id=thread_id,
+            message=req.message,
+        )
+    except ValueError as e:
+        # _resolve_agent raises ValueError for unknown / wrong-tenant agent_id
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        log.exception("Per-agent invocation failed")
+        raise HTTPException(status_code=500, detail=str(e))
+
+    response_text = result["response"]
+    background.add_task(record_turn, ctx.tenant_id, thread_id, req.message, response_text)
+    return ChatResponse(thread_id=thread_id, response=response_text)
+
+
+@app.post("/chat/{agent_id}/stream")
+async def chat_with_agent_stream(
+    agent_id: str,
+    req: ChatRequest,
+    ctx: TenantContext = Depends(get_current_tenant),
+):
+    """Streamed chat with a student-built agent. Same SSE envelope as
+    /chat/stream — `thread`, `chunk`, `error`, `done` events."""
+    try:
+        agent_uuid = UUID(agent_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="agent_id must be a UUID")
+
+    thread_id = req.thread_id or str(uuid4())
+    await _ensure_thread_belongs_to_tenant(thread_id, ctx)
+
+    current_tenant.set(ctx.tenant_id)
+
+    async def gen():
+        yield _sse({"event": "thread", "thread_id": thread_id})
+        accumulated = []
+        try:
+            async for chunk in app.state.runtime.stream(
+                ctx=ctx,
+                agent_id=agent_uuid,
+                thread_id=thread_id,
+                message=req.message,
+            ):
+                serialized = _serialize_chunk(chunk)
+                if not serialized:
+                    continue
+                accumulated.append(serialized)
+                yield _sse({"event": "chunk", "data": serialized})
+        except ValueError as e:
+            yield _sse({"event": "error", "detail": str(e)})
+        except Exception as e:
+            log.exception("Per-agent stream failed")
+            yield _sse({"event": "error", "detail": str(e)})
+        yield _sse({"event": "done"})
+
         full_response = "".join(accumulated)
         if full_response.strip():
             asyncio.create_task(

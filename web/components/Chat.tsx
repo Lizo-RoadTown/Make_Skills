@@ -11,9 +11,13 @@ type Message = { role: "user" | "agent"; content: string };
 type Props = {
   threadId: string | null;
   onThreadChange: (id: string) => void;
+  /** UUID of a student-built agent. Omit / null = platform default. */
+  agentId?: string | null;
+  /** Optional header label override (e.g., the agent's name). */
+  title?: string;
 };
 
-export function Chat({ threadId, onThreadChange }: Props) {
+export function Chat({ threadId, onThreadChange, agentId, title }: Props) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [streaming, setStreaming] = useState(false);
   const [thinking, setThinking] = useState(false);
@@ -53,7 +57,7 @@ export function Chat({ threadId, onThreadChange }: Props) {
     let agentText = "";
     let firstChunk = true;
 
-    for await (const ev of streamChat(msg, threadId)) {
+    for await (const ev of streamChat(msg, threadId, agentId ?? null)) {
       if (ev.event === "thread") {
         if (!threadId) {
           rememberThread(ev.thread_id, msg);
@@ -89,15 +93,21 @@ export function Chat({ threadId, onThreadChange }: Props) {
   return (
     <div className="flex h-full flex-1 flex-col">
       <header className="border-b border-zinc-800 bg-zinc-900 px-6 py-3">
-        <h1 className="text-sm font-semibold text-zinc-300">Make_Skills agent</h1>
+        <h1 className="text-sm font-semibold text-zinc-300">
+          {title || "Make_Skills agent"}
+        </h1>
       </header>
       <div ref={scrollRef} className="flex-1 overflow-y-auto">
         <div className="mx-auto flex max-w-3xl flex-col gap-4 p-4">
           {messages.length === 0 && !thinking && (
             <div className="mt-20 text-center text-zinc-500">
-              <p className="text-lg text-zinc-300">Make_Skills agent</p>
+              <p className="text-lg text-zinc-300">
+                {title || "Make_Skills agent"}
+              </p>
               <p className="mt-2 text-sm">
-                Ask anything — I&apos;ll route to the right skill or subagent.
+                {agentId
+                  ? "Ask something this agent's persona + skills can handle."
+                  : "Ask anything — I'll route to the right skill or subagent."}
               </p>
             </div>
           )}
