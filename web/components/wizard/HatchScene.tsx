@@ -122,13 +122,13 @@ export function HatchScene({ draft, onComplete }: Props) {
                     if (e.key === "Enter") submitName();
                   }}
                   placeholder="give it a name"
-                  className="w-full max-w-md rounded-lg border border-zinc-700 bg-zinc-950 px-4 py-3 text-center text-lg text-zinc-100 placeholder:text-zinc-600 focus:border-blue-500 focus:outline-none"
+                  className="w-full max-w-md rounded-lg border border-zinc-700 bg-zinc-950 px-4 py-3 text-center text-lg text-text placeholder:text-text-dim focus:border-blue-500 focus:outline-none"
                 />
                 <button
                   type="button"
                   onClick={submitName}
                   disabled={!trimmedName}
-                  className="rounded bg-blue-600 px-4 py-1.5 text-sm font-semibold text-white transition hover:bg-blue-500 disabled:cursor-not-allowed disabled:bg-zinc-800 disabled:text-zinc-500"
+                  className="rounded bg-blue-600 px-4 py-1.5 text-sm font-semibold text-white transition hover:bg-blue-500 disabled:cursor-not-allowed disabled:bg-zinc-800 disabled:text-text-subtle"
                 >
                   hatch
                 </button>
@@ -152,7 +152,7 @@ export function HatchScene({ draft, onComplete }: Props) {
                     {selectedStarter.svg}
                   </svg>
                 </motion.div>
-                <div className="text-2xl font-semibold text-zinc-100">
+                <div className="text-2xl font-semibold text-text">
                   {trimmedName}
                 </div>
                 <button

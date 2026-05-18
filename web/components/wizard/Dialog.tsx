@@ -85,11 +85,11 @@ export function Dialog({ text, speakerName, onComplete, speed = 22 }: Props) {
         className="relative max-w-xl cursor-pointer rounded-lg border border-zinc-700 bg-zinc-900/90 px-5 py-4 shadow-lg backdrop-blur"
       >
         {speakerName && (
-          <div className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-zinc-500">
+          <div className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-text-subtle">
             {speakerName}
           </div>
         )}
-        <p className="text-sm leading-relaxed text-zinc-200">
+        <p className="text-sm leading-relaxed text-text">
           {text.slice(0, revealed)}
           {!done && (
             <motion.span
@@ -100,7 +100,7 @@ export function Dialog({ text, speakerName, onComplete, speed = 22 }: Props) {
           )}
         </p>
         {!done && (
-          <div className="mt-2 text-[10px] uppercase tracking-wider text-zinc-600">
+          <div className="mt-2 text-[10px] uppercase tracking-wider text-text-dim">
             click or press space to skip
           </div>
         )}

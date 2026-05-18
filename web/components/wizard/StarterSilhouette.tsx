@@ -101,8 +101,8 @@ export function StarterPicker({ selected, onPick }: Props) {
             <svg viewBox="0 0 64 64" width="64" height="64">
               {s.svg}
             </svg>
-            <div className="text-sm font-semibold text-zinc-100">{s.label}</div>
-            <div className="text-[11px] leading-snug text-zinc-500">{s.tagline}</div>
+            <div className="text-sm font-semibold text-text">{s.label}</div>
+            <div className="text-[11px] leading-snug text-text-subtle">{s.tagline}</div>
           </motion.button>
         );
       })}

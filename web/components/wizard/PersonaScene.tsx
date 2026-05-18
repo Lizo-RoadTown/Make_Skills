@@ -92,17 +92,17 @@ export function PersonaScene({ initialPersona, onComplete, onBack }: Props) {
                   onChange={(e) => setText(e.target.value)}
                   rows={6}
                   placeholder="who is this agent? what does it care about? how does it behave?"
-                  className="w-full rounded-lg border border-zinc-700 bg-zinc-950 px-4 py-3 text-sm text-zinc-100 placeholder:text-zinc-600 focus:border-blue-500 focus:outline-none"
+                  className="w-full rounded-lg border border-zinc-700 bg-zinc-950 px-4 py-3 text-sm text-text placeholder:text-text-dim focus:border-blue-500 focus:outline-none"
                 />
                 <div className="flex items-center justify-between">
-                  <div className="text-[11px] uppercase tracking-wider text-zinc-600">
+                  <div className="text-[11px] uppercase tracking-wider text-text-dim">
                     {wordCount} word{wordCount === 1 ? "" : "s"}
                   </div>
                   <div className="flex gap-2">
                     <button
                       type="button"
                       onClick={onBack}
-                      className="rounded border border-zinc-800 px-3 py-1.5 text-xs text-zinc-400 hover:bg-zinc-900"
+                      className="rounded border border-zinc-800 px-3 py-1.5 text-xs text-text-muted hover:bg-zinc-900"
                     >
                       ← Back
                     </button>
@@ -110,14 +110,14 @@ export function PersonaScene({ initialPersona, onComplete, onBack }: Props) {
                       type="button"
                       onClick={submit}
                       disabled={!trimmed}
-                      className="rounded bg-blue-600 px-4 py-1.5 text-xs font-semibold text-white transition hover:bg-blue-500 disabled:cursor-not-allowed disabled:bg-zinc-800 disabled:text-zinc-500"
+                      className="rounded bg-blue-600 px-4 py-1.5 text-xs font-semibold text-white transition hover:bg-blue-500 disabled:cursor-not-allowed disabled:bg-zinc-800 disabled:text-text-subtle"
                     >
                       Set the idea
                     </button>
                   </div>
                 </div>
                 <div className="rounded border border-zinc-800 bg-zinc-950/50 p-3">
-                  <div className="mb-2 text-[10px] uppercase tracking-wider text-zinc-600">
+                  <div className="mb-2 text-[10px] uppercase tracking-wider text-text-dim">
                     examples — click to use
                   </div>
                   <div className="flex flex-col gap-1.5">
@@ -126,9 +126,9 @@ export function PersonaScene({ initialPersona, onComplete, onBack }: Props) {
                         key={ex.label}
                         type="button"
                         onClick={() => setText(ex.text)}
-                        className="rounded px-2 py-1 text-left text-xs text-zinc-400 transition hover:bg-zinc-900 hover:text-zinc-200"
+                        className="rounded px-2 py-1 text-left text-xs text-text-muted transition hover:bg-zinc-900 hover:text-text"
                       >
-                        <span className="font-semibold text-zinc-300">
+                        <span className="font-semibold text-text-muted">
                           {ex.label}
                         </span>{" "}
                         — {ex.text.slice(0, 70)}…
@@ -147,17 +147,17 @@ export function PersonaScene({ initialPersona, onComplete, onBack }: Props) {
                 transition={{ duration: 0.4 }}
                 className="flex flex-col items-center gap-4"
               >
-                <div className="text-sm uppercase tracking-wider text-zinc-500">
+                <div className="text-sm uppercase tracking-wider text-text-subtle">
                   the idea
                 </div>
-                <div className="max-w-xl rounded-lg border border-zinc-800 bg-zinc-950 px-5 py-4 text-sm italic text-zinc-300">
+                <div className="max-w-xl rounded-lg border border-zinc-800 bg-zinc-950 px-5 py-4 text-sm italic text-text-muted">
                   &ldquo;{trimmed}&rdquo;
                 </div>
                 <div className="mt-2 flex gap-3">
                   <button
                     type="button"
                     onClick={() => setPhase("writing")}
-                    className="rounded border border-zinc-800 px-4 py-2 text-sm text-zinc-400 hover:bg-zinc-900"
+                    className="rounded border border-zinc-800 px-4 py-2 text-sm text-text-muted hover:bg-zinc-900"
                   >
                     Edit
                   </button>

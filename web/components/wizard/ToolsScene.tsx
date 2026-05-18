@@ -106,7 +106,7 @@ export function ToolsScene({ ownSkill, initialTools = [], onComplete, onBack }: 
               >
                 {ownSkill && (
                   <div>
-                    <div className="mb-2 text-[10px] uppercase tracking-wider text-zinc-500">
+                    <div className="mb-2 text-[10px] uppercase tracking-wider text-text-subtle">
                       Your skill
                     </div>
                     <ToolRow
@@ -120,7 +120,7 @@ export function ToolsScene({ ownSkill, initialTools = [], onComplete, onBack }: 
                   </div>
                 )}
                 <div>
-                  <div className="mb-2 mt-2 text-[10px] uppercase tracking-wider text-zinc-500">
+                  <div className="mb-2 mt-2 text-[10px] uppercase tracking-wider text-text-subtle">
                     Bundled skills
                   </div>
                   {error && (
@@ -140,7 +140,7 @@ export function ToolsScene({ ownSkill, initialTools = [], onComplete, onBack }: 
                       />
                     ))}
                     {bundled.length === 0 && !error && (
-                      <div className="text-xs text-zinc-600">loading…</div>
+                      <div className="text-xs text-text-dim">loading…</div>
                     )}
                   </div>
                 </div>
@@ -148,7 +148,7 @@ export function ToolsScene({ ownSkill, initialTools = [], onComplete, onBack }: 
                   <button
                     type="button"
                     onClick={onBack}
-                    className="rounded border border-zinc-800 px-3 py-1.5 text-xs text-zinc-400 hover:bg-zinc-900"
+                    className="rounded border border-zinc-800 px-3 py-1.5 text-xs text-text-muted hover:bg-zinc-900"
                   >
                     ← Back
                   </button>
@@ -171,10 +171,10 @@ export function ToolsScene({ ownSkill, initialTools = [], onComplete, onBack }: 
                 transition={{ duration: 0.4 }}
                 className="flex flex-col items-center gap-4"
               >
-                <div className="text-sm uppercase tracking-wider text-zinc-500">
+                <div className="text-sm uppercase tracking-wider text-text-subtle">
                   toolbelt
                 </div>
-                <div className="text-2xl font-semibold text-zinc-100">
+                <div className="text-2xl font-semibold text-text">
                   {selected.size} tool{selected.size === 1 ? "" : "s"}
                 </div>
                 <button
@@ -256,8 +256,8 @@ function ToolRow({
         )}
       </span>
       <span className="flex-1">
-        <span className="block font-mono text-xs text-zinc-100">{label}</span>
-        <span className="mt-0.5 block text-xs text-zinc-500">{description}</span>
+        <span className="block font-mono text-xs text-text">{label}</span>
+        <span className="mt-0.5 block text-xs text-text-subtle">{description}</span>
       </span>
     </button>
   );

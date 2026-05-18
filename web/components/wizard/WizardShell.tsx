@@ -45,7 +45,7 @@ export function WizardShell() {
       {/* Header chrome */}
       <header className="flex shrink-0 items-center justify-between border-b border-zinc-800 px-8 py-4">
         <div className="flex items-center gap-4">
-          <div className="text-xs uppercase tracking-wider text-zinc-500">
+          <div className="text-xs uppercase tracking-wider text-text-subtle">
             Section 1 · {STEP_LABELS[currentStep]}
           </div>
           {/* Progress dots */}
@@ -81,11 +81,11 @@ export function WizardShell() {
                   skills={skillsForAvatar}
                   size={28}
                 />
-                <span className="text-xs text-zinc-300">
+                <span className="text-xs text-text-muted">
                   {draft.name.trim() || "unnamed"}
                 </span>
                 {draft.provider && (
-                  <span className="rounded bg-zinc-800 px-1.5 py-0.5 text-[9px] uppercase tracking-wider text-zinc-400">
+                  <span className="rounded bg-zinc-800 px-1.5 py-0.5 text-[9px] uppercase tracking-wider text-text-muted">
                     {draft.provider}
                   </span>
                 )}
@@ -95,7 +95,7 @@ export function WizardShell() {
           <button
             type="button"
             onClick={() => send({ type: "RESTART" })}
-            className="text-[11px] uppercase tracking-wider text-zinc-600 hover:text-zinc-400"
+            className="text-[11px] uppercase tracking-wider text-text-dim hover:text-text-muted"
           >
             restart
           </button>

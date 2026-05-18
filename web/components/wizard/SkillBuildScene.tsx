@@ -260,10 +260,10 @@ export function SkillBuildScene({ initial, onComplete, onBack }: Props) {
                     whileTap={{ scale: 0.98 }}
                     className="rounded-lg border border-zinc-800 bg-zinc-950 p-4 text-left transition hover:border-zinc-600 hover:bg-zinc-900"
                   >
-                    <div className="text-sm font-semibold text-zinc-100">
+                    <div className="text-sm font-semibold text-text">
                       {j.label}
                     </div>
-                    <div className="mt-1 text-xs text-zinc-500">{j.blurb}</div>
+                    <div className="mt-1 text-xs text-text-subtle">{j.blurb}</div>
                   </motion.button>
                 ))}
               </motion.div>
@@ -323,7 +323,7 @@ export function SkillBuildScene({ initial, onComplete, onBack }: Props) {
                   <button
                     type="button"
                     onClick={onBack}
-                    className="rounded border border-zinc-800 px-3 py-1.5 text-xs text-zinc-400 hover:bg-zinc-900"
+                    className="rounded border border-zinc-800 px-3 py-1.5 text-xs text-text-muted hover:bg-zinc-900"
                   >
                     ← Back
                   </button>
@@ -331,7 +331,7 @@ export function SkillBuildScene({ initial, onComplete, onBack }: Props) {
                     type="button"
                     onClick={submit}
                     disabled={!allFilled}
-                    className="rounded bg-blue-600 px-4 py-1.5 text-xs font-semibold text-white transition hover:bg-blue-500 disabled:cursor-not-allowed disabled:bg-zinc-800 disabled:text-zinc-500"
+                    className="rounded bg-blue-600 px-4 py-1.5 text-xs font-semibold text-white transition hover:bg-blue-500 disabled:cursor-not-allowed disabled:bg-zinc-800 disabled:text-text-subtle"
                   >
                     Save the skill
                   </button>
@@ -347,7 +347,7 @@ export function SkillBuildScene({ initial, onComplete, onBack }: Props) {
                 transition={{ duration: 0.4 }}
                 className="flex flex-col items-center gap-4"
               >
-                <div className="text-sm uppercase tracking-wider text-zinc-500">
+                <div className="text-sm uppercase tracking-wider text-text-subtle">
                   skill written
                 </div>
                 <motion.div
@@ -359,11 +359,11 @@ export function SkillBuildScene({ initial, onComplete, onBack }: Props) {
                   <div className="font-mono text-sm text-blue-300">
                     {draft.name}
                   </div>
-                  <div className="mt-1 text-xs text-zinc-400">
+                  <div className="mt-1 text-xs text-text-muted">
                     {draft.description}
                   </div>
                 </motion.div>
-                <div className="max-w-md text-center text-xs text-zinc-500">
+                <div className="max-w-md text-center text-xs text-text-subtle">
                   This skill is now part of your agent&apos;s shape. You&apos;ll
                   wire it as a tool next.
                 </div>
@@ -371,7 +371,7 @@ export function SkillBuildScene({ initial, onComplete, onBack }: Props) {
                   <button
                     type="button"
                     onClick={() => setPhase("authoring")}
-                    className="rounded border border-zinc-800 px-4 py-2 text-sm text-zinc-400 hover:bg-zinc-900"
+                    className="rounded border border-zinc-800 px-4 py-2 text-sm text-text-muted hover:bg-zinc-900"
                   >
                     Edit
                   </button>
@@ -441,7 +441,7 @@ function Field({
 }) {
   return (
     <label className="flex flex-col gap-1">
-      <span className="text-[10px] uppercase tracking-wider text-zinc-500">
+      <span className="text-[10px] uppercase tracking-wider text-text-subtle">
         {label}
       </span>
       <input
@@ -450,7 +450,7 @@ function Field({
         onChange={(e) => onChange(e.target.value)}
         onFocus={onFocus}
         placeholder={placeholder}
-        className={`rounded border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-700 focus:border-blue-500 focus:outline-none ${
+        className={`rounded border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-text placeholder:text-text-dim focus:border-blue-500 focus:outline-none ${
           mono ? "font-mono" : ""
         }`}
       />
@@ -471,7 +471,7 @@ function BodyField({
 }) {
   return (
     <label className="flex flex-col gap-1">
-      <span className="text-[10px] uppercase tracking-wider text-zinc-500">
+      <span className="text-[10px] uppercase tracking-wider text-text-subtle">
         {label}
       </span>
       <textarea
@@ -479,7 +479,7 @@ function BodyField({
         onChange={(e) => onChange(e.target.value)}
         onFocus={onFocus}
         rows={2}
-        className="rounded border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-zinc-200 placeholder:text-zinc-700 focus:border-blue-500 focus:outline-none"
+        className="rounded border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-text placeholder:text-text-dim focus:border-blue-500 focus:outline-none"
       />
     </label>
   );
@@ -491,9 +491,9 @@ function FieldHint({ text }: { text: string }) {
       initial={{ opacity: 0, y: 4 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.2 }}
-      className="max-w-xl rounded-lg border border-zinc-800 bg-zinc-900/80 px-4 py-3 text-xs text-zinc-300 backdrop-blur"
+      className="max-w-xl rounded-lg border border-zinc-800 bg-zinc-900/80 px-4 py-3 text-xs text-text-muted backdrop-blur"
     >
-      <div className="mb-0.5 text-[10px] font-semibold uppercase tracking-wider text-zinc-600">
+      <div className="mb-0.5 text-[10px] font-semibold uppercase tracking-wider text-text-dim">
         Guide
       </div>
       {text}

@@ -241,7 +241,7 @@ export function BrainScene({ onComplete, onBack }: Props) {
                       className="flex flex-col gap-1.5 rounded-lg border border-zinc-800 bg-zinc-950 p-4 text-left transition hover:border-zinc-600 hover:bg-zinc-900"
                     >
                       <div className="flex items-center justify-between">
-                        <div className="text-base font-semibold text-zinc-100">
+                        <div className="text-base font-semibold text-text">
                           {p.label}
                         </div>
                         <div className="flex gap-1.5">
@@ -267,9 +267,9 @@ export function BrainScene({ onComplete, onBack }: Props) {
                           ) : null}
                         </div>
                       </div>
-                      <div className="text-xs text-zinc-500">{p.description}</div>
+                      <div className="text-xs text-text-subtle">{p.description}</div>
                       {p.starter_model && (
-                        <div className="mt-1 font-mono text-[10px] text-zinc-600">
+                        <div className="mt-1 font-mono text-[10px] text-text-dim">
                           {p.starter_model}
                         </div>
                       )}
@@ -287,14 +287,14 @@ export function BrainScene({ onComplete, onBack }: Props) {
                 transition={{ duration: 0.4 }}
                 className="flex flex-col items-center gap-4"
               >
-                <div className="text-sm uppercase tracking-wider text-zinc-500">
+                <div className="text-sm uppercase tracking-wider text-text-subtle">
                   brain
                 </div>
-                <div className="text-2xl font-semibold text-zinc-100">
+                <div className="text-2xl font-semibold text-text">
                   {chosen.label}
                 </div>
                 {chosen.starter_model && (
-                  <div className="font-mono text-xs text-zinc-500">
+                  <div className="font-mono text-xs text-text-subtle">
                     {chosen.starter_model}
                   </div>
                 )}
@@ -321,7 +321,7 @@ export function BrainScene({ onComplete, onBack }: Props) {
                   <button
                     type="button"
                     onClick={onBack}
-                    className="rounded border border-zinc-800 px-4 py-2 text-sm text-zinc-400 hover:bg-zinc-900"
+                    className="rounded border border-zinc-800 px-4 py-2 text-sm text-text-muted hover:bg-zinc-900"
                   >
                     ← Back
                   </button>

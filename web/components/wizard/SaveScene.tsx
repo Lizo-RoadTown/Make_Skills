@@ -107,11 +107,11 @@ export function SaveScene({ draft, onRestart, onBack }: Props) {
                 animated
               />
               <div className="text-center">
-                <div className="text-2xl font-semibold text-zinc-100">
+                <div className="text-2xl font-semibold text-text">
                   {draft.name?.trim()}
                 </div>
                 {draft.provider && (
-                  <div className="mt-1 font-mono text-xs text-zinc-500">
+                  <div className="mt-1 font-mono text-xs text-text-subtle">
                     brain: {draft.provider}
                     {draft.model ? ` · ${draft.model}` : ""}
                   </div>
@@ -119,26 +119,26 @@ export function SaveScene({ draft, onRestart, onBack }: Props) {
               </div>
               <div className="w-full rounded-lg border border-zinc-800 bg-zinc-950/50 px-5 py-4">
                 <Row label="idea">
-                  <span className="italic text-zinc-300">
+                  <span className="italic text-text-muted">
                     &ldquo;{draft.persona || "—"}&rdquo;
                   </span>
                 </Row>
                 <Row label="skill">
                   {draft.skill ? (
-                    <span className="font-mono text-zinc-200">
+                    <span className="font-mono text-text">
                       {draft.skill.name}
                     </span>
                   ) : (
-                    <span className="text-zinc-600">—</span>
+                    <span className="text-text-dim">—</span>
                   )}
                 </Row>
                 <Row label="tools">
-                  <span className="text-zinc-300">
+                  <span className="text-text-muted">
                     {draft.tools?.length || 0} wired
                   </span>
                 </Row>
                 <Row label="integrations">
-                  <span className="text-zinc-300">
+                  <span className="text-text-muted">
                     {draft.integrations?.length || 0} wired
                   </span>
                 </Row>
@@ -147,7 +147,7 @@ export function SaveScene({ draft, onRestart, onBack }: Props) {
                 <button
                   type="button"
                   onClick={onBack}
-                  className="rounded border border-zinc-800 px-4 py-2 text-sm text-zinc-400 hover:bg-zinc-900"
+                  className="rounded border border-zinc-800 px-4 py-2 text-sm text-text-muted hover:bg-zinc-900"
                 >
                   ← Back
                 </button>
@@ -203,7 +203,7 @@ export function SaveScene({ draft, onRestart, onBack }: Props) {
                 />
               </motion.div>
               <div className="text-center">
-                <div className="text-2xl font-semibold text-zinc-100">
+                <div className="text-2xl font-semibold text-text">
                   {draft.name?.trim()}
                 </div>
                 <div className="mt-1 text-xs uppercase tracking-wider text-blue-400">
@@ -214,13 +214,13 @@ export function SaveScene({ draft, onRestart, onBack }: Props) {
                 <button
                   type="button"
                   onClick={onRestart}
-                  className="rounded border border-zinc-800 px-4 py-2 text-sm text-zinc-300 hover:bg-zinc-900"
+                  className="rounded border border-zinc-800 px-4 py-2 text-sm text-text-muted hover:bg-zinc-900"
                 >
                   Hatch another
                 </button>
                 <Link
                   href="/agents"
-                  className="rounded border border-zinc-800 px-4 py-2 text-sm text-zinc-300 hover:bg-zinc-900"
+                  className="rounded border border-zinc-800 px-4 py-2 text-sm text-text-muted hover:bg-zinc-900"
                 >
                   View your stable
                 </Link>
@@ -259,7 +259,7 @@ export function SaveScene({ draft, onRestart, onBack }: Props) {
 function Row({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="flex items-baseline gap-3 border-b border-zinc-900 py-2 last:border-0">
-      <div className="w-28 shrink-0 text-[10px] uppercase tracking-wider text-zinc-500">
+      <div className="w-28 shrink-0 text-[10px] uppercase tracking-wider text-text-subtle">
         {label}
       </div>
       <div className="flex-1 text-sm">{children}</div>

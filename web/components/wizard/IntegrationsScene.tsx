@@ -104,7 +104,7 @@ export function IntegrationsScene({ initial = [], onComplete, onBack }: Props) {
                 )}
                 {configured.length > 0 && (
                   <div>
-                    <div className="mb-2 text-[10px] uppercase tracking-wider text-zinc-500">
+                    <div className="mb-2 text-[10px] uppercase tracking-wider text-text-subtle">
                       Configured in this workspace
                     </div>
                     <div className="flex flex-col gap-1.5">
@@ -121,7 +121,7 @@ export function IntegrationsScene({ initial = [], onComplete, onBack }: Props) {
                 )}
                 {recommended.length > 0 && (
                   <div>
-                    <div className="mb-2 text-[10px] uppercase tracking-wider text-zinc-500">
+                    <div className="mb-2 text-[10px] uppercase tracking-wider text-text-subtle">
                       Recommended (not yet wired in this workspace)
                     </div>
                     <div className="flex flex-col gap-1.5">
@@ -141,7 +141,7 @@ export function IntegrationsScene({ initial = [], onComplete, onBack }: Props) {
                   <button
                     type="button"
                     onClick={onBack}
-                    className="rounded border border-zinc-800 px-3 py-1.5 text-xs text-zinc-400 hover:bg-zinc-900"
+                    className="rounded border border-zinc-800 px-3 py-1.5 text-xs text-text-muted hover:bg-zinc-900"
                   >
                     ← Back
                   </button>
@@ -152,7 +152,7 @@ export function IntegrationsScene({ initial = [], onComplete, onBack }: Props) {
                         setSelected(new Set());
                         submit();
                       }}
-                      className="rounded border border-zinc-800 px-3 py-1.5 text-xs text-zinc-500 hover:bg-zinc-900"
+                      className="rounded border border-zinc-800 px-3 py-1.5 text-xs text-text-subtle hover:bg-zinc-900"
                     >
                       Skip
                     </button>
@@ -176,10 +176,10 @@ export function IntegrationsScene({ initial = [], onComplete, onBack }: Props) {
                 transition={{ duration: 0.4 }}
                 className="flex flex-col items-center gap-4"
               >
-                <div className="text-sm uppercase tracking-wider text-zinc-500">
+                <div className="text-sm uppercase tracking-wider text-text-subtle">
                   integrations
                 </div>
-                <div className="text-2xl font-semibold text-zinc-100">
+                <div className="text-2xl font-semibold text-text">
                   {selected.size === 0
                     ? "none"
                     : `${selected.size} wired`}
@@ -258,14 +258,14 @@ function IntegrationRow({
       </span>
       <span className="flex-1">
         <span className="flex items-center gap-2">
-          <span className="font-mono text-xs text-zinc-100">{server.name}</span>
+          <span className="font-mono text-xs text-text">{server.name}</span>
           {server.category && (
-            <span className="rounded bg-zinc-800 px-1.5 py-0.5 text-[9px] uppercase tracking-wider text-zinc-500">
+            <span className="rounded bg-zinc-800 px-1.5 py-0.5 text-[9px] uppercase tracking-wider text-text-subtle">
               {server.category}
             </span>
           )}
         </span>
-        <span className="mt-0.5 block text-xs text-zinc-500">
+        <span className="mt-0.5 block text-xs text-text-subtle">
           {server.description}
         </span>
       </span>
