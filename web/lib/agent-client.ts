@@ -16,10 +16,15 @@ export type StreamEvent =
 export async function* streamChat(
   message: string,
   threadId: string | null,
+  agentId: string | null = null,
 ): AsyncGenerator<StreamEvent> {
+  // Per-agent endpoint when agentId is set; default platform agent otherwise.
+  const url = agentId
+    ? `${AGENT_URL}/chat/${encodeURIComponent(agentId)}/stream`
+    : `${AGENT_URL}/chat/stream`;
   let res: Response;
   try {
-    res = await fetch(`${AGENT_URL}/chat/stream`, {
+    res = await fetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ message, thread_id: threadId }),

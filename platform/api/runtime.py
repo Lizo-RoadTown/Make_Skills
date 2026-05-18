@@ -1,31 +1,29 @@
 """
-Pillar 1B step 4 — AgentRuntime skeleton.
+Pillar 1B step 6 — per-(tenant, agent_id) deepagents instantiation.
 
-Per-(tenant, agent_id) deepagents instantiation with cached components.
 Replaces the singleton built in api/agent.py for the case where the
 student is chatting with one of THEIR built agents (rather than the
-platform-default guide-shaped agent).
+platform-default guide-shaped agent). The default agent stays the
+singleton; per-agent instances are built on demand from a saved
+`user_agents` row + its skills + the tenant's decrypted API key.
 
-This step ships:
-  - AgentConfig dataclass — the materialized view of a row in
-    user_agents + its child rows in student_skills + student_integrations
-    + the tenant's decrypted secret for the chosen provider.
-  - StudentSkill / StudentIntegration sub-dataclasses.
-  - AgentRuntime class with empty component caches (filled in over
-    steps 5-8) and a working _get_config that reads from the DB.
-  - chat() / stream() stubs that raise NotImplementedError.
+Cache layers:
+  _agent_configs   : (tenant_id, agent_id) -> AgentConfig
+  _built_agents    : (tenant_id, agent_id) -> compiled deepagents instance
+  _provider_clients: (tenant_id, provider, model) -> ChatModel (future TTL eviction)
+  _compiled_skills : (skill_id, version) -> Tool (immutable per version)
 
-Step 5 cuts /chat over to use this for the default-agent case.
-Step 6 wires per-agent_id routing. Step 7 fills the compiled-skill
-cache. Step 8 fills the MCP-client pool. Step 9 wires invalidation.
+See docs/proposals/pillar-1b-agent-runtime.md.
 
-See docs/proposals/pillar-1b-agent-runtime.md for the full picture.
+Step 7 (skill compilation) is bundled with step 6 since per-agent
+runtime is pointless without working skills. Step 8 (MCP integration
+loading) is deferred — agents without integrations work fine.
 """
 from __future__ import annotations
 
 import logging
 from dataclasses import dataclass, field
-from typing import AsyncIterator
+from typing import Any, AsyncIterator
 from uuid import UUID
 
 from api.auth import TenantContext
@@ -102,17 +100,26 @@ class AgentRuntime:
                          tenant hard caps.
     """
 
-    def __init__(self, default_agent: object | None = None) -> None:
+    def __init__(
+        self,
+        default_agent: object | None = None,
+        checkpointer: object | None = None,
+    ) -> None:
         # The singleton deepagents instance built by api/agent.build_agent
-        # at FastAPI startup. Used for the agent_id=None case (the
-        # platform-default guide-shaped agent) until step 6 wires per-
-        # (tenant, agent_id) instantiation.
+        # at FastAPI startup. Used for agent_id=None (the platform-default
+        # guide-shaped agent).
         self._default_agent = default_agent
+
+        # Shared checkpointer (TenantScopedSaver) used when building per-
+        # agent instances. Same pool as the default agent — thread_ids
+        # are UUIDs so collisions are impossible.
+        self._checkpointer = checkpointer
 
         # Simple dicts for the skeleton. Step 9 swaps in TTL/LRU caches
         # (cachetools or equivalent) once we have observation data for
         # sizing.
         self._agent_configs: dict[tuple[str, str], AgentConfig] = {}
+        self._built_agents: dict[tuple[str, str], object] = {}
         self._provider_clients: dict[tuple[str, str, str], object] = {}
         self._compiled_skills: dict[tuple[str, int], object] = {}
         self._mcp_clients: dict[tuple[str, str], object] = {}
@@ -231,10 +238,67 @@ class AgentRuntime:
         return config
 
     def invalidate_agent(self, tenant_id: str, agent_id: UUID) -> None:
-        """Drop cached config for a (tenant, agent) pair. Wired into
-        agent / skill / integration write endpoints in step 9 so cache
-        stays fresh after the wizard saves an edit."""
-        self._agent_configs.pop((tenant_id, str(agent_id)), None)
+        """Drop cached config + built instance for a (tenant, agent) pair.
+        Called by agent/skill/integration write endpoints after a save
+        so the next chat call rebuilds from fresh DB state."""
+        key = (tenant_id, str(agent_id))
+        self._agent_configs.pop(key, None)
+        self._built_agents.pop(key, None)
+
+    # ---- Internal: build a deepagents instance from saved config ----
+
+    def _build_agent_from_config(self, config: "AgentConfig") -> object:
+        """Materialize a per-student agent from its AgentConfig.
+
+        Resolves the LLM provider with the student's decrypted key (or
+        falls back to platform env vars if the student hasn't set one
+        for this provider). Compiles each saved skill into a callable
+        tool. Wires the persona as the agent's instructions/system
+        prompt. Uses the shared checkpointer so threads persist.
+        """
+        from deepagents import create_deep_agent
+
+        from api.model_registry import RECOMMENDED_STARTERS, resolve_model
+        from api.skill_compiler import compile_skill_to_tool
+
+        # Resolve model. Use the agent's saved model, falling back to
+        # the platform's recommended starter for that provider if the
+        # agent has no model set (older rows or "use default").
+        model_name = config.model or RECOMMENDED_STARTERS.get(config.provider)
+        if not model_name:
+            raise RuntimeError(
+                f"No model configured for provider {config.provider!r} "
+                f"and no recommended starter — set agent.model on save."
+            )
+
+        model_cfg: dict[str, Any] = {"provider": config.provider, "name": model_name}
+        if config.api_key:
+            # model_registry's resolvers accept api_key via **kwargs; most
+            # providers map it to their SDK's `api_key` parameter.
+            model_cfg["api_key"] = config.api_key
+
+        model = resolve_model(model_cfg)
+
+        # Compile skills to tools. Each skill becomes a callable named
+        # by skill.name; the LLM picks among them by their `description`.
+        tools = [
+            compile_skill_to_tool(skill, model)
+            for skill in config.skills
+        ]
+
+        # Build the deepagents instance. Persona becomes the agent's
+        # instructions. No subagents — those are platform-level (the
+        # default agent uses them); per-student agents are flat.
+        kwargs: dict[str, Any] = {
+            "model": model,
+            "tools": tools,
+        }
+        if config.persona:
+            kwargs["instructions"] = config.persona
+        if self._checkpointer is not None:
+            kwargs["checkpointer"] = self._checkpointer
+
+        return create_deep_agent(**kwargs)
 
     # ---- Internal: resolve which deepagents instance to use ----
 
@@ -243,12 +307,10 @@ class AgentRuntime:
     ) -> object:
         """Returns the deepagents instance to invoke for this call.
 
-        Step 5 (this): agent_id=None returns the platform-default
-        singleton. Same instance every call; identical behavior to the
-        pre-runtime code path.
-
-        Step 6 (next): agent_id=<UUID> loads the AgentConfig + builds a
-        per-(tenant, agent) instance from cached components.
+        agent_id=None  → the platform-default singleton (the guide-shaped
+                         agent built by api/agent.build_agent at startup).
+        agent_id=<UUID> → load the student's saved config and either return
+                          a cached compiled instance or build a fresh one.
         """
         if agent_id is None:
             if self._default_agent is None:
@@ -258,10 +320,27 @@ class AgentRuntime:
                 )
             return self._default_agent
 
-        raise NotImplementedError(
-            "Per-agent_id runtime instantiation is a step-6 deliverable. "
-            f"Got agent_id={agent_id!r}; only None is supported today."
+        # Check cache first
+        key = (ctx.tenant_id, str(agent_id))
+        cached = self._built_agents.get(key)
+        if cached is not None:
+            return cached
+
+        # Load config + build
+        config = await self._get_config(ctx, agent_id)
+        if config is None:
+            raise ValueError(
+                f"Agent {agent_id} not found in tenant {ctx.tenant_id} "
+                f"(deleted, wrong tenant, or never created)."
+            )
+
+        agent = self._build_agent_from_config(config)
+        self._built_agents[key] = agent
+        log.info(
+            "built per-agent runtime: tenant=%s agent=%s provider=%s skills=%d",
+            ctx.tenant_id, agent_id, config.provider, len(config.skills),
         )
+        return agent
 
     # ---- Chat surface ----
 

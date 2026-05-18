@@ -16,38 +16,39 @@ type Subagent = {
   persona_excerpt: string;
 };
 
-type StoredAgent = {
+type StableAgent = {
   id: string;
   name: string;
   starter: StarterSlug | null;
-  provider?: string;
-  model?: string;
-  persona?: string;
-  skill?: { name: string; description: string; body: string };
-  tools?: string[];
-  integrations?: string[];
-  savedAt: number;
+  provider: string;
+  model: string | null;
+  persona: string | null;
+  created_at: string | null;
+  updated_at: string | null;
+  skill_count: number;
+  integration_count: number;
 };
-
-const AGENTS_KEY = "make_skills.agents.v1";
 
 export default function AgentsPage() {
   const [subagents, setSubagents] = useState<Subagent[]>([]);
-  const [stable, setStable] = useState<StoredAgent[]>([]);
+  const [stable, setStable] = useState<StableAgent[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch(`${AGENT_URL}/subagents/list`)
-      .then((r) => r.json())
-      .then((j) => setSubagents(j.subagents || []))
-      .catch((e) => setError((e as Error).message))
-      .finally(() => setLoading(false));
-
-    try {
-      const raw = window.localStorage.getItem(AGENTS_KEY);
-      if (raw) setStable(JSON.parse(raw));
-    } catch {}
+    // Preset subagents (file-baked) + the student's stable (DB).
+    Promise.all([
+      fetch(`${AGENT_URL}/subagents/list`)
+        .then((r) => r.json())
+        .then((j) => setSubagents(j.subagents || []))
+        .catch((e) => setError((e as Error).message)),
+      fetch(`${AGENT_URL}/agents/list`)
+        .then((r) => (r.ok ? r.json() : { agents: [] }))
+        .then((j) => setStable(j.agents || []))
+        .catch(() => {
+          // Backend not reachable — leave stable empty; don't break the page.
+        }),
+    ]).finally(() => setLoading(false));
   }, []);
 
   return (
@@ -106,26 +107,31 @@ export default function AgentsPage() {
           ) : (
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {stable.map((a) => (
-                <div
+                <Link
                   key={a.id}
-                  className="flex flex-col gap-3 rounded-lg border border-zinc-800 bg-zinc-900 p-4"
+                  href={`/chat/${a.id}`}
+                  className="flex flex-col gap-3 rounded-lg border border-zinc-800 bg-zinc-900 p-4 transition hover:border-zinc-600 hover:bg-zinc-900/70"
                 >
                   <div className="flex items-center gap-3">
                     <EvolvedAvatar
                       starter={a.starter}
-                      skills={a.skill ? [{ name: a.skill.name }] : []}
+                      skills={
+                        a.skill_count > 0
+                          ? Array.from({ length: a.skill_count }, (_, i) => ({
+                              name: `${a.id}-skill-${i}`,
+                            }))
+                          : []
+                      }
                       size={48}
                     />
                     <div className="min-w-0 flex-1">
                       <div className="truncate text-sm font-semibold text-zinc-100">
                         {a.name}
                       </div>
-                      {a.provider && (
-                        <div className="font-mono text-[10px] text-zinc-500">
-                          {a.provider}
-                          {a.model ? ` · ${a.model}` : ""}
-                        </div>
-                      )}
+                      <div className="font-mono text-[10px] text-zinc-500">
+                        {a.provider}
+                        {a.model ? ` · ${a.model}` : ""}
+                      </div>
                     </div>
                   </div>
                   {a.persona && (
@@ -134,23 +140,22 @@ export default function AgentsPage() {
                     </p>
                   )}
                   <div className="flex flex-wrap gap-1.5">
-                    {a.skill && (
-                      <span className="rounded bg-blue-950 px-2 py-0.5 font-mono text-[10px] text-blue-300">
-                        {a.skill.name}
+                    {a.skill_count > 0 && (
+                      <span className="rounded bg-blue-950 px-2 py-0.5 text-[10px] text-blue-300">
+                        {a.skill_count} skill{a.skill_count === 1 ? "" : "s"}
                       </span>
                     )}
-                    {a.tools && a.tools.length > 1 && (
+                    {a.integration_count > 0 && (
                       <span className="rounded bg-zinc-800 px-2 py-0.5 text-[10px] text-zinc-400">
-                        +{a.tools.length - 1} tools
+                        {a.integration_count} integration
+                        {a.integration_count === 1 ? "" : "s"}
                       </span>
                     )}
-                    {a.integrations && a.integrations.length > 0 && (
-                      <span className="rounded bg-zinc-800 px-2 py-0.5 text-[10px] text-zinc-400">
-                        {a.integrations.length} integrations
-                      </span>
-                    )}
+                    <span className="ml-auto text-[10px] uppercase tracking-wider text-zinc-600">
+                      chat →
+                    </span>
                   </div>
-                </div>
+                </Link>
               ))}
             </div>
           )}

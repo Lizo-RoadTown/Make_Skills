@@ -27,9 +27,13 @@ async def build_agent(config_path: str | Path | None = None, repo_root: str | Pa
     """
     Build the deepagents agent with an async Postgres-backed checkpointer.
 
-    Returns the compiled agent — call .ainvoke() / .astream() on it. Each
-    call should pass a thread_id in the config so the AsyncPostgresSaver
-    can persist state per conversation.
+    Returns (agent, checkpointer). The checkpointer is shared with
+    AgentRuntime for per-student agents — thread_ids are UUIDs so
+    collisions across default-agent and per-agent threads are impossible.
+
+    Call .ainvoke() / .astream() on the agent. Each call must pass a
+    thread_id in the config so the AsyncPostgresSaver persists state
+    per conversation.
     """
     from contextlib import asynccontextmanager
 
@@ -125,7 +129,7 @@ async def build_agent(config_path: str | Path | None = None, repo_root: str | Pa
         subagents=subagents,
         checkpointer=checkpointer,
     )
-    return agent
+    return agent, checkpointer
 
 
 def load_subagents(subagents_dir: Path, repo_root: Path) -> list[dict[str, Any]]:

@@ -2,10 +2,10 @@
 /**
  * Save — wizard step 7. The agent ships to the student's stable.
  *
- * v1: persists to localStorage `make_skills.agents.v1`. The /agents
- * page reads this list and merges with bundled presets. Future: POST
- * to /agents/create which writes a `user_agents` row keyed off the
- * caller's tenant_id.
+ * Posts to /agents/create. The backend writes user_agents + child
+ * student_skills + student_integrations rows in a single transaction
+ * scoped by tenant. Draft localStorage is cleared on success so the
+ * wizard starts fresh next time.
  */
 import { motion } from "motion/react";
 import { useCallback, useMemo, useState } from "react";
@@ -15,33 +15,44 @@ import { Dialog } from "./Dialog";
 import { EvolvedAvatar } from "./EvolvedAvatar";
 import type { WizardDraft } from "./wizardMachine";
 
-const AGENTS_KEY = "make_skills.agents.v1";
+const AGENT_URL = process.env.NEXT_PUBLIC_AGENT_URL || "http://localhost:8001";
 const DRAFT_KEY = "make_skills.agent_draft.v1";
 
-type StoredAgent = WizardDraft & { id: string; savedAt: number };
-
-function loadAgents(): StoredAgent[] {
-  if (typeof window === "undefined") return [];
-  try {
-    const raw = window.localStorage.getItem(AGENTS_KEY);
-    if (raw) return JSON.parse(raw);
-  } catch {}
-  return [];
-}
-
-function saveAgent(draft: WizardDraft): StoredAgent {
-  const agents = loadAgents();
-  const stored: StoredAgent = {
-    ...draft,
-    id: `agent_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
-    savedAt: Date.now(),
+async function persistAgent(draft: WizardDraft): Promise<{ id: string }> {
+  const payload = {
+    name: draft.name.trim(),
+    starter: draft.starter,
+    provider: draft.provider,
+    model: draft.model || null,
+    persona: draft.persona || null,
+    skills: draft.skill
+      ? [
+          {
+            name: draft.skill.name,
+            description: draft.skill.description,
+            body_md: draft.skill.body,
+          },
+        ]
+      : [],
+    integrations: (draft.integrations || []).map((slug) => ({
+      mcp_server_slug: slug,
+      config: {},
+    })),
   };
-  agents.unshift(stored);
+  const res = await fetch(`${AGENT_URL}/agents/create`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) {
+    const detail = await res.text().catch(() => "");
+    throw new Error(`save failed (${res.status}): ${detail.slice(0, 200)}`);
+  }
+  const data = await res.json();
   try {
-    window.localStorage.setItem(AGENTS_KEY, JSON.stringify(agents));
     window.localStorage.removeItem(DRAFT_KEY);
   } catch {}
-  return stored;
+  return { id: data.id };
 }
 
 type Props = {
@@ -55,6 +66,7 @@ type Phase = "greeting" | "reviewing" | "saving" | "saved";
 export function SaveScene({ draft, onRestart, onBack }: Props) {
   const [phase, setPhase] = useState<Phase>("greeting");
   const [savedId, setSavedId] = useState<string | null>(null);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   const skillsForAvatar = useMemo(
     () => (draft.skill ? [{ name: draft.skill.name }] : []),
@@ -63,12 +75,18 @@ export function SaveScene({ draft, onRestart, onBack }: Props) {
 
   const greetingText = `Here's ${draft.name?.trim() || "your agent"}. Take a look. If it's right, send it to your stable.`;
 
-  const ship = useCallback(() => {
+  const ship = useCallback(async () => {
     setPhase("saving");
-    const stored = saveAgent(draft);
-    setSavedId(stored.id);
-    // Small pause so the celebration animation feels intentional
-    setTimeout(() => setPhase("saved"), 400);
+    setSaveError(null);
+    try {
+      const { id } = await persistAgent(draft);
+      setSavedId(id);
+      // Small pause so the celebration animation feels intentional
+      setTimeout(() => setPhase("saved"), 400);
+    } catch (e) {
+      setSaveError((e as Error).message);
+      setPhase("reviewing");
+    }
   }, [draft]);
 
   return (
@@ -141,6 +159,11 @@ export function SaveScene({ draft, onRestart, onBack }: Props) {
                   Send to your stable
                 </button>
               </div>
+              {saveError && (
+                <div className="mt-3 max-w-md rounded border border-red-900 bg-red-950/40 px-3 py-2 text-xs text-red-300">
+                  Save failed: {saveError}
+                </div>
+              )}
             </motion.div>
           )}
 
@@ -197,16 +220,19 @@ export function SaveScene({ draft, onRestart, onBack }: Props) {
                 </button>
                 <Link
                   href="/agents"
-                  className="rounded bg-blue-600 px-5 py-2 text-sm font-semibold text-white transition hover:bg-blue-500"
+                  className="rounded border border-zinc-800 px-4 py-2 text-sm text-zinc-300 hover:bg-zinc-900"
                 >
-                  View your stable →
+                  View your stable
                 </Link>
+                {savedId && (
+                  <Link
+                    href={`/chat/${savedId}`}
+                    className="rounded bg-blue-600 px-5 py-2 text-sm font-semibold text-white transition hover:bg-blue-500"
+                  >
+                    Chat with {draft.name?.trim() || "it"} →
+                  </Link>
+                )}
               </div>
-              {savedId && (
-                <div className="text-[10px] font-mono text-zinc-700">
-                  {savedId}
-                </div>
-              )}
             </motion.div>
           )}
         </div>
