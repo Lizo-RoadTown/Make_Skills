@@ -19,9 +19,19 @@ export function Chat({ threadId, onThreadChange }: Props) {
   const [thinking, setThinking] = useState(false);
   const scrollRef = useRef<HTMLDivElement | null>(null);
 
-  // Reset the displayed messages when the user picks a different thread.
-  // (We don't fetch server history yet — just start with an empty view.)
+  // Track streaming state in a ref so the reset effect below doesn't
+  // depend on it (which would cause the effect to re-fire when streaming
+  // flips, wiping the response).
+  const streamingRef = useRef(false);
+  streamingRef.current = streaming;
+
+  // Reset the displayed messages when the user picks a different thread
+  // via ThreadSidebar — but NOT when we ourselves caused the threadId
+  // change mid-send (the stream's first event is `thread`, which calls
+  // onThreadChange; without this guard the reset would wipe the user
+  // message + the in-flight response).
   useEffect(() => {
+    if (streamingRef.current) return;
     setMessages([]);
   }, [threadId]);
 
