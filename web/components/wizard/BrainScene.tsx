@@ -123,6 +123,9 @@ export function BrainScene({ onComplete, onBack }: Props) {
   // Start populated with the fallback list so providers always show,
   // even when the API hasn't deployed /providers/list yet.
   const [providers, setProviders] = useState<Provider[]>(FALLBACK_PROVIDERS);
+  // Provider slugs the student has saved their own key for. Merged with
+  // server-side env-var readiness to compute the displayed "ready" state.
+  const [savedKeySlugs, setSavedKeySlugs] = useState<Set<string>>(new Set());
   const [chosen, setChosen] = useState<Provider | null>(null);
 
   useEffect(() => {
@@ -136,7 +139,34 @@ export function BrainScene({ onComplete, onBack }: Props) {
       .catch(() => {
         // Keep the fallback list — silent failure is fine here.
       });
+
+    // Fetch the student's stored keys so the "ready" badge reflects
+    // /settings/keys entries, not just server env vars.
+    fetch(`${AGENT_URL}/secrets/list`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((j) => {
+        if (j?.providers_with_keys) {
+          setSavedKeySlugs(
+            new Set(
+              (j.providers_with_keys as { provider_slug: string }[]).map(
+                (p) => p.provider_slug,
+              ),
+            ),
+          );
+        }
+      })
+      .catch(() => {
+        // 403 (non-admin) or network error — keep empty set, just means
+        // every needs-key provider shows the "needs key" badge.
+      });
   }, []);
+
+  // Effective readiness: ready if the server has the env var OR the
+  // student has saved their own key for this provider.
+  const effectivelyReady = useCallback(
+    (p: Provider) => p.ready || savedKeySlugs.has(p.slug),
+    [savedKeySlugs],
+  );
 
   const guideState: CharacterState = useMemo(() => {
     if (phase === "greeting" || phase === "reacting") return "speaking";
@@ -167,14 +197,22 @@ export function BrainScene({ onComplete, onBack }: Props) {
     onComplete({ provider: chosen.slug, model: chosen.starter_model || "" });
   }, [chosen, onComplete]);
 
-  // Sort: ready first, then by free-tier/local before paid
+  // Sort: ready (with student keys merged) first, then by free-tier/local before paid
   const sorted = useMemo(() => {
     const tierOrder: Record<string, number> = { "free-tier": 0, local: 1, paid: 2 };
     return [...providers].sort((a, b) => {
-      if (a.ready !== b.ready) return a.ready ? -1 : 1;
+      const aReady = effectivelyReady(a);
+      const bReady = effectivelyReady(b);
+      if (aReady !== bReady) return aReady ? -1 : 1;
       return (tierOrder[a.tier] ?? 99) - (tierOrder[b.tier] ?? 99);
     });
-  }, [providers]);
+  }, [providers, effectivelyReady]);
+
+  // True when the chosen provider needs a key and the student hasn't
+  // saved one. Drives the inline warning in the reaction phase.
+  const chosenNeedsKey = chosen
+    ? chosen.key_env_vars.length > 0 && !effectivelyReady(chosen)
+    : false;
 
   return (
     <div className="relative flex h-full w-full flex-col">
@@ -218,11 +256,15 @@ export function BrainScene({ onComplete, onBack }: Props) {
                           >
                             {p.tier}
                           </span>
-                          {!p.ready && (
-                            <span className="rounded bg-zinc-800 px-1.5 py-0.5 text-[10px] uppercase tracking-wider text-zinc-400">
+                          {effectivelyReady(p) && p.key_env_vars.length > 0 ? (
+                            <span className="rounded bg-emerald-950 px-1.5 py-0.5 text-[10px] uppercase tracking-wider text-emerald-400">
+                              key set
+                            </span>
+                          ) : !effectivelyReady(p) ? (
+                            <span className="rounded bg-amber-950 px-1.5 py-0.5 text-[10px] uppercase tracking-wider text-amber-400">
                               needs key
                             </span>
-                          )}
+                          ) : null}
                         </div>
                       </div>
                       <div className="text-xs text-zinc-500">{p.description}</div>
@@ -254,6 +296,25 @@ export function BrainScene({ onComplete, onBack }: Props) {
                 {chosen.starter_model && (
                   <div className="font-mono text-xs text-zinc-500">
                     {chosen.starter_model}
+                  </div>
+                )}
+                {chosenNeedsKey && (
+                  <div className="mt-2 max-w-md rounded-lg border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-xs text-amber-200">
+                    <div className="font-semibold">Heads up — needs a key</div>
+                    <div className="mt-1 text-amber-200/80">
+                      {chosen.label} won&apos;t respond until you paste your
+                      own API key. You can continue the wizard now and set it
+                      later — but the agent won&apos;t actually run until
+                      then.
+                    </div>
+                    <a
+                      href="/settings/keys"
+                      target="_blank"
+                      rel="noreferrer"
+                      className="mt-2 inline-block text-amber-100 underline decoration-amber-400/60 underline-offset-2 hover:text-white"
+                    >
+                      Open /settings/keys in a new tab →
+                    </a>
                   </div>
                 )}
                 <div className="mt-2 flex gap-3">
