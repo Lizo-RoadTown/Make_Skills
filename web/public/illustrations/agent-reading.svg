@@ -1,0 +1,102 @@
+<svg
+  viewBox="0 0 320 240"
+  xmlns="http://www.w3.org/2000/svg"
+  fill="none"
+  role="img"
+  aria-labelledby="agent-reading-title"
+>
+  <title id="agent-reading-title">An agent reading a page</title>
+
+  <defs>
+    <filter id="agent-reading-shadow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="3" />
+      <feOffset dy="3" />
+      <feComponentTransfer>
+        <feFuncA type="linear" slope="0.35" />
+      </feComponentTransfer>
+      <feMerge>
+        <feMergeNode />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- Desk / ground hint -->
+  <line
+    x1="40"
+    y1="208"
+    x2="280"
+    y2="208"
+    stroke="#3f3f46"
+    stroke-width="1"
+    stroke-dasharray="3 4"
+  />
+
+  <!-- Orb creature, slightly tilted, looking down -->
+  <g transform="translate(125, 36) rotate(-6 60 60)">
+    <circle
+      cx="60"
+      cy="60"
+      r="54"
+      fill="#1e3a8a"
+      stroke="#3b82f6"
+      stroke-width="2"
+      filter="url(#agent-reading-shadow)"
+    />
+    <!-- Highlight, suggests looking-toward-the-paper -->
+    <ellipse cx="46" cy="48" rx="11" ry="6" fill="#bfdbfe" opacity="0.55" />
+    <!-- Single subtle focus point -->
+    <circle cx="62" cy="74" r="3.2" fill="#0c1e3d" />
+  </g>
+
+  <!-- Paper / scroll, in front, slightly tilted -->
+  <g transform="translate(105, 124) rotate(-4)">
+    <rect
+      x="0"
+      y="0"
+      width="110"
+      height="80"
+      rx="2"
+      fill="#27272a"
+      stroke="#71717a"
+      stroke-width="1.5"
+      filter="url(#agent-reading-shadow)"
+    />
+    <!-- Folded corner -->
+    <path
+      d="M 96 0 L 110 0 L 110 14 Z"
+      fill="#18181b"
+      stroke="#71717a"
+      stroke-width="1.5"
+    />
+    <path
+      d="M 96 0 L 96 14 L 110 14"
+      stroke="#71717a"
+      stroke-width="1.5"
+      fill="none"
+    />
+    <!-- Text lines -->
+    <line x1="10" y1="16" x2="84" y2="16" stroke="#71717a" stroke-width="1.5" stroke-linecap="round" />
+    <line x1="10" y1="26" x2="74" y2="26" stroke="#71717a" stroke-width="1.5" stroke-linecap="round" />
+    <line x1="10" y1="36" x2="82" y2="36" stroke="#71717a" stroke-width="1.5" stroke-linecap="round" />
+    <line x1="10" y1="50" x2="68" y2="50" stroke="#71717a" stroke-width="1.5" stroke-linecap="round" />
+    <line x1="10" y1="60" x2="76" y2="60" stroke="#71717a" stroke-width="1.5" stroke-linecap="round" />
+    <line x1="10" y1="70" x2="58" y2="70" stroke="#71717a" stroke-width="1.5" stroke-linecap="round" />
+  </g>
+
+  <!-- Sparkle: small hint that the agent is engaged -->
+  <g transform="translate(248, 72)" opacity="0.75">
+    <path
+      d="M 8 0 L 9.5 6.5 L 16 8 L 9.5 9.5 L 8 16 L 6.5 9.5 L 0 8 L 6.5 6.5 Z"
+      fill="#f59e0b"
+    />
+  </g>
+
+  <!-- Smaller sparkle for asymmetry -->
+  <g transform="translate(60, 110)" opacity="0.5">
+    <path
+      d="M 5 0 L 6 4 L 10 5 L 6 6 L 5 10 L 4 6 L 0 5 L 4 4 Z"
+      fill="#f59e0b"
+    />
+  </g>
+</svg>
