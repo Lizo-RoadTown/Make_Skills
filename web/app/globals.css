@@ -1,8 +1,59 @@
 @import "tailwindcss";
 
+/*
+ * Design tokens — primitive layer.
+ *
+ * The zinc scale is the project's neutral palette. We name a couple
+ * of legacy aliases (--color-background, --color-foreground) for
+ * backwards compatibility with code that already uses them.
+ *
+ * Six semantic state colors per docs/UX_CONTRACT.md — Color Semantics.
+ * Each state has THREE tokens: a strong text/border color, a soft
+ * background tint, and a border (often the same as the strong color
+ * at a different alpha). Use the semantic token, not the primitive.
+ */
 @theme inline {
-  --color-background: #18181b;
-  --color-foreground: #f4f4f5;
+  /* Surface — legacy aliases kept for migration */
+  --color-background: #18181b;     /* zinc-900 */
+  --color-foreground: #f4f4f5;     /* zinc-100 */
+
+  /* Surface — semantic */
+  --color-surface: #18181b;        /* page background */
+  --color-surface-elevated: #27272a;   /* zinc-800 — cards, modals */
+  --color-surface-sunken: #09090b;     /* zinc-950 — wells, code blocks */
+  --color-border: #27272a;         /* zinc-800 — default border */
+  --color-border-strong: #3f3f46;  /* zinc-700 — emphasized border */
+  --color-text: #f4f4f5;           /* zinc-100 — body */
+  --color-text-muted: #a1a1aa;     /* zinc-400 — secondary */
+  --color-text-subtle: #71717a;    /* zinc-500 — tertiary, hints */
+  --color-text-dim: #52525b;       /* zinc-600 — labels, metadata */
+
+  /*
+   * State colors — semantic. Each state has three tokens:
+   *   --color-X       strong (use as text-X or bg-X for filled chips)
+   *   --color-X-soft  soft tint (use as bg-X-soft)
+   *   --color-X-edge  border    (use as border-X-edge)
+   */
+
+  /* Candidate — selected, unjudged. Suboptimal-but-valid shares this. */
+  --color-candidate: #fcd34d;          /* amber-300 */
+  --color-candidate-soft: #78350f1a;   /* amber-500/10 */
+  --color-candidate-edge: #f59e0b66;   /* amber-500/40 */
+
+  /* Correct / live — the agent is doing its job */
+  --color-correct: #6ee7b7;            /* emerald-300 */
+  --color-correct-soft: #064e3b1a;     /* emerald-500/10 */
+  --color-correct-edge: #10b98166;     /* emerald-500/40 */
+
+  /* Active / pivot — what's being worked on right now */
+  --color-active: #93c5fd;             /* blue-300 */
+  --color-active-soft: #1e3a8a1a;      /* blue-500/10 */
+  --color-active-edge: #3b82f666;      /* blue-500/40 */
+
+  /* Invalid — blocked, retry required */
+  --color-invalid: #fca5a5;            /* red-300 */
+  --color-invalid-soft: #450a0a66;     /* red-950/40 */
+  --color-invalid-edge: #7f1d1d;       /* red-900 */
 }
 
 html,
