@@ -39,16 +39,16 @@ const NAV: NavGroup[] = [
   {
     label: "Test",
     items: [
-      { href: "/test-runs", label: "Test runs", status: "live" },
-      { href: "/sessions", label: "Sessions", status: "stub" },
       { href: "/upskilling", label: "Quests", pillar: "2", status: "stub" },
     ],
   },
   {
     label: "Observe",
     items: [
-      { href: "/observability", label: "Dashboard", pillar: "3", status: "live" },
-      { href: "/memory", label: "Memory", status: "live" },
+      // Consolidated surface: sessions, memory, test runs, and the
+      // overview KPIs all live as tabs of /observability. Per the
+      // UX_CONTRACT "one place per concern" rule.
+      { href: "/observability", label: "Observability", status: "live" },
       { href: "/docs", label: "Docs", status: "live" },
     ],
   },

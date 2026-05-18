@@ -1,12 +1,9 @@
-import { MarkdownTreeBrowser } from "@/components/MarkdownTreeBrowser";
+import { redirect } from "next/navigation";
 
-export default function TestRunsPage() {
-  return (
-    <MarkdownTreeBrowser
-      subdir="test-runs"
-      title="Test runs"
-      description="Test outcomes from production-shape verification flows. Each run captures the test cases attempted, what passed, what failed, and the friction surfaces encountered along the way."
-      emptyText="No test runs yet."
-    />
-  );
+/**
+ * /test-runs consolidated into /observability?tab=test-runs per the
+ * UX_CONTRACT "one place per concern" rule.
+ */
+export default function TestRunsRedirect() {
+  redirect("/observability?tab=test-runs");
 }
