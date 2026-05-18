@@ -18,6 +18,10 @@ node_modules/
 
 # Render CLI binary — local-only, downloaded per-machine.
 render.exe
+
+# Serena MCP project-local state (LSP cache, project memories).
+# Per-developer; never committed.
+.serena/
 render
 
 # Upstream skill libraries — cloned locally, not vendored.
