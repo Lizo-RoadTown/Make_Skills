@@ -1,4 +1,5 @@
 "use client";
+import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { EvolvedAvatar } from "@/components/wizard/EvolvedAvatar";
@@ -93,16 +94,32 @@ export default function AgentsPage() {
             </div>
           </div>
           {stable.length === 0 ? (
-            <div className="rounded-lg border border-dashed border-zinc-800 bg-zinc-950 px-6 py-10 text-center">
-              <p className="text-sm text-zinc-500">
-                Empty. Hatch your first agent to start your stable.
-              </p>
-              <Link
-                href="/agents/build"
-                className="mt-3 inline-block text-sm text-blue-400 hover:text-blue-300"
-              >
-                Build one →
-              </Link>
+            <div className="relative overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-950">
+              <div className="relative aspect-[16/7] w-full">
+                <Image
+                  src="/illustrations/agents-hero.jpg"
+                  alt="Four crystalline geometric forms — sphere, cube, faceted star, and luminous lattice — suspended in glowing formation against a dark background"
+                  fill
+                  className="object-cover"
+                  sizes="(min-width: 1024px) 64rem, 100vw"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 via-zinc-950/40 to-transparent" />
+              </div>
+              <div className="relative -mt-12 flex flex-col items-center gap-4 px-6 pb-10 text-center">
+                <h3 className="text-xl font-semibold text-zinc-100 sm:text-2xl">
+                  Your stable is empty
+                </h3>
+                <p className="max-w-md text-sm text-zinc-400">
+                  Hatch your first agent — name it, pick a brain, write its
+                  idea, give it a skill. About five minutes.
+                </p>
+                <Link
+                  href="/agents/build"
+                  className="mt-2 rounded-md bg-blue-600 px-6 py-2.5 text-sm font-medium text-white shadow-lg shadow-blue-900/40 transition hover:bg-blue-500"
+                >
+                  Hatch your first →
+                </Link>
+              </div>
             </div>
           ) : (
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
