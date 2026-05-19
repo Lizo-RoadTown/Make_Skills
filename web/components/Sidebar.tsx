@@ -3,6 +3,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signIn, signOut, useSession } from "next-auth/react";
 import { useEffect, useState } from "react";
+import { BrandMark } from "./BrandMark";
 
 type NavItem = {
   href: string;
@@ -176,11 +177,14 @@ function SidebarHeader({
 }) {
   return (
     <div className="flex shrink-0 items-center justify-between border-b border-zinc-800 px-5 py-4">
-      <Link href="/" className="block">
-        <h1 className="text-sm font-semibold tracking-tight text-zinc-100">
-          Make_Skills
-        </h1>
-        <p className="text-xs text-zinc-500">humancensys.com</p>
+      <Link href="/" className="flex items-center gap-2.5">
+        <BrandMark size={28} />
+        <div>
+          <h1 className="text-sm font-semibold tracking-tight text-zinc-100">
+            Make_Skills
+          </h1>
+          <p className="text-xs text-zinc-500">humancensys.com</p>
+        </div>
       </Link>
       {closable && (
         <button
