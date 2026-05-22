@@ -165,3 +165,12 @@ These skills can stay conversational. The pattern in this doc is for *executable
 ## Reference implementation
 
 [`web-app-scaffold/SKILL.md`](../web-app-scaffold/SKILL.md) is the canonical example of this pattern in this repo. Read it as the worked-through template.
+
+## Pair with the public stack
+
+This skill defines *what makes a skill agentic*. For the mechanical side of authoring, evaluating, and packaging:
+
+- **`superpowers:writing-skills`** — invoke before creating or editing any SKILL.md; covers frontmatter, naming, descriptions that actually trigger
+- **`skill-creator:skill-creator`** — evals and benchmarking; measures whether a skill's description fires when it should
+- **`firecrawl:skill-gen`** — scaffold a new skill from a documentation URL
+- **`superpowers:verification-before-completion`** — required at the REPORT stage; evidence before "done"

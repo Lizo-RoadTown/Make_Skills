@@ -69,3 +69,13 @@ These come from [open_deep_research](https://github.com/langchain-ai/open_deep_r
 - [open_deep_research](https://github.com/langchain-ai/open_deep_research) — alternative role decomposition (summarizer/researcher/compressor/writer), source for the optional roles above
 - [deep_research_bench](https://github.com/Ayanami0730/deep_research_bench) — RACE + FACT eval criteria; informs whether to add fact-checker
 - [ToolUniverse](https://github.com/mims-harvard/ToolUniverse) — researcher's tool belt
+
+## Pair with the public stack
+
+The topology is yours; the role-level workflows can lean on existing skills:
+
+- **`academic-research-skills:ars-plan`** — Socratic chapter-by-chapter planning the planner role can adopt for its JSON plan
+- **`academic-research-skills:ars-lit-review`** — annotated bibliography format for the researcher's output when the task is literature-style
+- **`antigravity-bundle-llm-application-developer:context-window-management`** — keeping each role under budget; load-bearing for the "context isolation" rule
+- **`firecrawl:firecrawl-search`** + **`firecrawl:firecrawl-scrape`** — alternative web tool belt for the researcher when ToolUniverse isn't enough
+- **`huggingface-skills:huggingface-papers`** — when the researcher needs to surface arXiv/HF papers specifically

@@ -132,3 +132,12 @@ Promotion candidates (skill → tool):
 - [`agentic-skill-design`](../agentic-skill-design/SKILL.md) — the operating pattern this skill (and the skills it produces) follow.
 - [`agentic-upskilling`](../agentic-upskilling/SKILL.md) — the active practice that consumes this skill's "promotion candidates" output.
 - [`web-app-scaffold/intake.md`](../web-app-scaffold/intake.md) — first concrete example, extracted from this repo's setup conversation.
+
+## Pair with the public stack
+
+Transcript probing and pattern crystallization can lean on existing tools:
+
+- **`episodic-memory:remembering-conversations`** — actual transcript search instead of manual JSONL walking; use as the PROBE tool
+- **`superpowers:writing-skills`** — when a recurring friction pattern earns its own new skill
+- **`antigravity-bundle-essentials:kaizen`** — continuous-improvement framing for the patterns that don't deserve a full skill but should change behavior
+- **`antigravity-bundle-llm-application-developer:langfuse`** — for friction patterns that surface in agent telemetry (high turn count, retry loops, tool errors)

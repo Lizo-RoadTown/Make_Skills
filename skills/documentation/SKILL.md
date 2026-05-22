@@ -126,3 +126,13 @@ A docstring should answer: what does this do, what are the inputs, what does it 
 
 - [assets/adr-template.md](assets/adr-template.md) — blank ADR
 - [assets/readme-template.md](assets/readme-template.md) — minimal README skeleton
+
+## Pair with the public stack
+
+The three rules (Diátaxis / ADRs / docs-as-code) are the discipline. Templates and prose-quality passes are better served by current public skills:
+
+- **`antigravity-bundle-oss-maintainer:documentation-templates`** — current README / CONTRIBUTING / CHANGELOG templates
+- **`antigravity-bundle-architecture-design:architecture-decision-records`** — current ADR format; pair with this skill's §ADRs
+- **`elements-of-style:writing-clearly-and-concisely`** — prose-quality pass before merging any docs PR
+- **`antigravity-bundle-creative-director:copy-editing`** — UI / user-facing copy (different audience than developer docs)
+- **`antigravity-bundle-oss-maintainer:changelog-automation`** — CHANGELOG.md generation

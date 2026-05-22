@@ -60,3 +60,10 @@ The `/roadmap` page in `web/` renders the markdown live. After an agent update, 
 ## On cloud-hosted (Render) writes
 
 When the api runs on Render, there's no volume mount of the repo — `ROADMAP.md` lives at `/app/ROADMAP.md` baked into the image. Writes succeed in the running container but are **lost on next deploy** unless committed back to git. A future enhancement is git-commit-from-container; for now, agent updates from a cloud-hosted instance should be considered ephemeral, and significant updates should be made from the local stack (where the volume mount makes them durable on the host).
+
+## Pair with the public stack
+
+This skill is mostly self-contained, but two public skills help when the roadmap update is part of broader motion:
+
+- **`antigravity-bundle-essentials:concise-planning`** — when an update reflects "we just decided to do A first, then B, then park C"
+- **`antigravity-bundle-oss-maintainer:commit`** — for the commit that captures the roadmap edit (especially when running from a local stack with durable writes)

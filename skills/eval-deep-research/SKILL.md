@@ -70,3 +70,12 @@ Encode these expectations in `subagents/writer/AGENTS.md` so the writer optimize
 - DRB tasks are research-paper-flavored. They reward depth on academic-style questions; less informative for code-heavy or narrowly operational tasks.
 - The Gemini judge requirement adds a per-eval cost (~$X / 100 tasks) and an external dependency. There's no offline scorer.
 - DRB-II is in development; check if you want to migrate.
+
+## Pair with the public stack
+
+The DRB harness is the eval surface. Discipline around running and reporting evals:
+
+- **`superpowers:verification-before-completion`** — required before reporting eval scores; evidence-before-claims
+- **`antigravity-bundle-qa-testing:test-driven-development`** — for the harness wiring itself
+- **`huggingface-skills:huggingface-community-evals`** — for cross-validating with HF eval leaderboards
+- **`antigravity-bundle-llm-application-developer:langfuse`** — long-running eval observability (traces, costs, per-task latency)

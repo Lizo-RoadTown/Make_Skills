@@ -180,3 +180,12 @@ After a cataloging pass:
 - [`agentic-upskilling`](../agentic-upskilling/SKILL.md) — skill→tool promotion criteria
 - [`design-evaluation`](../design-evaluation/SKILL.md) — sibling for "which design"
 - [`next-actions-planning`](../next-actions-planning/SKILL.md) — sibling for "what next"
+
+## Pair with the public stack
+
+Pattern detection benefits from real telemetry, not just git-log scrolling:
+
+- **`episodic-memory:remembering-conversations`** — surface repeated work patterns across sessions
+- **`antigravity-bundle-llm-application-developer:langfuse`** — tool-call frequency, the strongest signal for "make this reusable"
+- **`superpowers:dispatching-parallel-agents`** — when the recurring pattern is parallelizable (the cataloged work should become a parallel-agent dispatch, not a single agent)
+- **`antigravity-bundle-essentials:kaizen`** — continuous-improvement framing when patterns aren't yet at promotion threshold but should shape behavior
