@@ -48,3 +48,9 @@ docs/_pdfs/
 # (the "what does Make_Skills aim to be" doc, separate from "where is
 # Liz right now") will live elsewhere — TBD per the open-source plan.
 /ROADMAP.md
+
+# Strategic skills — the upskilling triad, the proposal/roadmap house-style
+# skills, and project-specific scaffolding. Kept local because together they
+# describe how Make_Skills uniquely works. See:
+# docs/plans/2026-05-21-project-starter-recommendations.md §6
+skills_private/
