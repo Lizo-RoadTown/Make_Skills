@@ -2,20 +2,18 @@
 
 Project context for Claude Code. Loaded into every conversation. Keep it tight; if a rule belongs to a subsystem, move it to a subdirectory `CLAUDE.md` (`web/CLAUDE.md`, `platform/CLAUDE.md`) instead of growing this file.
 
-## Pre-response discipline (apply before every response)
+## Discipline plugin (required)
 
-Make_Skills is a platform whose central promise is "agents that get sharper at the user's workflow over time." That promise applies to YOU first, here, in this repo. The discipline that makes it work is binding:
+This project depends on the `make-skills-discipline` Claude Code plugin. Install once per machine:
 
-1. **PROBE before asserting.** Any factual claim about the codebase / auth / storage / deploy / which library does X — run `Grep` or `Read` on the relevant file FIRST and cite `file:line`. Never assert from memory or training-data defaults alone. The "obvious" claims are the ones that go wrong.
-2. **Distinguish dev-tooling (`scripts/`, `docs/`, session memory) from runtime (`platform/`, `web/`).** When describing infrastructure, name the audience. Shared infrastructure (LanceDB, Postgres, Render disk) has two access paths — list both.
-3. **Write friction as memory at the moment of correction.** When Liz reverses a confident claim of mine, save a `feedback_*.md` immediately. Don't batch to session-end.
-4. **Cite skills when invoking them.** Naming `agentic-skill-design`, `lessons-learned`, etc. in the response makes the discipline visible and trains the dogfooding loop.
-5. **Append to the test-runs log at substantive task boundaries.** Every commit / PR / multi-step decision → one line in `docs/test-runs/<YYYY-MM-DD>-<topic>.md` capturing what happened and what surfaced.
-6. **Files over generalizations** about the running app. Open them, quote them. Memory is a pointer; the file is authority.
+    /plugin marketplace add Lizo-RoadTown/claude-skills-marketplace
+    /plugin install make-skills-discipline@lizo-skills
 
-The full rule set is at `~/.claude/projects/c--Users-Liz-Make-Skills/memory/feedback_pre_response_discipline.md`. Reference it; do not skip it.
+The plugin auto-injects behavioral rules into every Claude Code session in this repo — PROBE before asserting, cite `file:line`, distinguish dev-tooling from runtime, write friction as memory at the moment of correction, cite skills by name, append to the test-runs log. Hook scripts enforce the rules; the skill body documents them. See the plugin's [SKILL.md](https://github.com/Lizo-RoadTown/claude-skills-marketplace/blob/main/plugins/make-skills-discipline/skills/make-skills-discipline/SKILL.md) for the full rule text.
 
-This section IS the wrapper. The discipline-skills in `skills/` and `skills_private/` (`agentic-skill-design`, `lessons-learned`, `agentic-upskilling`, `orchestration-cataloging`, `next-actions-planning`, `design-evaluation`) are the longer-form discipline this headline encodes. Apply the rules above by default; reach for the skill files when a task needs depth they describe.
+The discipline-skills in `skills/` and `skills_private/` (`agentic-skill-design`, `lessons-learned`, `agentic-upskilling`, `orchestration-cataloging`, `next-actions-planning`, `design-evaluation`) are the longer-form discipline the plugin points at. Reach for them when a task needs the depth they describe.
+
+If the plugin isn't installed, the canonical rule text lives at `~/.claude/projects/c--Users-Liz-Make-Skills/memory/feedback_pre_response_discipline.md` (auto-loaded as session memory) — but install the plugin; the memory file alone has the drift problem the plugin's hook scripts solve.
 
 ## The stack
 
