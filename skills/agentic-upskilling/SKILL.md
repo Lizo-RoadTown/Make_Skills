@@ -148,3 +148,12 @@ The skill itself (this `SKILL.md`) is platform code — same wisdom for every us
 - [`lessons-learned`](../lessons-learned/SKILL.md) — overlaps in observing user patterns; the lessons-learned pass should flag promotion candidates as a side effect
 - [`roadmap-maintenance`](../roadmap-maintenance/SKILL.md) — the canonical example of a successfully-promoted skill+tool pair
 - ROADMAP.md (per-tenant, gitignored) — has Pillar 2 entry tracking the active project status
+
+## Pair with the public stack
+
+The promotion-criteria evidence (3+ invocations, mechanical, stable shape) lives in the agent's observability layer. Use these to gather it:
+
+- **`episodic-memory:remembering-conversations`** — search transcripts for repeated skill invocations; produces the "N uses" count
+- **`antigravity-bundle-llm-application-developer:langfuse`** — tool-call telemetry; surfaces "promoted tool called K times this week" or "tool not called in N sessions" (demotion signal)
+- **`superpowers:writing-skills`** — when authoring the markdown skill that accompanies a newly-promoted tool
+- **`antigravity-bundle-qa-testing:test-driven-development`** — write the two-mode tests before flipping the tool into `builtin_tools`

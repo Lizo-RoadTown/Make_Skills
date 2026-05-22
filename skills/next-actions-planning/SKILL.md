@@ -166,3 +166,12 @@ After a planning pass, save signals back to memory:
 
 - [`agentic-skill-design`](../agentic-skill-design/SKILL.md) — the PROBE → DECIDE → ACT → REPORT pattern this skill instantiates
 - [`roadmap-maintenance`](../roadmap-maintenance/SKILL.md) — the source of truth this skill reads, but does not write to (planning is a separate artifact from the roadmap)
+
+## Pair with the public stack
+
+This skill picks WHAT to do next. For the HOW once a candidate is chosen:
+
+- **`antigravity-bundle-essentials:concise-planning`** — distillation rules for the plan's "next 3 things"
+- **`superpowers:writing-plans`** — when the chosen next-action is itself a multi-step plan that needs its own session
+- **`superpowers:executing-plans`** — when handing a written plan off to execution
+- **`superpowers:brainstorming`** — when the PROBE step turns up nothing strong; widen the candidate set before scoring

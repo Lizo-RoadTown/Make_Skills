@@ -137,3 +137,14 @@ For now: markdown in repo, rendered by GitHub's native viewer, sufficient. The p
 - [`documentation`](../documentation/SKILL.md) — the older documentation skill for individual documents (READMEs, ADRs in other repos); this open-source-documentation skill is the META skill for the project's whole docs system
 - [`ARCHITECTURE.md`](../../ARCHITECTURE.md) — the layered model
 - [`CONTRIBUTING.md`](../../CONTRIBUTING.md) — what contributors must do
+
+## Pair with the public stack
+
+The Make_Skills-specific tree + dual-mode discipline is yours. Mechanics of OSS hygiene are better delegated:
+
+- **`antigravity-bundle-oss-maintainer:documentation-templates`** — current README / CONTRIBUTING / SECURITY templates
+- **`antigravity-bundle-oss-maintainer:create-pr`** — PR description format
+- **`antigravity-bundle-oss-maintainer:commit`** — commit message format
+- **`antigravity-bundle-oss-maintainer:changelog-automation`** — CHANGELOG.md
+- **`antigravity-bundle-oss-maintainer:receiving-code-review`** + **`requesting-code-review`** — review hygiene for OSS contributors
+- **`elements-of-style:writing-clearly-and-concisely`** — prose quality across the whole docs/ tree

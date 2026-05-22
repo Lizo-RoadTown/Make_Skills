@@ -140,3 +140,12 @@ After a successful evaluation:
 - [`agentic-skill-design`](../agentic-skill-design/SKILL.md) — the PROBE/DECIDE/ACT/REPORT pattern this instantiates
 - [`next-actions-planning`](../next-actions-planning/SKILL.md) — the "what next" sibling
 - [`orchestration-cataloging`](../orchestration-cataloging/SKILL.md) — the "what recurring patterns should I make reusable" sibling
+
+## Pair with the public stack
+
+The matrix is yours. Pair it with brainstorming before and ADR capture after:
+
+- **`superpowers:brainstorming`** — run BEFORE this skill to surface the option set; this skill scores options, brainstorming generates them
+- **`antigravity-bundle-architecture-design:architecture-decision-records`** — capture the chosen path as an ADR after evaluation; the matrix becomes the Context section
+- **`antigravity-bundle-architecture-design:senior-architect`** — second-pair-of-eyes when the tradeoffs are load-bearing for system architecture
+- **`antigravity-bundle-essentials:concise-planning`** — when the recommendation is "do A first, then B"; this skill outputs the comparison, concise-planning sequences the execution

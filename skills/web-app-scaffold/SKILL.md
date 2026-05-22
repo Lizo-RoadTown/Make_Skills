@@ -101,3 +101,17 @@ Adding new presets: [how-to-add-presets.md](references/how-to-add-presets.md).
 - [`agentic-skill-design`](../agentic-skill-design/) — the meta-pattern this skill follows. Read it when designing OTHER agentic skills.
 - [`skills/_upstream/anthropics-skills/skills/skill-creator/`](../_upstream/anthropics-skills/skills/skill-creator/) — Anthropic's skill-authoring guide. Use when formalizing a wholly new pattern.
 - [`skills/_upstream/anthropics-skills/skills/frontend-design/`](../_upstream/anthropics-skills/skills/frontend-design/) — frontend aesthetic and component guidance, complementary to this skill.
+
+## Pair with the public stack
+
+The agentic *behavior* (PROBE → DECIDE → ACT → REPORT, chainlit defaults, deploy-on-first-run) is this skill's contribution. Current framework specifics and code-level operations are better delegated:
+
+- **`antigravity-bundle-web-wizard:nextjs-best-practices`** — current Next.js patterns (Next.js 16 has breaking changes — defer to this for App Router specifics)
+- **`antigravity-bundle-web-wizard:tailwind-patterns`** — current Tailwind v4 patterns (`@theme inline`, design tokens)
+- **`antigravity-bundle-web-wizard:react-patterns`** + **`react-best-practices`** — React 19 patterns
+- **`antigravity-bundle-typescript-javascript:nextjs-app-router-patterns`** — App Router data-fetching and Server Components
+- **`agent-sdk-dev:new-sdk-app`** — when the scaffold needs an Agent SDK backend, not just FastAPI
+- **`figma:figma-implement-design`** — when the scaffold target is a specific Figma design
+- **`superpowers:verification-before-completion`** — required before reporting "deployed"; run the dev server and confirm the golden path in a browser
+- **Serena MCP** (when installed) — for cross-file renames and symbol-level edits during scaffold customization, instead of grep + read patterns
+- **`verify`** (skill) — run the app and observe the change, not just `npm run build`

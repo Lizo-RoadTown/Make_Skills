@@ -125,3 +125,13 @@ The researcher then calls `parse_document.parse_pdf("./paper.pdf")` when it enco
 - **Source is a webpage** — use a web fetch tool with HTML→markdown (Tavily, Firecrawl, or `trafilatura`); LlamaParse is for binary docs
 - **Source is too large to parse upfront** — fetch a sample first, decide if the whole doc warrants the cost
 - **You need verbatim citations with page numbers** — LlamaParse loses some positional fidelity. Use `pypdf` or `pdfplumber` to grab the exact page span for citation, then LlamaParse for content extraction
+
+## Pair with the public stack
+
+PDFs / Office docs are covered here. For other input classes, hand off:
+
+- **`firecrawl:firecrawl-scrape`** — single JS-rendered webpage to markdown
+- **`firecrawl:firecrawl-crawl`** — multi-page sites, documentation, full crawls
+- **`firecrawl:firecrawl-search`** — when the source needs to be *found* first
+- **`huggingface-skills:huggingface-datasets`** — when the source is on the HF hub as a dataset
+- **`huggingface-skills:huggingface-papers`** — arXiv / HF paper IDs (skip parsing — pulls structured content)

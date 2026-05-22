@@ -205,3 +205,13 @@ After authoring a proposal:
   - [`sidebar-architecture.md`](../../docs/proposals/sidebar-architecture.md) — the canonical "user-friction-driven" shape
   - [`byo-personal-ollama.md`](../../docs/proposals/byo-personal-ollama.md) — the canonical "feature-staging" shape (P1 / P2 phases)
 - [`docs/proposals/README.md`](../../docs/proposals/README.md) — the index every new proposal links into
+
+## Pair with the public stack
+
+Proposals are upstream of ADRs and benefit from research + prose passes:
+
+- **`antigravity-bundle-architecture-design:architecture-decision-records`** — accepted proposals become ADRs; this skill plus that one is the full lifecycle
+- **`academic-research-skills:ars-plan`** — when the proposal needs a Socratic planning pass before writing
+- **`academic-research-skills:ars-lit-review`** — for proposals that depend on prior research (the "References" section becomes load-bearing)
+- **`elements-of-style:writing-clearly-and-concisely`** — prose-quality pass; matches the project's "state what is, not what it isn't" tone rule
+- **`superpowers:brainstorming`** — for proposals where the option set is genuinely open, before locking the Decision section
