@@ -1,8 +1,25 @@
 # Proposal: LanceDB memory MCP — cross-machine session memory
 
-**Status:** Open — written 2026-05-22, ready to execute in phases starting next session.
+**Status:** Open — written 2026-05-22. Phase 1 shipped (PR #32). Phase 2 in flight.
 **Authors:** Liz, agent-assisted
 **Date:** 2026-05-22
+
+## Scope — what this proposal is and is NOT
+
+This proposal is about **developer tooling for building agent apps** — specifically, making Claude Code's session memory (the typed-file `user_*` / `feedback_*` / `project_*` / `reference_*` protocol) work across machines by routing it through LanceDB.
+
+It is NOT about the running app's runtime memory. The running app's agents already use LanceDB directly via `platform/api/memory/lance.py` and tools like `recall()` and `query_db()` — that path predates this proposal and continues to work as-is.
+
+Two distinct consumers of the same LanceDB store:
+
+| Consumer | What they use | Status |
+|---|---|---|
+| **Running app's runtime agents** (in production, serving end-users) | `platform/api/memory/lance.py` directly — `recall()`, `query_db()`, `insert_records()` | Already shipped; this proposal does not change it |
+| **Developer's Claude Code sessions** (Liz building the app, contributors building forks) | MCP server (Phase 1) + sync shim (Phase 2) + hosted endpoint (Phase 3) | This proposal |
+
+The infrastructure (LanceDB store, persistent disk, tenant scoping) is shared. The access paths are different because the consumers are different — runtime agents are Python code in the same process; Claude Code is an external MCP client.
+
+For project-starter scaffolding: when a new repo is created with the memory layer baked in (per the 2026-05-22 architectural directive), BOTH access paths come along — the runtime LanceDB code for the app's agents AND the MCP server + shim for the developer's Claude Code sessions. They share the data directory.
 
 ## Problem
 

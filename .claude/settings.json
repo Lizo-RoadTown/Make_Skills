@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo Discipline check before responding: PROBE files for any factual claim and cite file:line. Distinguish dev-tooling vs runtime when describing infrastructure. Save corrections as feedback memory at the moment they happen. Cite skills by name when invoking them. Full rules: feedback_pre_response_discipline.md."
+          }
+        ]
+      }
+    ]
+  }
+}

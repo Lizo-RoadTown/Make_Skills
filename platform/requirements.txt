@@ -25,6 +25,13 @@ pyarrow>=18.0                # LanceDB depends on this; pin explicitly
 # memory from any machine. See docs/proposals/lancedb-memory-mcp.md.
 mcp>=1.0
 
+# Memory sync shim (Phase 2) — daemon that mirrors LanceDB <-> the file-based
+# memory directory at ~/.claude/projects/<key>/memory/ so the existing file
+# protocol coexists with the MCP store. watchdog provides cross-platform
+# filesystem event notifications.
+watchdog>=4.0
+PyYAML>=6.0
+
 # Auth.js v5 JWT verification — HS256 token issued by web/, verified here.
 # Shared AUTH_SECRET between web/.env.local and platform/deploy/.env.
 python-jose[cryptography]>=3.3

@@ -2,6 +2,21 @@
 
 Project context for Claude Code. Loaded into every conversation. Keep it tight; if a rule belongs to a subsystem, move it to a subdirectory `CLAUDE.md` (`web/CLAUDE.md`, `platform/CLAUDE.md`) instead of growing this file.
 
+## Pre-response discipline (apply before every response)
+
+Make_Skills is a platform whose central promise is "agents that get sharper at the user's workflow over time." That promise applies to YOU first, here, in this repo. The discipline that makes it work is binding:
+
+1. **PROBE before asserting.** Any factual claim about the codebase / auth / storage / deploy / which library does X — run `Grep` or `Read` on the relevant file FIRST and cite `file:line`. Never assert from memory or training-data defaults alone. The "obvious" claims are the ones that go wrong.
+2. **Distinguish dev-tooling (`scripts/`, `docs/`, session memory) from runtime (`platform/`, `web/`).** When describing infrastructure, name the audience. Shared infrastructure (LanceDB, Postgres, Render disk) has two access paths — list both.
+3. **Write friction as memory at the moment of correction.** When Liz reverses a confident claim of mine, save a `feedback_*.md` immediately. Don't batch to session-end.
+4. **Cite skills when invoking them.** Naming `agentic-skill-design`, `lessons-learned`, etc. in the response makes the discipline visible and trains the dogfooding loop.
+5. **Append to the test-runs log at substantive task boundaries.** Every commit / PR / multi-step decision → one line in `docs/test-runs/<YYYY-MM-DD>-<topic>.md` capturing what happened and what surfaced.
+6. **Files over generalizations** about the running app. Open them, quote them. Memory is a pointer; the file is authority.
+
+The full rule set is at `~/.claude/projects/c--Users-Liz-Make-Skills/memory/feedback_pre_response_discipline.md`. Reference it; do not skip it.
+
+This section IS the wrapper. The discipline-skills in `skills/` and `skills_private/` (`agentic-skill-design`, `lessons-learned`, `agentic-upskilling`, `orchestration-cataloging`, `next-actions-planning`, `design-evaluation`) are the longer-form discipline this headline encodes. Apply the rules above by default; reach for the skill files when a task needs depth they describe.
+
 ## The stack
 
 | Layer | Tech |
