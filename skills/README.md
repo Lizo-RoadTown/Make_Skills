@@ -47,16 +47,19 @@ These skills are loaded automatically by deepagents when the agent runs from thi
 
 | Skill | Description |
 |-------|-------------|
-| [documentation/](documentation/) | Write/update documentation in this codebase |
-| [deep-research-pattern/](deep-research-pattern/) | Architectural pattern for multi-agent deep research (5-role decomposition + context isolation). Drawn from open_deep_research and NVIDIA AI-Q. |
-| [eval-deep-research/](eval-deep-research/) | Run the deep_research_bench (DRB) harness against the research subagents — RACE + FACT scores. |
-| [document-parsing/](document-parsing/) | Convert PDFs / DOCX / PPTX / scanned images into LLM-friendly markdown (LlamaParse, Claude native PDFs, Marker, Docling, Unstructured). |
-| [web-app-scaffold/](web-app-scaffold/) | Scaffold a deployable web app for a specified stack (frontend host + framework + API + DB + domain). Agentic — probes, decides, executes. Has an [intake form](web-app-scaffold/intake.md) and stack [presets](web-app-scaffold/references/). |
 | [agentic-skill-design/](agentic-skill-design/) | Meta-skill for designing skills that DECIDE and EXECUTE rather than ask the user permission for every choice. Captures the PROBE → DECIDE → ACT → REPORT pattern. |
-| [lessons-learned/](lessons-learned/) | Walk back through prior chat transcripts to find systematic friction patterns (recurring info needs, corrections, negotiations) and crystallize them into intake forms + memory updates. |
-| [roadmap-maintenance/](roadmap-maintenance/) | Keep `ROADMAP.md` current as work ships. Agents flip statuses via `update_roadmap_status`; users amend manually anytime. File-backed, rendered at `/roadmap` in the UI. |
-| [open-source-documentation/](open-source-documentation/) | Maintain the `docs/` tree (concepts/how-to/reference/decisions/proposals/per-pillar) for the open-source project. Defines the ADR pattern, the two-mode discipline for every doc, and the freshness rules for keeping docs current. |
-| [agentic-upskilling/](agentic-upskilling/) | **Active practice (not a static doc).** Each user's tool library grows over time as repeatedly-invoked skills get promoted to tools. Defines the promotion criteria, the mechanics, the reverse-direction (tool → skill demotion), and the eventual Pillar 2 site page. |
+| [deep-research-pattern/](deep-research-pattern/) | Architectural pattern for multi-agent deep research (3-role decomposition + context isolation). Drawn from open_deep_research and NVIDIA AI-Q. |
+| [design-evaluation/](design-evaluation/) | Evaluate a design question with multiple options across dimensions that matter for the project — produces a tradeoff matrix, scores each option, recommends a path. |
+| [documentation/](documentation/) | Write/update documentation using Diátaxis + ADRs + docs-as-code. |
+| [document-parsing/](document-parsing/) | Convert PDFs / DOCX / PPTX / scanned images into LLM-friendly markdown (LlamaParse, Claude native PDFs, Marker, Docling, Unstructured). |
+| [eval-deep-research/](eval-deep-research/) | Run the deep_research_bench (DRB) harness against the research subagents — RACE + FACT scores. |
+| [next-actions-planning/](next-actions-planning/) | Produce a grounded "what to do next" plan for the project — based on what shipped, what's open, what blocks what, and what the user has signaled they care about. |
+
+### Proprietary skills (not in this repo)
+
+A second set of skills lives outside the public repo in a gitignored `skills_private/` directory. These describe how Make_Skills uniquely works — together they form the upskilling triad, the house-style discipline, and project-specific scaffolding — and are kept proprietary as the platform's competitive differentiator. See [`docs/plans/2026-05-21-project-starter-recommendations.md`](../docs/plans/2026-05-21-project-starter-recommendations.md) §1 for the publishing decision.
+
+The proprietary set: `agentic-upskilling`, `orchestration-cataloging`, `lessons-learned`, `roadmap-maintenance`, `open-source-documentation`, `proposal-authoring`, `web-app-scaffold`.
 
 ## Refreshing the upstream library
 
