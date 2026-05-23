@@ -140,6 +140,24 @@ Synthesise the agents' returns into a `reference_wrapper_research_per_interface.
 
 Skip this step only when the interface table has fewer than ~6 rows or the user explicitly wants the structural map alone.
 
+### 3.5a. Observability is a cluster with its own internal layering
+
+When the wrapper-type clustering produces an **observability** group, decompose it further into two SUB-layers before recommending a stack. Observability has two distinct audiences and they need different infrastructure even though one dashboard layer can serve both:
+
+- **Runtime app observability** — watches the running application (HTTP requests, DB queries, LLM calls, exceptions). Audience: anyone monitoring production. Right stack: OpenTelemetry SDK → Tempo/Loki/Prometheus → Grafana; plus specialized SaaS for the deep-dive jobs (LangSmith for LLM conversations, Sentry for stack traces + replay).
+- **Dev-experience observability** — watches the development process (hook fires, memory writes, skill invocations, architecture drift). Audience: the developer + collaborating agents. Right stack: file-tail (Promtail → Loki) for streaming logs + polling script → Postgres for periodic snapshots. **OpenTelemetry is overkill here** — the data sources are file-based or polling-derived, not request-lifecycle-shaped.
+
+Decision rules that go with the layering:
+
+1. OpenTelemetry is the protocol for runtime-app telemetry only; skip it for dev-experience
+2. Grafana is the dashboard layer (queries other stores); it doesn't store anything itself
+3. Specialized UIs (LangSmith, Sentry) stay for forensic deep-dive — don't try to consolidate them into Grafana
+4. Same Grafana instance can serve both layers; build different dashboards per audience
+5. Self-host vs hosted: gate by deployment topology AND a code-level `PLATFORM_MODE` check (defense in depth)
+6. Dev-experience telemetry stays local-machine by default; don't ship hook logs to SaaS backends
+
+Reference memory: `reference_observability_layering.md` captures the full pattern with citations. PROBE it whenever the conversation is about telemetry, OpenTelemetry, Grafana, LangSmith, Sentry, Langfuse, Helicone, PostHog, log aggregation, error tracking, or distributed tracing.
+
 ## 4. ACT — build the map artifact
 
 Write `docs/plans/<YYYY-MM-DD>-infrastructure-map.md`:
