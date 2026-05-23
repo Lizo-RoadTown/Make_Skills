@@ -15,6 +15,11 @@ uvicorn[standard]>=0.30
 psycopg[binary]>=3.2
 psycopg_pool>=3.2
 
+# Error tracking — initialised at FastAPI startup, gated by SENTRY_DSN env var.
+# Self-host leaves SENTRY_DSN unset (no telemetry). Hosted-multitenant sets
+# the DSN in the Render dashboard.
+sentry-sdk[fastapi]>=2.0
+
 # Semantic memory (LanceDB) — embedded vector store, no separate service
 lancedb>=0.18
 fastembed>=0.5               # ONNX-based embeddings, ~10x lighter than sentence-transformers (no torch dep)

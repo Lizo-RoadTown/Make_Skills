@@ -71,7 +71,12 @@ services:
       - key: LANGSMITH_PROJECT
         value: make-skills
       - key: LANGSMITH_TRACING
-        value: "false"
+        # LangSmith traces deepagents / LangGraph calls (model + prompt +
+        # response + latency + cost). Enabled here for hosted-multitenant
+        # deployments only — the agent code gates on PLATFORM_MODE=hosted
+        # so self-host instances do NOT ship traces to a SaaS the user
+        # didn't opt into. Self-host stays untraced.
+        value: "true"
     disk:
       name: memory-data
       mountPath: /data/memory

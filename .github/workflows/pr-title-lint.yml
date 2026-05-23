@@ -1,0 +1,51 @@
+# PR title lint — enforces Conventional Commits format on PR titles.
+#
+# Why PR titles (not commit messages): we squash-merge, so the PR title is what
+# ends up in the commit log. Per the 2026-05-22 research, this is the pattern
+# Electron / Vite / Vercel / AWS use.
+#
+# Two-mode discipline: workflow is dev-tooling. Runs identically regardless of
+# PLATFORM_MODE. Both modes ship from the same merged commits.
+
+name: pr-title-lint
+
+on:
+  pull_request:
+    types:
+      - opened
+      - edited
+      - reopened
+      - synchronize
+
+permissions:
+  pull-requests: read
+
+jobs:
+  lint-pr-title:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: amannn/action-semantic-pull-request@v5
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          # Allowed Conventional Commit types. Mirrors release-please-config.json.
+          types: |
+            feat
+            fix
+            perf
+            deps
+            docs
+            refactor
+            test
+            build
+            ci
+            chore
+            revert
+          # Allow lowercase subjects (don't force capitalisation).
+          subjectPattern: ^[a-z0-9].*
+          subjectPatternError: |
+            The subject "{subject}" must start with a lowercase letter or digit.
+            Example: "feat: add memory snapshot system"
+          # Match GitHub's auto-suffix on revert PRs.
+          ignoreLabels: |
+            ignore-semantic-pull-request
