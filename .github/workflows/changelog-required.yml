@@ -1,0 +1,47 @@
+# changelog-required — warns when PRs touch infra files without a CHANGELOG entry.
+#
+# Behaviour:
+#   - Runs on every PR
+#   - Looks at the files changed in the PR
+#   - If any "infra-shaped" file changed (render.yaml, deploy configs, platform
+#     code, web frontend code, GH workflows themselves), checks that CHANGELOG.md
+#     also appears in the diff
+#   - If CHANGELOG.md is NOT modified, posts an advisory comment but does NOT
+#     block the merge by default — this is a soft enforcement that surfaces the
+#     gap without breaking emergency fixes.
+#
+#   - Can be made blocking by removing `continue-on-error: true` once the team
+#     is used to the discipline.
+#
+# Two-mode discipline: dev-tooling. Both deployment modes ship from PRs that
+# pass this check.
+
+name: changelog-required
+
+on:
+  pull_request:
+    types:
+      - opened
+      - synchronize
+      - reopened
+      - labeled
+      - unlabeled
+
+permissions:
+  pull-requests: write
+  contents: read
+
+jobs:
+  changelog-check:
+    runs-on: ubuntu-latest
+    # Advisory only — does not block merge on failure.
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: tarides/changelog-check-action@v3
+        with:
+          changelog: CHANGELOG.md
+        # Skip with a `no changelog` label on the PR for trivial / docs-only
+        # changes that don't warrant a CHANGELOG entry.

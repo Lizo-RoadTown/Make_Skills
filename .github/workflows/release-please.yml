@@ -1,0 +1,39 @@
+# release-please — automated CHANGELOG.md + version-bump + GitHub Release
+# on merges to main that follow Conventional Commits.
+#
+# Behavior:
+#   - On every push to main, scans the commit log since the last release.
+#   - If any `feat:` / `fix:` / `deps:` (or other release-please-tracked types)
+#     have landed, opens (or updates) a "Release PR" that:
+#       1. Bumps versions in tracked manifest files (see release-please-config.json)
+#       2. Updates CHANGELOG.md with categorised entries
+#       3. Tags the release on merge and creates a GitHub Release
+#
+#   - Self-host vs hosted-multitenant: this workflow is dev-tooling (lives in
+#     GitHub Actions, not the deployed app). It runs identically regardless of
+#     PLATFORM_MODE. Both modes ship from the same git tags.
+#
+# References:
+#   - https://github.com/googleapis/release-please
+#   - https://github.com/googleapis/release-please/blob/main/docs/customizing.md
+
+name: release-please
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  release-please:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: googleapis/release-please-action@v4
+        with:
+          # Config files live at the repo root for visibility.
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json
