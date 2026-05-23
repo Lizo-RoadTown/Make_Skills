@@ -75,8 +75,18 @@ services:
         # response + latency + cost). Enabled here for hosted-multitenant
         # deployments only — the agent code gates on PLATFORM_MODE=hosted
         # so self-host instances do NOT ship traces to a SaaS the user
-        # didn't opt into. Self-host stays untraced.
+        # didn't opt into. Self-host stays untraced. Code-level gate at
+        # platform/api/main.py.
         value: "true"
+      # Sentry error tracking. Self-host leaves SENTRY_DSN unset (no telemetry).
+      # Hosted-multitenant sets the DSN in the Render dashboard. The Python
+      # backend reads SENTRY_DSN at platform/api/main.py startup; the Next.js
+      # frontend reads SENTRY_DSN server-side and NEXT_PUBLIC_SENTRY_DSN
+      # client-side via web/sentry.*.config.ts.
+      - key: SENTRY_DSN
+        sync: false
+      - key: SENTRY_TRACES_SAMPLE_RATE
+        value: "0.1"
     disk:
       name: memory-data
       mountPath: /data/memory

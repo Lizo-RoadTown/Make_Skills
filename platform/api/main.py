@@ -24,6 +24,46 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
+# --------------------------------------------------------------------------
+# Observability init — MUST run BEFORE the api.agent import below, because
+# api.agent triggers langchain / langgraph / deepagents imports that activate
+# LangSmith tracing at import time if the env vars are set.
+#
+# Two-mode gating:
+#   - Self-host (PLATFORM_MODE != "hosted"): pop the LangSmith env vars so
+#     tracing stays off even if the user accidentally set them (defense in
+#     depth against the "I copied render.yaml as a template" failure mode).
+#     Sentry SDK is initialised only if SENTRY_DSN is set AND hosted mode.
+#   - Hosted (PLATFORM_MODE == "hosted"): both LangSmith and Sentry fire,
+#     gated by their respective API keys / DSNs.
+#
+# See reference_observability_layering.md for the full pattern. See
+# render.yaml:55-74 for the env vars that drive this.
+# --------------------------------------------------------------------------
+if os.environ.get("PLATFORM_MODE", "self_host") != "hosted":
+    # Self-host — refuse to ship traces to any SaaS the user didn't opt into.
+    for _key in ("LANGSMITH_TRACING", "LANGSMITH_API_KEY", "LANGCHAIN_TRACING_V2"):
+        os.environ.pop(_key, None)
+
+_sentry_dsn = os.environ.get("SENTRY_DSN")
+if _sentry_dsn and os.environ.get("PLATFORM_MODE") == "hosted":
+    try:
+        import sentry_sdk  # noqa: I001 — runtime import, not top-of-file
+        from sentry_sdk.integrations.fastapi import FastApiIntegration
+
+        sentry_sdk.init(
+            dsn=_sentry_dsn,
+            integrations=[FastApiIntegration()],
+            traces_sample_rate=float(os.environ.get("SENTRY_TRACES_SAMPLE_RATE", "0.1")),
+            environment=os.environ.get("PLATFORM_MODE", "self_host"),
+            release=os.environ.get("RENDER_GIT_COMMIT", "dev"),
+        )
+    except ImportError:
+        # sentry-sdk not installed — silently continue. Self-host installs may
+        # have skipped it. The DSN being set without the SDK is a misconfig
+        # but not worth crashing the API over.
+        pass
+
 from api.agent import build_agent
 from api.auth import TenantContext, get_current_tenant
 from api.db import close_pool, init_pool
