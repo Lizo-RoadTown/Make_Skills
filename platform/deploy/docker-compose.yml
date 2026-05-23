@@ -101,7 +101,37 @@ services:
     ports:
       - "${GRAFANA_PORT:-3001}:3000"
 
+  # Loki — log aggregation backend for the dev-experience observability layer.
+  # Receives entries from Promtail (below), serves Grafana queries from the
+  # dev-experience dashboard. See docs/runbooks/dev-experience-observability.md.
+  loki:
+    image: grafana/loki:3.3.0
+    restart: unless-stopped
+    command: -config.file=/etc/loki/local-config.yaml
+    volumes:
+      - ./loki-config.yml:/etc/loki/local-config.yaml:ro
+      - loki-data:/tmp/loki
+    ports:
+      # Internal port; expose only if you want to query Loki API directly.
+      - "${LOKI_PORT:-3100}:3100"
+
+  # Promtail — tails the developer's Claude Code hook log
+  # (~/.claude/logs/hooks.jsonl) and ships entries to Loki.
+  # Mounting the host's ~/.claude/logs/ as read-only into /var/log/claude/.
+  # The DEV_HOOKS_LOG_DIR env var lets users override the host path; defaults
+  # to ~/.claude/logs which works for the standard Claude Code install.
+  promtail:
+    image: grafana/promtail:3.3.0
+    restart: unless-stopped
+    depends_on:
+      - loki
+    command: -config.file=/etc/promtail/config.yml
+    volumes:
+      - ./promtail-config.yml:/etc/promtail/config.yml:ro
+      - ${DEV_HOOKS_LOG_DIR:-${HOME}/.claude/logs}:/var/log/claude:ro
+
 volumes:
   postgres-data:
   grafana-data:
   memory-data:
+  loki-data:
