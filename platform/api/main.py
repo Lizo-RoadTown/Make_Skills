@@ -16,7 +16,7 @@ import json
 import logging
 import asyncio
 import os
-from contextlib import asynccontextmanager
+from contextlib import AsyncExitStack, asynccontextmanager
 from uuid import UUID, uuid4
 
 from fastapi import BackgroundTasks, FastAPI, HTTPException, Query
@@ -112,7 +112,14 @@ async def lifespan(app: FastAPI):
     # Application connection pool for tenant-scoped queries (separate from
     # the LangGraph checkpointer's pool — see api/db.py docstring).
     await init_pool()
-    yield
+    # In hosted mode, compose the MCP session manager into our lifespan.
+    # Stdio (self-host) mode skips this — the developer's local sessions
+    # talk to the memory MCP via stdio (mcp_server.main), not HTTP.
+    async with AsyncExitStack() as stack:
+        if os.environ.get("PLATFORM_MODE", "self_host").lower() == "hosted":
+            from api.memory.mcp_http import session_lifespan
+            await stack.enter_async_context(session_lifespan(app))
+        yield
     await close_pool()
 
 
@@ -1101,3 +1108,15 @@ def _serialize_chunk(chunk) -> str:
             if isinstance(block, dict) and block.get("type") == "text"
         )
     return ""
+
+
+# ----- Memory MCP HTTP transport (hosted mode only) -----
+#
+# Stdio (self-host) mode skips this mount entirely — the developer's local
+# Claude Code session talks to the memory MCP via stdio (mcp_server.main).
+# In hosted mode we expose the same Server instance over Streamable HTTP
+# under /mcp/memory, gated by MakeSkillsTokenVerifier (HS256 JWT shared
+# with the Next.js Auth.js app via AUTH_SECRET).
+if os.environ.get("PLATFORM_MODE", "self_host").lower() == "hosted":
+    from api.memory.mcp_http import mount_into
+    mount_into(app, path="/mcp/memory")
