@@ -28,7 +28,7 @@ pyarrow>=18.0                # LanceDB depends on this; pin explicitly
 # MCP server — exposes the LanceDB memory store as a Model Context Protocol
 # service so Claude Code (and other MCP clients) can read/write session
 # memory from any machine. See docs/proposals/lancedb-memory-mcp.md.
-mcp>=1.0
+mcp>=1.20,<2  # Phase 3 HTTP transport needs StreamableHTTPSessionManager
 
 # Memory sync shim (Phase 2) — daemon that mirrors LanceDB <-> the file-based
 # memory directory at ~/.claude/projects/<key>/memory/ so the existing file
@@ -44,6 +44,7 @@ python-jose[cryptography]>=3.3
 # Testing — Pillar 0 isolation tests live at platform/tests/
 pytest>=8.0
 pytest-asyncio>=0.24
+asgi-lifespan>=2.0  # Phase 3 test fixtures — TestClient doesn't fire FastAPI lifespan events
 
 # Optional: tool & search providers
 # Uncomment per-tool only when you wire it into deepagents.toml MCP block.
