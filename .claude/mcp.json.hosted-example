@@ -1,0 +1,9 @@
+{
+  "memory": {
+    "type": "http",
+    "url": "https://humancensys.com/mcp/memory",
+    "headers": {
+      "Authorization": "Bearer REPLACE_WITH_YOUR_JWT"
+    }
+  }
+}
