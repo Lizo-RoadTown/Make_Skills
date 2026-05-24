@@ -12,6 +12,7 @@ All notable changes to Make_Skills are documented here. Format follows [Keep a C
 - **`docs/test-runs/2026-05-23-mapping-and-observability.md`** — friction-surface log for the 2026-05-22 → 23 arc.
 - **LangSmith tracing** flipped on in `render.yaml` (`LANGSMITH_TRACING="true"`) — only takes effect when `PLATFORM_MODE=hosted`. Self-host stays untraced.
 - **Sentry SDKs** wired in `platform/requirements.txt` (`sentry-sdk[fastapi]`) and `web/package.json` (`@sentry/nextjs`). DSNs unset by default; self-host gets no telemetry until the user explicitly opts in.
+- **Dev-experience observability layer** (#38) — `platform/deploy/docker-compose.yml` adds Loki + Promtail services. Promtail tails the host's `~/.claude/logs/hooks.jsonl` (from the make-skills-discipline plugin v0.1.2+) and ships parsed entries to Loki. New Grafana dashboard `dev-experience.json` shows hook activity over time, action breakdown, and recent events. Runbook: `docs/runbooks/dev-experience-observability.md`. Local-machine only by design — does not ship to Render.
 - **LangSmith + Sentry init code** (#40) — `platform/api/main.py` pops LangSmith env vars when `PLATFORM_MODE != hosted`, and calls `sentry_sdk.init()` only when `SENTRY_DSN` is set AND `PLATFORM_MODE=hosted`. `web/sentry.{client,server,edge}.config.ts` + `web/instrumentation.ts` wire Next.js telemetry for all three runtimes; `web/next.config.ts` is wrapped with `withSentryConfig` for build-time source-map upload.
 
 ### Changed
