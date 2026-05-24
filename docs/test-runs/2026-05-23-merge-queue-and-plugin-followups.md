@@ -1,0 +1,55 @@
+# Test-run log — 2026-05-23 (evening) — merge queue + plugin follow-ups
+
+Session focus: Drain the 9-PR backlog accumulated across the 2026-05-22 → 23 arc, then triage plugin follow-up items so they don't get lost.
+
+Continuation of `2026-05-23-mapping-and-observability.md`.
+
+## What shipped
+
+| PR | Title | Notes |
+|---|---|---|
+| marketplace #2 | `make-skills-discipline v0.1.2` | Node launcher, `memory`/`tenant` keyword drop, memory-detector hook. **Merged first** so the hooks.jsonl file would exist for PR #38's dashboard. |
+| #31 | project-starter recommendations rewrite | Independent. Clean merge. |
+| #32 | Memory MCP Phase 1 | **Closed as superseded by #33.** Same Phase 1 commit (2fd8fd1) was already in #33's branch, so merging #33 brought it in. |
+| #33 | Memory MCP Phase 2 + discipline wrapper | Required rebase onto main (project-starter doc commit was duplicated; git auto-detected and skipped). |
+| #34 | Infrastructure-mapping system | Clean merge. |
+| #36 → **#39** | Layered-explanation + obs-callout | Auto-closed when base `infrastructure-mapping-system` was deleted on #34 merge. Recreated against `main`. |
+| #35 | Phase A CI bundle | Required title lowercase (`Phase` → `phase`) to pass the very PR-title-lint workflow this PR ships. |
+| #37 → **#40** | LangSmith + Sentry init code | Auto-closed when base `phase-a-ci-and-observability` was deleted on #35 merge. Recreated against `main` + CHANGELOG entry added. |
+| #38 | Dev-experience observability (Loki + Promtail + Grafana) | Required rebase + CHANGELOG entry added. |
+
+**Net result:** 9 PRs merged, 1 closed-as-superseded, 2 recreated. Final open-PR count: zero (both repos).
+
+## Friction patterns surfaced
+
+| Pattern | Where | Memory entry / follow-up |
+|---|---|---|
+| **Stacked-PR auto-close.** GitHub auto-closes a PR when its base branch is deleted via merge. Bit twice (#36, #37). | `gh pr view 36 --json state` showed `CLOSED` after #34's merge auto-deleted `infrastructure-mapping-system`. Same pattern for #37. | Logged as issue #4 in `docs/plans/2026-05-23-plugin-v0.1.3-followups.md`. Recommendation: retarget stacked PRs to `main` BEFORE merging the base. |
+| **PR-title lint requires lowercase subject after `feat:`.** `amannn/action-semantic-pull-request@v5` rejected "Phase A..." for the capital P. | `gh run view 26347860885 --log-failed` showed `subjectPattern: ^[a-z0-9].*`. | Discipline documented; consider noting in `CLAUDE.md`. |
+| **changelog-check is hard-fail, not advisory.** I had described it as advisory in earlier summaries; in practice it blocks merge if CHANGELOG.md is not modified. | `tarides/changelog-check-action@v3` returned exit 1 on #40 and #38 until I added CHANGELOG entries. | Correct mental model: any PR touching user-visible code needs a CHANGELOG entry under `## [Unreleased]`. |
+| **Dual-mode-trigger hook fires on docs that mention the keywords.** Writing `docs/plans/2026-05-23-plugin-v0.1.3-followups.md` triggered the hook because the doc mentions `AUTH_SECRET` and `JWTTenantResolver` as part of describing the existing keyword list. | This file's authoring fired the same hook twice. | Logged as issue #1a in `docs/plans/2026-05-23-plugin-v0.1.3-followups.md`. Same class as the v0.1.2 `memory`/`tenant` fix — needs an extension-or-path gate. |
+
+## Decisions
+
+1. **Close #32 as superseded by #33** rather than rebase #32 separately. #33's branch contained 2fd8fd1 (the Phase 1 commit) plus Phase 2 work, so merging #33 brought in everything.
+2. **Recreate auto-closed PRs against `main`** rather than restore deleted base branches. Cleaner history, same outcome.
+3. **Add CHANGELOG entries inline at merge time** for PRs that lacked them, rather than batch later. Keeps the CHANGELOG-PR association explicit.
+
+## Plugin follow-ups captured
+
+All 5 items now live at `docs/plans/2026-05-23-plugin-v0.1.3-followups.md` with file:line references and definitions of done. Recommended order:
+
+1. Smoke-test v0.1.2 (no code, just observe `hooks.jsonl` during real work)
+2. v0.1.3 citation regex + dual-mode trigger gating (#1 + #1a — same hook)
+3. Stacked-PR discipline doc (no code)
+4. Defer the layered-explanation hook; rely on the skill text instead
+
+## What's NOT done that I want to flag
+
+- **The plugin v0.1.2 smoke-test items.** Marketplace PR #2 is merged, so v0.1.2 is reinstallable — but the smoke-test from `2026-05-23-mapping-and-observability.md:46` is still TODO. Should fall out of normal next-session work.
+- **`docs/plans/2026-05-23-plugin-v0.1.3-followups.md` itself is uncommitted** as of this log being written. Pending a single commit to land both this test-runs log + the followups plan.
+
+## Open questions
+
+1. **Should PR-title-lint and changelog-check be enforced via branch-protection, or stay advisory-via-CI?** Currently CI-only; can be bypassed by admin merge. If the team grows, branch protection prevents drift.
+2. **Should the discipline plugin enforce CHANGELOG entries directly via a PreToolUse on `git commit -m`?** Would be earlier than CI. Probably overkill while the team is just Liz.
