@@ -2,6 +2,19 @@
 
 Project context for Claude Code. Loaded into every conversation. Keep it tight; if a rule belongs to a subsystem, move it to a subdirectory `CLAUDE.md` (`web/CLAUDE.md`, `platform/CLAUDE.md`) instead of growing this file.
 
+## Discipline plugin (required)
+
+This project depends on the `make-skills-discipline` Claude Code plugin. Install once per machine:
+
+    /plugin marketplace add Lizo-RoadTown/claude-skills-marketplace
+    /plugin install make-skills-discipline@lizo-skills
+
+The plugin auto-injects behavioral rules into every Claude Code session in this repo — PROBE before asserting, cite `file:line`, distinguish dev-tooling from runtime, write friction as memory at the moment of correction, cite skills by name, append to the test-runs log. Hook scripts enforce the rules; the skill body documents them. See the plugin's [SKILL.md](https://github.com/Lizo-RoadTown/claude-skills-marketplace/blob/main/plugins/make-skills-discipline/skills/make-skills-discipline/SKILL.md) for the full rule text.
+
+The discipline-skills in `skills/` and `skills_private/` (`agentic-skill-design`, `lessons-learned`, `agentic-upskilling`, `orchestration-cataloging`, `next-actions-planning`, `design-evaluation`) are the longer-form discipline the plugin points at. Reach for them when a task needs the depth they describe.
+
+If the plugin isn't installed, the canonical rule text lives at `~/.claude/projects/c--Users-Liz-Make-Skills/memory/feedback_pre_response_discipline.md` (auto-loaded as session memory) — but install the plugin; the memory file alone has the drift problem the plugin's hook scripts solve.
+
 ## The stack
 
 | Layer | Tech |
