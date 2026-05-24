@@ -93,10 +93,8 @@ def mount_into(app: FastAPI, path: str = "/mcp/memory") -> None:
     #     ),
     #     required_scopes=[],
     #   )
-    asgi = AuthenticationMiddleware(
-        mgr.handle_request,
-        backend=BearerAuthBackend(_verifier),
-    )
-    asgi = AuthContextMiddleware(asgi)
+    asgi = mgr.handle_request
     asgi = RequireAuthMiddleware(asgi, required_scopes=[])
+    asgi = AuthContextMiddleware(asgi)
+    asgi = AuthenticationMiddleware(asgi, backend=BearerAuthBackend(_verifier))
     app.mount(path, asgi)
