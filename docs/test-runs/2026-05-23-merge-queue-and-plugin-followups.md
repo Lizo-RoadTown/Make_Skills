@@ -86,3 +86,20 @@ After marketplace PR #3 merged (v0.1.3 of `make-skills-discipline`), Liz ran `/p
 4. Make a real `platform/api/` edit with `AUTH_SECRET` → expect dual-mode reminder STILL fires (gate not over-relaxed).
 
 **Captured as feedback memory:** `feedback_plugin_loader_binds_at_session_start.md` — so future sessions don't assume `/plugin update` means hot-reload.
+
+---
+
+## Smoke-test completion — fresh session (2026-05-23, after `/exit` + resume)
+
+Liz exited and restarted Claude Code. SessionStart hook confirmed plugin bound at startup. Marketplace pointer reports v0.1.3; cache has `0.1.0/` and `0.1.3/` directories.
+
+| Test | Result | Evidence |
+|---|---|---|
+| Dual-mode docs gate skips `.md` files | PASS | `Write` to `docs/test-runs/.smoke-test-v0.1.3.tmp.md` mentioning `AUTH_SECRET`, `JWTTenantResolver`, `tenant_id` produced NO dual-mode reminder. (In v0.1.0/v0.1.2, this fire was deterministic — saw it 5+ times in the prior session.) |
+| URL citation accepted | PASS by unit test | `test_url_citation_accepted` + `test_http_url_citation_accepted` pass. Couldn't run live without a destructive runtime edit. |
+| Runtime preservation (gate not over-relaxed) | PASS by unit test | `test_runtime_py_file_with_trigger_keyword_fires` + `test_runtime_ts_file_fires` pass. |
+| `hooks.jsonl` written by Claude-Code-invoked hooks | **FAIL — new finding** | File never appears at `~/.claude/logs/` or `${CLAUDE_PROJECT_DIR}/.claude/logs/`. Manual `python -c "from _observability import log_event; log_event(...)"` writes correctly to `~/.claude/logs/hooks.jsonl` — so the path, mkdir, JSON serialization, and write permission all work. The Claude-Code-invoked hooks fall back to the no-op `log_event` stub because the `from _observability import log_event` line silently fails under the Node launcher's invocation. Logged as v0.1.4 candidate (§6) in `docs/plans/2026-05-23-plugin-v0.1.3-followups.md`. |
+
+**Implication.** PR #38's Loki dashboard panels will stay empty until v0.1.4 lands. The hook BEHAVIOR is correct (v0.1.3 gate works); only the observability side-effect is broken.
+
+**Next deferrable.** v0.1.4 should fix the silent import + add a subprocess-invocation test so this class of bug surfaces in CI.

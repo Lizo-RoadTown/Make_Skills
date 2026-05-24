@@ -24,7 +24,7 @@ All notable changes to Make_Skills are documented here. Format follows [Keep a C
 - New skill: `skills/infrastructure-mapping/SKILL.md` — see #34.
 - Test-runs log: `docs/test-runs/2026-05-23-mapping-and-observability.md` — see #34.
 - Plugin v0.1.3 follow-ups punch list: `docs/plans/2026-05-23-plugin-v0.1.3-followups.md` (citation regex, dual-mode trigger gating, smoke-test items, stacked-PR discipline). Items #1 and #1a marked complete after marketplace PR #3 (v0.1.3) shipped.
-- Merge-queue session log: `docs/test-runs/2026-05-23-merge-queue-and-plugin-followups.md` (9 PRs drained, friction patterns captured).
+- Merge-queue session log: `docs/test-runs/2026-05-23-merge-queue-and-plugin-followups.md` (9 PRs drained, friction patterns captured). Smoke-test completion section added after fresh-session verification of v0.1.3 — dual-mode docs gate confirmed working, new v0.1.4 candidate filed for silent `_observability.py` import failure under the Node launcher.
 
 ## [0.1.0] — 2026-05-22
 
