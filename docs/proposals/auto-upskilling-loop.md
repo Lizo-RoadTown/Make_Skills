@@ -6,24 +6,41 @@
 
 Automated version of the `agentic-upskilling` skill (currently manual). The agent observes its own work at defined interface points, counts repeated workflows, and at 3+ uses dispatches an LLM agent to author a **codified orchestration** (an agent + specified tools + contract) from the pattern. Human approves via PR review.
 
-## Promotion target: orchestration, not function
+## Promotion targets: four shapes, matcher classifies
 
-The original `agentic-upskilling` skill framed promotion as "skill → tool" (Python function). On further thought, that's too narrow. Most skills are sequences with judgment + error-handling needs (e.g., "PR ceremony" = branch → edit → commit → push → open → wait for CI → handle CI failures → merge). The right promotion is to a **codified orchestration**:
+The original `agentic-upskilling` skill framed promotion as one thing — "skill → tool." On reflection there are **four promotion shapes**. The matcher's job is to detect a recurring pattern AND classify which shape it should become. Different shapes for different pattern characteristics:
 
-| Component | What it is | Example for "PR ceremony" |
+| Shape | When to promote here | Example |
 |---|---|---|
-| **Agent** | Small LLM-driven worker that handles the sequence, has judgment for edge cases | `branch-and-ship-pr-agent` |
-| **Specified tools** | The narrow set of tools the agent is allowed to call | `git`, `gh pr create`, `gh pr checks`, `gh pr merge` |
-| **Contract** | Input shape, output shape, success criteria — the testable surface | Input: `(changes_summary, title, body, base_branch)`. Output: `{merged_sha, pr_number}` on success; `{rejection_reason, ci_failures}` on failure. |
+| **Tool (a button)** — Python function or single shell call | Pure mechanical, ZERO agent judgment needed, deterministic input→output | `open_pr(title, body) → pr_number` — same gh command shape every time, no decisions |
+| **Plugin (hooks)** | Behavioral pattern that needs enforcement at hook points (before/after a tool call, at session start, etc.) | The discipline plugin's PROBE-before-asserting check; `_observability.py` log writes |
+| **Skill.md** | Small reusable prescriptive pattern; agent reads and follows; some judgment but no orchestration | "How to write a feedback memory" — frontmatter shape, body shape, MEMORY.md index update |
+| **Codified orchestration** (agent + tools + contract) | Multi-step workflow with real judgment moments (handle errors, branch on conditions) | PR ceremony with CI handling — branch → edit → push → open → handle bounces → merge |
 
-This matches the platform's existing `agent-app` variant pattern (agents with tools with contracts is the architectural fingerprint). The promotion is producing more of the same kind of unit the platform already runs at runtime.
+**Critical refinement: patterns count even when not consecutive.** If the same workflow appears 3+ times across a session interspersed with other work, it still counts. The matcher tracks recurrence, not consecutiveness.
 
-**Why not just a Python function?**
+**Routing logic (the matcher's classification step):**
 
-- Most workflows have judgment moments (CI bounce → fix-title vs add-changelog vs retry). Functions can't do this; agents can.
-- Contracts are stronger than function signatures — they include success criteria, not just types.
-- Composing orchestrations is the platform's native pattern (deepagents subagents call other subagents). Functions don't compose the same way.
-- An orchestration's "tool" set can include calling OTHER orchestrations once promoted — the library grows compositionally.
+```
+For each detected recurring pattern:
+  - Does it need any judgment? (branch on conditions, handle errors)
+    NO → tool (button)
+    YES → continue
+  - Is it enforced as a check before/after another action?
+    YES → plugin (hooks)
+    NO → continue
+  - Is it primarily a single prescriptive sequence the agent reads-and-follows?
+    YES → skill.md
+    NO → orchestration (agent + tools + contract)
+```
+
+This matches the platform's existing patterns:
+- **Tools** are what the discipline plugin promoted for `log_event`, `_check_citation`
+- **Plugins** are how the discipline itself was codified (PROBE/cite/distinguish behaviors → hooks.json)
+- **Skills.md** are how `agentic-skill-design`, `lessons-learned`, `infrastructure-mapping` were codified
+- **Orchestrations** are how the platform's `agent-app` variant works (agents with tools with contracts)
+
+The auto-upskilling loop produces more of the SAME kinds of units the platform already runs.
 
 ## Why this matters
 
