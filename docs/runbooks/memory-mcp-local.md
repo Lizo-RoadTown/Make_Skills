@@ -103,9 +103,66 @@ Use memory_delete on the memory named "test_handshake".
 
 **Claude Code says the MCP server "failed to start"** — run the server directly (`python -m platform.api.memory.mcp_server`) and check the stderr output. Most often a missing dep or a permission issue on `MEMORY_DATA_DIR`.
 
-## Next steps (after Phase 1 ships)
+## Hosted mode (cross-machine memory)
 
-- **Phase 2:** the local sync shim — daemon that mirrors MCP-backed memory to the file directory at `~/.claude/projects/<key>/memory/`. Lets the existing file-protocol coexist with the MCP store.
-- **Phase 3:** hosted-mode auth — JWT validation, multi-tenant, HTTP/SSE transport, deployed to humancensys.com/mcp.
+Once humancensys.com is deployed on Render with `PLATFORM_MODE=hosted`, the memory MCP serves an HTTP endpoint at `/mcp/memory` that any of your machines can connect to. This is what makes memory follow you across machines and across repos.
 
-See [docs/proposals/lancedb-memory-mcp.md](../proposals/lancedb-memory-mcp.md) for the full plan.
+### What you get
+
+- One LanceDB store (on Render's persistent disk) shared by every Claude Code session that authenticates with your JWT.
+- Tenant isolation: any other user on the platform has their own scope; they can't read your memories.
+- The same 6 tools available locally (read, list, write, delete, search, recall) — same protocol, just over HTTPS.
+
+### Setup
+
+1. **Confirm the deployment.** Render service `make-skills-api` is up; `PLATFORM_MODE=hosted` and `AUTH_SECRET` are set in the service env. The `/mcp/memory` route is mounted only when both conditions hold.
+
+2. **Get your JWT.** Log into the web UI (Next.js Auth.js flow at humancensys.com). The web app's session uses HS256 JWTs signed with the same `AUTH_SECRET` the api verifies. The web UI exposes the raw token at `/api/auth/token` (returns the active session's JWT).
+
+3. **Configure Claude Code's MCP client.** Add to `.claude/mcp.json` in your project (or copy the example at `.claude/mcp.json.hosted-example`):
+
+   ```json
+   {
+     "memory": {
+       "type": "http",
+       "url": "https://humancensys.com/mcp/memory",
+       "headers": {
+         "Authorization": "Bearer YOUR_JWT_HERE"
+       }
+     }
+   }
+   ```
+
+4. **Restart Claude Code.** Run `/mcp` in a session — the `memory` server should show as connected. Use `memory_write`, `memory_search`, etc. from any session in any of your repos.
+
+### Under the hood
+
+- Claude Code POSTs JSON-RPC requests to `/mcp/memory/` with `Authorization: Bearer <jwt>`.
+- The FastAPI app runs the request through a 3-layer middleware sandwich: `AuthenticationMiddleware` (extracts user from JWT) → `AuthContextMiddleware` (sets SDK contextvar) → `RequireAuthMiddleware` (401 if unauthenticated).
+- The verifier (`MakeSkillsTokenVerifier` in `platform/api/memory/auth_bridge.py`) decodes the HS256 JWT, extracts `tenant_id` from claims, and sets `mcp_server.tenant_ctx_var` for the duration of the request.
+- The MCP tool handlers read `_resolve_tenant()` → returns the JWT-derived UUID → LanceDB scopes the read/write to your tenant's data only.
+
+### Verifying tenant isolation
+
+Memories written under JWT A are only visible to sessions presenting JWT A. To confirm:
+
+```
+# Write under tenant A's JWT in one session
+# Switch .claude/mcp.json to tenant B's JWT, restart Claude Code
+# memory_read of the same name → returns {"error": "not_found"}
+```
+
+### Hosted-mode troubleshooting
+
+**401 on every request** — JWT missing, malformed, expired, or signed with wrong secret. Confirm `AUTH_SECRET` matches between web (Vercel) and api (Render). Decode at jwt.io to check `sub` and `tenant_id` claims.
+
+**404 on `/mcp/memory`** — `PLATFORM_MODE` isn't `hosted` on the api side, or env vars didn't pick up. Restart the Render service.
+
+**Connection refused / timeouts** — Render free tier cold-start (~30s). Retry, or move to a warmer plan.
+
+**Local stdio memories don't appear in hosted** — expected. Self-host writes `tenant_id="default"` (string); hosted writes JWT-derived UUID. Different scopes in the same LanceDB. The B1 migration PR (future) will unify them.
+
+## Next steps
+
+- **Phase 4 (future):** Anthropic feature request — first-class MCP-backed Claude Code memory, retire the shim.
+- See [docs/proposals/lancedb-memory-mcp.md](../proposals/lancedb-memory-mcp.md) for the full architecture.

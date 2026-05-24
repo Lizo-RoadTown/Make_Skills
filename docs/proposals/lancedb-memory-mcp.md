@@ -141,11 +141,23 @@ Build the local daemon that mirrors MCP-backed memory to the file directory. Cla
 
 Deliverable: `scripts/memory-shim/` (Python daemon) + install instructions.
 
-### Phase 3 — hosted-mode auth + Render deployment (~1 session)
+### Phase 3 — hosted-mode auth + Render deployment (shipped via PRs #45, #46, #47)
 
-Wire JWT validation into the MCP server. Add the MCP endpoint to the existing FastAPI app at humancensys.com. Test cross-machine: log into two machines, write memory on one, see it on the other.
+Mounted the existing low-level `mcp.server.Server` as a streamable HTTP endpoint at `/mcp/memory` via `StreamableHTTPSessionManager`. Auth via the SDK's `TokenVerifier` protocol — `MakeSkillsTokenVerifier` (in `platform/api/memory/auth_bridge.py`) reuses the existing HS256 JWT decode from `platform/api/auth.py` and sets `mcp_server.tenant_ctx_var` so the 6 tool handlers see the per-request tenant.
 
-Deliverable: hosted MCP endpoint at humancensys.com/mcp + updated `platform/api/main.py` + auth tests.
+Two-mode discipline: self-host mode never mounts the HTTP route or constructs the session manager. Stdio entry point unchanged.
+
+**Why not the FastAPI `Depends()` chain for auth?** Starlette mounts bypass FastAPI's dependency injection — `Depends()` doesn't fire inside a sub-app. The SDK's `TokenVerifier` is the equivalent surface for MCP-mounted apps. Documented in agent A's research (May 2026 dispatch) at finding #4.
+
+**Why contextvars and not closures or per-request Server instances?** Streamable HTTP keeps a long-lived session keyed by `mcp-session-id`; rebinding handlers per HTTP request collides with that lifecycle. `contextvars.ContextVar` is the only pattern that respects the session model. Documented in agent B's research at recommendation #4.
+
+**Why not unify on the existing `current_tenant` ContextVar?** Two reasons documented in `platform/api/memory/mcp_server.py:42-72`: (1) `current_tenant`'s default `DEFAULT_TENANT_ID` is the all-zeros UUID, which differs from the string `"default"` that Phase 1 MCP has been storing — swap-without-migration would orphan data; (2) the all-zeros UUID triggers a reproducible LanceDB filter bug on fresh writes. The unification is deferred to a future migration PR (change `DEFAULT_TENANT_ID` to a non-zero UUID + backfill the tenants FK chain + LanceDB rows). For now, MCP keeps `tenant_ctx_var` (default `"default"`) and the TokenVerifier sets it to the JWT-derived UUID in hosted mode (where the UUID is real, not all-zeros).
+
+**Middleware sandwich (FastMCP's canonical pattern):** `AuthenticationMiddleware` (outermost — extracts user from `Authorization: Bearer` via `BearerAuthBackend(verifier)`) → `AuthContextMiddleware` (copies to SDK contextvar) → `RequireAuthMiddleware` (innermost — 401 if unauthenticated).
+
+**Test surface deferred.** Integration tests at `platform/tests/test_memory_mcp_hosted.py` cover the three core cases (missing/invalid token → 401; tenant isolation) but are currently `pytest.mark.skip`-marked because the fixture hangs on multi-test lifespan re-entry. The structural fix is to construct a fresh FastAPI app per-test rather than importing the module-level `app`. Production code verified by direct probe.
+
+Deliverable: hosted MCP endpoint at humancensys.com/mcp/memory + `platform/api/memory/{auth_bridge,mcp_http}.py` + integration test skeleton at `platform/tests/test_memory_mcp_hosted.py`. Runbook section in `docs/runbooks/memory-mcp-local.md`.
 
 ### Phase 4 (later) — Anthropic feature request + Option 1 client (TBD)
 
