@@ -29,6 +29,7 @@ All notable changes to Make_Skills are documented here. Format follows [Keep a C
 - Plugin v0.1.3 follow-ups punch list: `docs/plans/2026-05-23-plugin-v0.1.3-followups.md` (citation regex, dual-mode trigger gating, smoke-test items, stacked-PR discipline). Items #1 and #1a marked complete after marketplace PR #3 (v0.1.3) shipped.
 - Merge-queue session log: `docs/test-runs/2026-05-23-merge-queue-and-plugin-followups.md` (9 PRs drained, friction patterns captured). Smoke-test completion section added after fresh-session verification of v0.1.3 — dual-mode docs gate confirmed working, new v0.1.4 candidate filed for silent `_observability.py` import failure under the Node launcher. Phase 3 (memory MCP) research-dispatch section + Context7 prompt-injection note added.
 - Memory MCP Phase 3 implementation plan: `docs/plans/2026-05-23-memory-mcp-phase-3.md` — 12 TDD tasks across 3 PRs (contextvar refactor → HTTP transport + auth + tests → docs + client wiring). Grounded in parallel-agent research; cites SDK file:line and external sources.
+- **Auto-upskilling loop proposal** — `docs/proposals/auto-upskilling-loop.md`. Captures the design for automating the `agentic-upskilling` skill: observe at defined interfaces → count repeats → at 3+ uses dispatch an author-orchestration subagent → human approves PR. Promotion target is a codified orchestration (agent + tools + contract), not a Python function. Depends on plugin v0.1.4 (hooks.jsonl writes). ~6-8 hours MVP effort.
 
 ## [0.1.0] — 2026-05-22
 
