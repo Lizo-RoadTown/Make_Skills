@@ -18,6 +18,7 @@ All notable changes to Make_Skills are documented here. Format follows [Keep a C
 ### Changed
 
 - **`render.yaml`** — LANGSMITH_TRACING value `"false"` → `"true"`. Gated by `PLATFORM_MODE=hosted` per the two-mode discipline; self-host instances ignore.
+- **Memory MCP refactor for Phase 3** (PR #45) — `platform/api/memory/mcp_server.py` now reads tenant via `_resolve_tenant()` (backed by `tenant_ctx_var` ContextVar, default `"default"`) instead of the module-level `DEFAULT_TENANT` constant. Stdio self-host behavior preserved. Sets up Phase 3 PR 2 (HTTP transport + JWT auth) to inject per-request tenant without touching handler bodies. See `docs/plans/2026-05-23-memory-mcp-phase-3.md` for execution recovery notes. Also fixes a pre-existing test helper kwarg collision (`_call(name=...)`).
 
 ### Documentation
 
