@@ -207,3 +207,22 @@ async def test_write_with_invalid_record_type_returns_error():
         record_type="not_a_real_type",
     )
     assert "error" in result
+
+
+from contextvars import copy_context
+
+@pytest.mark.asyncio
+async def test_resolve_tenant_falls_back_to_default():
+    """When no ContextVar is set, _resolve_tenant returns DEFAULT_TENANT_ID."""
+    from api.migrations import DEFAULT_TENANT_ID
+    assert mcp_server._resolve_tenant() == DEFAULT_TENANT_ID
+
+
+@pytest.mark.asyncio
+async def test_resolve_tenant_reads_contextvar():
+    """When the ContextVar is set, _resolve_tenant returns its value."""
+    ctx = copy_context()
+    def _inner():
+        mcp_server.tenant_ctx_var.set("custom-tenant-uuid")
+        return mcp_server._resolve_tenant()
+    assert ctx.run(_inner) == "custom-tenant-uuid"

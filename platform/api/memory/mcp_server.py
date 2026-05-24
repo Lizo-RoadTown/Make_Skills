@@ -39,6 +39,27 @@ from mcp.types import TextContent, Tool
 
 from . import lance
 
+from contextvars import ContextVar
+
+from api.migrations import DEFAULT_TENANT_ID
+
+# Phase 3: per-request tenant. Set by the HTTP transport's auth middleware
+# (see api.memory.auth_bridge); unset in stdio mode, where _resolve_tenant
+# falls back to DEFAULT_TENANT_ID. This preserves the Phase 1 single-tenant
+# semantics for self-host.
+tenant_ctx_var: ContextVar[str] = ContextVar("memory_mcp_tenant_id")
+
+
+def _resolve_tenant() -> str:
+    """Return the per-request tenant_id, or DEFAULT_TENANT_ID if unset.
+
+    Reading the ContextVar with a default value is the only safe pattern;
+    .get() with no default raises LookupError when never set. The stdio
+    server never sets this var, so self-host always sees DEFAULT_TENANT_ID.
+    """
+    return tenant_ctx_var.get(DEFAULT_TENANT_ID)
+
+
 # Phase 1: single-user, single-tenant. Phase 3 swaps this for JWT-derived tenant_id.
 DEFAULT_TENANT = "default"
 
