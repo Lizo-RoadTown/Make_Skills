@@ -53,3 +53,36 @@ All 5 items now live at `docs/plans/2026-05-23-plugin-v0.1.3-followups.md` with 
 
 1. **Should PR-title-lint and changelog-check be enforced via branch-protection, or stay advisory-via-CI?** Currently CI-only; can be bypassed by admin merge. If the team grows, branch protection prevents drift.
 2. **Should the discipline plugin enforce CHANGELOG entries directly via a PreToolUse on `git commit -m`?** Would be earlier than CI. Probably overkill while the team is just Liz.
+
+---
+
+## Smoke-test attempt — IMPORTANT FINDING
+
+After marketplace PR #3 merged (v0.1.3 of `make-skills-discipline`), Liz ran `/plugin update`. The marketplace pointer file (`~/.claude/plugins/marketplaces/lizo-skills/plugins/make-skills-discipline/.claude-plugin/plugin.json`) updated to `version: "0.1.3"` and the cache now has `0.1.3/` populated. But the smoke test — writing a docs file mentioning `AUTH_SECRET` and expecting NO dual-mode reminder — **failed**: the reminder still fired.
+
+**Probe (per discipline §1a — PROBE existing wiring):**
+
+| Check | Finding |
+|---|---|
+| Marketplace pointer version | `0.1.3` |
+| Cached versions on disk | `0.1.0/` and `0.1.3/` — **no `0.1.1` or `0.1.2` ever cached** |
+| `0.1.0/scripts/` contents | `pre_tool_use.py`, `stop_audit.py`, `user_prompt_submit.py` — no `_observability.py`, no `session_start.py`, no Node launcher |
+| `hooks.jsonl` location | Does NOT exist anywhere on disk (`~/.claude/logs/` and `${CLAUDE_PROJECT_DIR}/.claude/logs/` both empty/missing) |
+| Hook firing observed | Dual-mode reminder fires on docs files mentioning `AUTH_SECRET` — v0.1.0 / v0.1.2 behavior, NOT v0.1.3 |
+
+**Conclusion: the active session was bound to v0.1.0 at start, and `/plugin update` does NOT hot-swap hooks into a running session.** A fresh session is required for v0.1.3 to take effect.
+
+**Implications worth knowing:**
+
+1. **v0.1.1, v0.1.2, and v0.1.3 fixes have never actually run live in Liz's sessions** — every session this past week started against the v0.1.0 cache. The "memory/tenant false positive fix" from v0.1.2 was never tested in production use.
+2. **PR #38's dev-experience dashboard would have shown empty panels** even if `docker compose up -d loki promtail grafana` ran — `hooks.jsonl` is never written by v0.1.0 (no `_observability.py`).
+3. **The dual-mode false-positives logged throughout the 2026-05-23 sessions were v0.1.0 behavior**, not v0.1.2.
+
+**Required action.** Liz must `/exit` the current Claude Code session and start a fresh one. The new session binds to whatever the marketplace pointer says at startup. Then re-run the smoke test:
+
+1. Write a docs file mentioning `AUTH_SECRET` → expect NO dual-mode reminder (v0.1.3 gate).
+2. Verify `~/.claude/logs/hooks.jsonl` or `${CLAUDE_PROJECT_DIR}/.claude/logs/hooks.jsonl` starts being written.
+3. Cite a URL in a turn, then make a runtime edit → expect NO citation reminder (v0.1.3 URL pattern).
+4. Make a real `platform/api/` edit with `AUTH_SECRET` → expect dual-mode reminder STILL fires (gate not over-relaxed).
+
+**Captured as feedback memory:** `feedback_plugin_loader_binds_at_session_start.md` — so future sessions don't assume `/plugin update` means hot-reload.
