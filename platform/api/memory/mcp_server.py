@@ -39,6 +39,37 @@ from mcp.types import TextContent, Tool
 
 from . import lance
 
+from contextvars import ContextVar
+
+# Phase 3: per-request tenant for the MCP server.
+#
+# Intentionally separate from `api.tenant_context.current_tenant`, which
+# defaults to `DEFAULT_TENANT_ID` (the canonical Pillar 0 all-zeros UUID
+# used by LangGraph / checkpointer / auth.py). The MCP server has stored
+# rows under tenant_id = "default" (a string) since Phase 1, and the
+# all-zeros UUID triggers a reproducible LanceDB filter bug on fresh
+# writes. Unifying on `current_tenant` would orphan Phase 1 data and
+# hit the bug; the unification is deferred to a future migration PR
+# that changes DEFAULT_TENANT_ID to a non-zero UUID and backfills the
+# tenants FK chain.
+#
+# Self-host stdio sessions never .set() this var → stays at "default".
+# Phase 3 PR 2's TokenVerifier .set()s the JWT-derived tenant_id (a
+# real UUID) per HTTP request in hosted mode.
+tenant_ctx_var: ContextVar[str] = ContextVar(
+    "memory_mcp_tenant_id", default="default"
+)
+
+
+def _resolve_tenant() -> str:
+    """Return the per-request tenant_id for MCP operations.
+
+    Self-host stdio: returns "default" (the constructor default; never .set()).
+    Hosted HTTP: returns the JWT-derived tenant_id set by the auth middleware.
+    """
+    return tenant_ctx_var.get()
+
+
 # Phase 1: single-user, single-tenant. Phase 3 swaps this for JWT-derived tenant_id.
 DEFAULT_TENANT = "default"
 
@@ -70,11 +101,11 @@ def _row_to_dict(row: dict[str, Any]) -> dict[str, Any]:
 
 
 def _fetch_one(name: str, include_deleted: bool = False) -> dict[str, Any] | None:
-    """Read a single memory by name, scoped to DEFAULT_TENANT. Returns None if absent."""
+    """Read a single memory by name, scoped to ``_resolve_tenant()``. Returns None if absent."""
     table, _ = lance.get_table()
     # LanceDB doesn't have a direct primary-key lookup; do a filtered scan.
     rid = lance._sql_escape(_id_from_name(name))
-    tenant_clause = lance._tenant_clause(DEFAULT_TENANT, include_public=False)
+    tenant_clause = lance._tenant_clause(_resolve_tenant(), include_public=False)
     where = f"{tenant_clause} AND id = '{rid}'"
     if not include_deleted:
         where += f" AND visibility != '{VISIBILITY_DELETED}'"
@@ -239,7 +270,7 @@ async def call_tool(name: str, arguments: dict[str, Any]) -> list[TextContent]:
         record_type = arguments.get("record_type")
         limit = int(arguments.get("limit", 100))
         rows = lance.list_records(
-            tenant_id=DEFAULT_TENANT,
+            tenant_id=_resolve_tenant(),
             limit=limit,
             record_type=record_type,
             include_public=False,
@@ -269,7 +300,7 @@ async def call_tool(name: str, arguments: dict[str, Any]) -> list[TextContent]:
         if existing is not None:
             table, _ = lance.get_table()
             rid = lance._sql_escape(_id_from_name(arguments["name"]))
-            table.delete(f"id = '{rid}' AND tenant_id = '{DEFAULT_TENANT}'")
+            table.delete(f"id = '{rid}' AND tenant_id = '{_resolve_tenant()}'")
         record = {
             "id": _id_from_name(arguments["name"]),
             "type": record_type,
@@ -281,7 +312,7 @@ async def call_tool(name: str, arguments: dict[str, Any]) -> list[TextContent]:
         }
         inserted = lance.insert_records(
             [record],
-            tenant_id=DEFAULT_TENANT,
+            tenant_id=_resolve_tenant(),
             visibility="private",
         )
         return [TextContent(type="text", text=json.dumps({
@@ -301,7 +332,7 @@ async def call_tool(name: str, arguments: dict[str, Any]) -> list[TextContent]:
             return [TextContent(type="text", text=json.dumps({"ok": True, "already_deleted": True}))]
         table, _ = lance.get_table()
         rid = lance._sql_escape(_id_from_name(arguments["name"]))
-        table.delete(f"id = '{rid}' AND tenant_id = '{DEFAULT_TENANT}'")
+        table.delete(f"id = '{rid}' AND tenant_id = '{_resolve_tenant()}'")
         record = {
             "id": _id_from_name(arguments["name"]),
             "type": existing.get("type") or "project",
@@ -311,13 +342,13 @@ async def call_tool(name: str, arguments: dict[str, Any]) -> list[TextContent]:
             "ts": existing.get("ts") or time.time(),
             "why": existing.get("why") or "",
         }
-        lance.insert_records([record], tenant_id=DEFAULT_TENANT, visibility=VISIBILITY_DELETED)
+        lance.insert_records([record], tenant_id=_resolve_tenant(), visibility=VISIBILITY_DELETED)
         return [TextContent(type="text", text=json.dumps({"ok": True}))]
 
     if name == "memory_search":
         rows = lance.search(
             query=arguments["query"],
-            tenant_id=DEFAULT_TENANT,
+            tenant_id=_resolve_tenant(),
             limit=int(arguments.get("limit", 5)),
             record_type=arguments.get("record_type"),
             include_public=False,
@@ -329,7 +360,7 @@ async def call_tool(name: str, arguments: dict[str, Any]) -> list[TextContent]:
     if name == "memory_recall":
         rows = lance.search(
             query=arguments["context"],
-            tenant_id=DEFAULT_TENANT,
+            tenant_id=_resolve_tenant(),
             limit=int(arguments.get("n", 5)),
             include_public=False,
         )

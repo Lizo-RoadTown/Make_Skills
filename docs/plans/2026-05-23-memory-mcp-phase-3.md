@@ -10,6 +10,32 @@
 
 **Research basis:** Three parallel agents dispatched 2026-05-23 (see `docs/test-runs/2026-05-23-merge-queue-and-plugin-followups.md` "Phase 3 research" section once added). Key findings: Starlette mount bypasses FastAPI `Depends()` so auth happens via SDK's `TokenVerifier` middleware; `contextvars` is the only viable per-request-tenant pattern given streamable HTTP's long-lived session lifecycle; `asgi-lifespan` is required for tests because FastAPI's `TestClient` doesn't fire lifespan events.
 
+## Execution recovery notes (2026-05-23)
+
+Task 1 + Task 2 executed via subagent-driven-development. The path was bumpier than the plan anticipated; documenting here so future plans and reviewers avoid the same trap.
+
+**What the original plan said.** Add a new `tenant_ctx_var` + `_resolve_tenant()` helper to `mcp_server.py`, defaulting to `DEFAULT_TENANT_ID`. Task 2 swaps 8 read-sites.
+
+**What the quality reviewer of Task 1 found.** `platform/api/tenant_context.py:24-26` already defines `current_tenant: ContextVar[str]` with the same shape — recommended reuse, not duplication.
+
+**What the Task 2 implementer found by actually running it.** Two showstoppers the plan and reviewer both missed:
+
+1. **Value mismatch.** `DEFAULT_TENANT = "default"` (the MCP server's existing string) and `DEFAULT_TENANT_ID = "00000000-0000-0000-0000-000000000000"` (the Pillar 0 UUID) are not equal. Swapping orphans Phase 1 data.
+2. **LanceDB filter bug.** Reproducible: `WHERE tenant_id = '00000000-...' AND id = '...'` misses fresh writes (works on pre-indexed rows, works on vector search, fails on AND-filter scans). Documented in the implementer's BLOCKED report; root cause not yet isolated.
+
+**Recovery path chosen (option A in the recovery decision tree).** Keep MCP's tenant identifier as the string `"default"` for self-host. Diverge from `current_tenant` deliberately, document why in the comment block above `tenant_ctx_var`. Phase 3 PR 2's TokenVerifier will `.set()` the JWT-derived UUID per-request in hosted mode — that's safe because hosted tenant UUIDs are not all-zeros.
+
+**Deferred to a future migration PR.** Unify on UUID: change `DEFAULT_TENANT_ID` from all-zeros to a non-zero UUID (sidesteps the LanceDB bug), backfill the tenants FK chain + LanceDB rows. ~2-4 hours of careful surgery, worth doing eventually for cross-table analytics consistency.
+
+**Lessons saved as feedback memories** in `~/.claude/projects/c--Users-Liz-Make-Skills/memory/`:
+- `feedback_probe_existing_infrastructure_before_planning.md` — grep for existing infra before adding new
+- `feedback_verify_values_not_just_names.md` — two similarly-named constants can have different values; verify before refactoring
+- `feedback_invoke_askuserquestion_dont_type_it.md` — the AskUserQuestion XML must be invoked as a tool, not typed in response text
+
+**PR 2 spec correction.** The plan's Task 5 (TokenVerifier) is still correct — it sets `mcp_server.tenant_ctx_var`, which is what we ended up keeping. No change needed to PR 2 task descriptions.
+
+**PR 3 spec correction.** The plan's Task 11 (proposal update) should reflect the deliberate divergence too — add a paragraph in the proposal's Phase 3 section explaining why MCP keeps `"default"` rather than unifying with `current_tenant`.
+
 **Sources:**
 - [auth.py](../../platform/api/auth.py) — existing HS256 JWT decode (line 80-94) and `TenantContext` dataclass
 - [mcp_server.py](../../platform/api/memory/mcp_server.py) — Phase 1 stdio server, `DEFAULT_TENANT` referenced at lines 43, 73, 77, 242, 272, 284, 304, 314, 320, 332
@@ -812,6 +838,8 @@ Mounted the existing low-level `mcp.server.Server` as a streamable HTTP endpoint
 Two-mode discipline: self-host mode never mounts the HTTP route or constructs the session manager. Stdio entry point unchanged.
 
 **Why not the FastAPI `Depends()` chain for auth?** Starlette mounts bypass FastAPI's dependency injection — `Depends()` doesn't fire inside a sub-app. The SDK's `TokenVerifier` is the equivalent surface for MCP-mounted apps. Documented in agent A's research (May 2026 dispatch) at finding #4.
+
+**Why not unify on the existing `current_tenant` ContextVar?** Two reasons documented in `platform/api/memory/mcp_server.py:42-72`: (1) `current_tenant`'s default `DEFAULT_TENANT_ID` is the all-zeros UUID, which differs from the string `"default"` that Phase 1 MCP has been storing — swap-without-migration would orphan data; (2) the all-zeros UUID triggers a reproducible LanceDB filter bug on fresh writes. The unification is deferred to a future migration PR (change `DEFAULT_TENANT_ID` to a non-zero UUID + backfill the tenants FK chain + LanceDB rows). For now, MCP keeps `tenant_ctx_var` (default `"default"`) and the TokenVerifier sets it to the JWT-derived UUID in hosted mode (where the UUID is real, not all-zeros).
 
 **Why contextvars and not closures or per-request Server instances?** Streamable HTTP keeps a long-lived session keyed by `mcp-session-id`; rebinding handlers per HTTP request collides with that lifecycle. `contextvars.ContextVar` is the only pattern that respects the session model. Documented in agent B's research at recommendation #4.
 
