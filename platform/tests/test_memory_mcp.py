@@ -35,9 +35,9 @@ def _unique_name(prefix: str) -> str:
     return f"test_{prefix}_{uuid.uuid4().hex[:8]}"
 
 
-async def _call(name: str, **arguments) -> dict | list:
+async def _call(tool_name: str, **arguments) -> dict | list:
     """Invoke a tool by name and parse the JSON response."""
-    blocks = await mcp_server.call_tool(name, arguments)
+    blocks = await mcp_server.call_tool(tool_name, arguments)
     assert len(blocks) == 1, f"expected 1 content block, got {len(blocks)}"
     return json.loads(blocks[0].text)
 
