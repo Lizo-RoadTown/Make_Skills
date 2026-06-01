@@ -6,6 +6,7 @@ All notable changes to Make_Skills are documented here. Format follows [Keep a C
 
 ### Added
 
+- **Adapter stub directories** — `adapters/classroom/`, `adapters/development/`, `adapters/research-project/` each ship a README defining the adapter contract per the three-layer engine spec. No code yet (the adapter artifacts — `manifest.json`, `watches.json`, `pattern-triggers.json`, `system-prompt-fragments/`, `default-skills.json`, `observatory-events.json` — populate when the MVP migration lands and the core engine moves into `core/`). The stubs make concrete what the Hub's `attached-adapters.json` and SDE_Extraction's `attached-adapters.json` reference as `status="intended; not yet implemented"`. Plus a top-level `adapters/README.md` orienting the layer.
 - **CHANGELOG.md** seeded with the work that landed across 2026-05-15 → 2026-05-23. Future entries go under `## [Unreleased]` and `release-please` rolls them into versioned releases.
 - **Three GitHub Actions workflows** under `.github/workflows/`: `release-please.yml` (versioning + CHANGELOG automation, with `extra-files` syncing version drift), `pr-title-lint.yml` (Conventional Commits enforcement via `amannn/action-semantic-pull-request`), `changelog-required.yml` (warns when infra files change without a CHANGELOG entry).
 - **Infrastructure-mapping system** — `skills/infrastructure-mapping/SKILL.md` (Simon-grounded mapping discipline) + `scripts/architecture_snapshot.py` + `scripts/architecture_diff.py` + first baseline at `docs/architecture-snapshots/2026-05-22-2353-*`. Ships in #34.
