@@ -126,6 +126,8 @@ Make_Skills/
 
 ### Phase 2 — Extract low-risk modules
 
+**Status:** ✅ Shipped 2026-06-01 in PR #60 — `feat(core): mvp migration phase 2 — extract low-coupling modules`.
+
 **Goal:** move the modules with the cleanest interfaces first. Use compatibility shims to keep old import paths working.
 
 **Move order (lowest coupling first):**
@@ -134,26 +136,32 @@ Make_Skills/
 |---|---|---|
 | `platform/api/model_registry.py` | `core/providers/model_registry.py` | `platform/api/model_registry.py` → re-exports from `core.providers.model_registry` |
 | `platform/api/subagents.py` | `core/orchestration/subagents.py` | same pattern |
-| `platform/api/observability.py` | `core/observability/__init__.py` (**telemetry emission helpers only — NOT the Project Observatory; that lives in the-loom**) | same pattern |
+| `platform/api/observability.py` | `core/observability/observability.py` (**telemetry emission helpers only — NOT the Project Observatory; that lives in the-loom**) | same pattern |
 | `platform/api/tenant_context.py` | `core/auth/tenant_context.py` | same pattern |
 | `platform/api/secrets.py` | `core/auth/secrets.py` | same pattern |
 
-**Pattern for each shim file** (kept at old location):
+**Pattern for each shim file** (kept at old location, prefer named imports over `*`):
 
 ```python
-# DEPRECATED: import from core.<area>.<module> instead. This shim
-# preserves backward compatibility for the MVP migration; remove after
-# all imports are updated.
-from core.providers.model_registry import *  # noqa: F401,F403
+"""DEPRECATED shim. Real module at core.<area>.<module>."""
+from core.providers.model_registry import (  # noqa: F401
+    RECOMMENDED_STARTERS,
+    resolve_model,
+    supported_providers,
+)
 ```
+
+**Dockerfile update** (`platform/deploy/Dockerfile`): added `COPY core /app/core`, `COPY services /app/services`, `COPY adapters /app/adapters` so the new paths resolve inside the container. The entrypoint `api.main:app` stays as-is until Phase 5. This was a constraint discovered during Phase 2 execution — the original plan assumed Dockerfile changes only happened at Phase 5.
 
 **Tests:** existing tests pass via the shims. Add one new test that imports from the NEW location too.
 
 **Deploy:** unchanged. `api.main:app` still works because `platform/api/main.py` is unchanged.
 
-**Open decision:** does `observability.py` keep its `from api.memory.lance import get_table` dependency? If yes, can't fully move observability until memory moves. **Recommendation:** make `core/observability/` initially re-export observability.py from its old location, defer the deeper extract to Phase 4.
+**Open decision (resolved):** `observability.py` keeps its `from api.memory.lance import get_table` dependency for now. Phase 4 will sever it when memory moves to `deprecated/`. No deeper extract attempted in Phase 2.
 
-**PR title:** `refactor: extract low-coupling modules to core/ with compatibility shims`
+**Caveat — git rename history:** because each shim overwrites the old file with a short re-export, git's rename heuristic falls below the 50% similarity threshold. The CHANGELOG entry + PR body carry the audit trail instead.
+
+**PR title:** `feat(core): mvp migration phase 2 — extract low-coupling modules`
 
 ### Phase 3 — Isolate skill-making + decide on roadmap
 
