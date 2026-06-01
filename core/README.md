@@ -30,7 +30,7 @@ The core is **stateless about cross-project knowledge**. It calls into the-loom 
 | Dir | Purpose |
 |---|---|
 | [`runtime/`](runtime/) | Per-turn agent loop, request dispatch, response streaming |
-| [`skill-making/`](skill-making/) | Skill compilation pipeline (SKILL.md → CompiledSkill) |
+| [`skill_making/`](skill_making/) | Skill compilation pipeline (SKILL.md → CompiledSkill). Directory uses underscore so the Python import path is valid: `from core.skill_making.compiler import compile_skill_to_tool`. |
 | [`providers/`](providers/) | Multi-model provider registry (Anthropic, OpenAI, Google, Ollama, etc.) |
 | [`orchestration/`](orchestration/) | Subagent composition, multi-agent patterns |
 | [`auth/`](auth/) | JWT verification, tenant resolution (`tenant_ctx_var`) |
@@ -54,7 +54,7 @@ The core is **stateless about cross-project knowledge**. It calls into the-loom 
 |---|---|---|
 | 1 — scaffold | **THIS PR** | Empty directories + READMEs |
 | 2 — low-coupling extracts | pending | `model_registry.py` → `core/providers/`, `subagents.py` → `core/orchestration/`, `observability.py` → `core/observability/`, `tenant_context.py` → `core/auth/`, `secrets.py` → `core/auth/`. Compatibility shims at old paths. |
-| 3 — skill-making | pending | `skill_compiler.py` → `core/skill-making/compiler.py` |
+| 3 — skill-making | **PR #61** | `skill_compiler.py` → `core/skill_making/compiler.py` + `services/skill_making/bridge_receiver.py` stub. Directories renamed `skill-making/` → `skill_making/` so Python imports resolve. |
 | 4 — deprecate LanceDB memory | pending | `platform/api/memory/` → `deprecated/lancedb-memory/` (no move into core/) |
 | 5 — runtime + main | pending | `agent.py` + `runtime.py` → `core/runtime/`, `auth.py` → `core/auth/`, `db.py` + `migrations.py` → `core/db/`, `main.py` → `services/api/main.py` (NOT `core/`) |
 

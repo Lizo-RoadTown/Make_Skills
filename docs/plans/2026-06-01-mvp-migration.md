@@ -165,17 +165,25 @@ from core.providers.model_registry import (  # noqa: F401
 
 ### Phase 3 — Isolate skill-making + decide on roadmap
 
+**Status:** ✅ Shipped 2026-06-01 in PR #61 — `feat(core): mvp migration phase 3 — skill-making boundary`.
+
 **Goal:** establish the skill-making boundary per the spec doc.
 
 **Moves:**
 
 | Old location | New location |
 |---|---|
-| `platform/api/skill_compiler.py` | `core/skill-making/compiler.py` |
+| `platform/api/skill_compiler.py` | `core/skill_making/compiler.py` |
+
+**Directory rename:** `core/skill-making/` → `core/skill_making/` and `services/skill-making/` → `services/skill_making/`. Python identifiers can't contain hyphens, so a hyphenated directory makes `from core.skill-making.compiler import ...` a syntax error. Underscore is the canonical form for any path that becomes part of a Python import. The hyphenated `skill-making` survives in PROSE (the "skill-making bridge" is a named concept in the spec) but never in import paths.
 
 **New file:**
 
-- `services/skill-making/bridge_receiver.py` — stub for receiving Path A candidates from the-loom over the skill-making bridge (per `2026-05-25-skill-making-bridge.md`)
+- `services/skill_making/bridge_receiver.py` — stub raising `BridgeReceiverNotImplemented` for receiving Path A candidates from the-loom over the skill-making bridge (per `2026-05-25-skill-making-bridge.md`). Full implementation lands post-Phase-5 when `services/api/` owns the FastAPI app + the-loom's Architecture Registry has a promotion-dispatcher.
+
+**Shim:** `platform/api/skill_compiler.py` re-exports `compile_skill_to_tool` from the new location. Single existing caller is `platform/api/runtime.py:262` (lazy import) — preserved.
+
+**Doc updates:** core/README.md, services/README.md, README.md, ARCHITECTURE.md updated to reflect the underscore directory names.
 
 **Decision needed on `platform/api/roadmap/`:**
 

@@ -11,7 +11,7 @@ This is **NOT** the same as the-loom's services. The-loom is a separate repo + s
 | Dir | Purpose | Status |
 |---|---|---|
 | [`api/`](api/) | FastAPI entry — `services.api.main:app` becomes the uvicorn target after Phase 5. Houses HTTP endpoints consuming projects call (chat, agent management, skill catalog reads). | Phase 5 |
-| [`skill-making/`](skill-making/) | Receives promotion candidates from the-loom's Architecture Registry over the skill-making bridge (per [`../docs/proposals/2026-05-25-skill-making-bridge.md`](../docs/proposals/2026-05-25-skill-making-bridge.md)). Dispatches to `core/skill-making/` for compilation. Sends registration acks back to the-loom. | Phase 3 (stub) → post-Phase-5 (real) |
+| [`skill_making/`](skill_making/) | Receives promotion candidates from the-loom's Architecture Registry over the skill-making bridge (per [`../docs/proposals/2026-05-25-skill-making-bridge.md`](../docs/proposals/2026-05-25-skill-making-bridge.md)). Dispatches to `core/skill_making/` for compilation. Sends registration acks back to the-loom. Directory uses underscore so the Python import path is valid. | Phase 3 (stub) → post-Phase-5 (real) |
 | [`admin/`](admin/) | Inspectors + dev tooling (e.g., `mcp_inspector.py`, `provider_inspector.py`, `fileviewer.py` from current `platform/api/`). Internal endpoints, not consumer-facing. | Phase 5 |
 
 ## How this differs from `core/`
@@ -27,7 +27,7 @@ This is **NOT** the same as the-loom's services. The-loom is a separate repo + s
 
 | Phase | What moves into `services/` |
 |---|---|
-| 3 | `services/skill-making/bridge_receiver.py` stub for the the-loom integration |
+| 3 | `services/skill_making/bridge_receiver.py` stub for the the-loom integration (shipped PR #61) |
 | 5 | `platform/api/main.py` → `services/api/main.py` (the uvicorn target) |
 | 5 | `platform/api/mcp_inspector.py`, `provider_inspector.py`, `fileviewer.py` → `services/admin/` |
 
