@@ -2,80 +2,222 @@
 
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 
-The agent platform engine. Takes recognized patterns and embodies them as runnable capability — the system that turns a pattern source into a usable skill, registers it, and makes it available to any consuming application.
+The **recursive skill engine** — the piece that watches a user's agent work, notices repeated patterns, generates skill candidates, and compiles approved candidates into runnable capability. Three layers: reusable core + project-type adapters + project-local instances.
 
-## What this repo is
+Sits inside a five-module platform with `the-loom` (cross-project intelligence + memory) and per-project consumers (Summer 2026 Hub, SDE_Extraction, humancensys-app, etc.).
 
-The reusable engine. Provides:
+## The boundary rule
 
-- Per-user AI agent runtime (orchestrator + subagent clan)
-- Skill compilation pipeline: markdown `.md` → runnable agent capability
-- Skill registry + sharing
-- Multi-model provider registry (Anthropic / OpenAI / Google / Ollama / etc.) with BYO API keys per user
-- Per-tenant semantic memory (LanceDB, episodic + session memory in one typed table)
-- Pillar 0 tenant isolation (Postgres RLS + ContextVar tenant resolution)
-- MCP server surface for memory + skill access
-- Observability hooks for telemetry to consumer-side dashboards
+> **Make_Skills improves local agency and produces candidates. The-loom observes across projects, governs promotion, and stores durable structure.**
 
-## What this repo is NOT
+Make_Skills owns local agency-pattern detection inside a project instance. The-loom owns cross-project structure recognition, promotion governance, and canonical durable structure. Read [`docs/proposals/2026-05-31-three-layer-engine-spec.md`](docs/proposals/2026-05-31-three-layer-engine-spec.md) for the full module spec.
 
-- A student-facing product. That's [`Lizo-RoadTown/humancensys-app`](https://github.com/Lizo-RoadTown/humancensys-app) — the first consumer.
-- A development tool for Liz. That's [`Lizo-RoadTown/the-loom`](https://github.com/Lizo-RoadTown/the-loom) — the personal AI substrate that lives during dev, never in deployed runtime.
-- A specific UI, identity provider, or branding. Consumers bring those.
+## The three layers
 
-See [`docs/proposals/make-skills-engine-vs-consumer-scope.md`](docs/proposals/make-skills-engine-vs-consumer-scope.md) for the engine/consumer boundary.
+```mermaid
+flowchart TB
+    subgraph CORE["Layer 1 — Reusable Core Engine (universal)"]
+        direction LR
+        C1[Per-turn agent loop]
+        C2[Local pattern detection]
+        C3[Skill compilation]
+        C4[Recursive skill execution]
+        C5[Multi-agent orchestration]
+    end
 
-## Architecture
+    subgraph ADAPT["Layer 2 — Project-Type Adapters (per-type)"]
+        direction LR
+        A1[classroom/]
+        A2[development/]
+        A3[research-project/]
+        A4["operations/ (future)"]
+    end
 
-```text
-Consumer app (e.g., humancensys-app, future health-app, future game-app)
-   |
-   |  HTTPS + JWT (HS256 via AUTH_SECRET)
-   v
-Make_Skills engine (this repo)
-   - platform/api/            FastAPI runtime + agent endpoints
-   - platform/api/memory/     LanceDB tenant-scoped memory MCP
-   - platform/api/auth.py     JWT verification + tenant resolution
-   - scripts/                 Engine tooling
-   - skills/                  Skill source files (.md)
-   - subagents/               Agent definitions
+    subgraph INST["Layer 3 — Project-Local Instances (per-project)"]
+        direction LR
+        I1[Hub ime4020-hub-app]
+        I2[Hub ime4020-hub-dev]
+        I3[SDE_Extraction sde-extraction-dev]
+        I4["..."]
+    end
+
+    CORE --> ADAPT
+    ADAPT --> INST
 ```
 
-Consumers integrate via:
+| Layer | Lives in | What it owns |
+|---|---|---|
+| **Reusable core** | `core/` (post-migration; currently `platform/api/`) | Pattern detection, skill formation, promotion-candidate generation, runtime agent loop, recursive workflow refinement, skill compilation |
+| **Project-type adapters** | [`adapters/<type>/`](adapters/) | Customizes the core for one CLASS of consuming projects (classroom-support-app, software-development, research-project, etc.) |
+| **Project-local instances** | Each consuming project's `.project-intelligence/<instance-id>/` (NOT in this repo) | Local skill candidates, observed workflows, user preferences, promotion candidates — the project's own evidence |
 
-- HTTPS REST for agent management + chat
-- MCP for memory read/write/search
+## How Make_Skills fits in the wider platform
 
-## Quick start (self-host)
+```mermaid
+flowchart LR
+    subgraph LOOM["the-loom (platform — cross-project)"]
+        direction TB
+        L1[Memory MCP]
+        L2[Project Registry]
+        L3[Project Observatory]
+        L4[Architecture Registry]
+        L5[Policy / Promotion Governance]
+    end
+
+    subgraph MS["Make_Skills (this repo)"]
+        direction TB
+        M1[Core engine]
+        M2[Adapters]
+        M3[Skill catalog]
+    end
+
+    subgraph CONS["Consuming projects"]
+        direction TB
+        P1[Summer 2026 Hub]
+        P2[SDE_Extraction]
+        P3[humancensys-app]
+        P4["..."]
+    end
+
+    CONS -- "agent endpoint requests" --> MS
+    MS -- "memory_recall / memory_write" --> LOOM
+    MS -- "telemetry (OTLP)" --> LOOM
+    MS -- "promotion candidates" --> LOOM
+    LOOM -- "ratified structure / catalog reads" --> MS
+    MS -- "compiled skills" --> CONS
+```
+
+| Module | Role | Repo |
+|---|---|---|
+| **Make_Skills** | The skill engine. Detects local patterns, compiles skills, runs the agent loop. (You are here.) | [`Lizo-RoadTown/Make_Skills`](https://github.com/Lizo-RoadTown/Make_Skills) |
+| **the-loom** | The platform. Memory MCP, project registry, observatory, governance, durable structure. | [`Lizo-RoadTown/the-loom`](https://github.com/Lizo-RoadTown/the-loom) |
+| **humancensys-app** | Consumer: student-facing product. | [`Lizo-RoadTown/humancensys-app`](https://github.com/Lizo-RoadTown/humancensys-app) |
+| **Summer 2026 Hub** | Consumer: classroom hub (MVP at n=1 student). | [`Lizo-RoadTown/summer-2026-hub`](https://github.com/Lizo-RoadTown/summer-2026-hub) |
+| **SDE_Extraction** | Consumer: research-heavy project. | [`Lizo-RoadTown/sde-extraction`](https://github.com/Lizo-RoadTown/sde-extraction) |
+| **docs-agent / ux-starter / web-starter** | Template repos for spawning new consumers. | [Lizo-RoadTown templates](https://github.com/Lizo-RoadTown) |
+| **project-starter** | Day-1 scaffolding for new projects (pre-template-era). | [`Lizo-RoadTown/project-starter`](https://github.com/Lizo-RoadTown/project-starter) |
+| **claude-skills-marketplace** | Public skills marketplace. | [`Lizo-RoadTown/claude-skills-marketplace`](https://github.com/Lizo-RoadTown/claude-skills-marketplace) |
+
+## The two promotion paths
+
+A "promotion" is when a local repeated pattern becomes durable cross-project structure (a published skill, an architectural node). Two paths converge at the same governance point in the-loom:
+
+```mermaid
+flowchart TB
+    subgraph PA["Path A — Local candidate"]
+        PA1[Project-local instance detects<br/>3+ recurrence of a pattern]
+        PA2[Make_Skills generates<br/>promotion candidate]
+        PA3[Submitted via skill-making bridge]
+    end
+
+    subgraph PB["Path B — Platform observatory"]
+        PB1[the-loom Project Observatory<br/>detects cross-project pattern]
+        PB2[the-loom generates<br/>platform-side candidate]
+    end
+
+    GOV[the-loom Policy + Architecture Registry<br/>ratifies or rejects]
+    COMP[Make_Skills compiles SKILL.md → CompiledSkill]
+    CAT[Skill catalog]
+
+    PA1 --> PA2 --> PA3 --> GOV
+    PB1 --> PB2 --> GOV
+    GOV -- "ratified" --> COMP
+    COMP --> CAT
+```
+
+See [`docs/proposals/2026-05-25-skill-making-bridge.md`](docs/proposals/2026-05-25-skill-making-bridge.md) for the wire format between Make_Skills and the-loom.
+
+## Repo layout (current + target)
+
+**Today** — engine code is at `platform/api/`. Migration to the target shape is staged across 5 phases per [`docs/plans/2026-06-01-mvp-migration.md`](docs/plans/2026-06-01-mvp-migration.md).
+
+**Target** (after migration):
+
+```text
+Make_Skills/
+├── core/                          Layer 1 — reusable core engine
+│   ├── runtime/                   Per-turn agent loop
+│   ├── skill-making/              Skill compilation pipeline
+│   ├── providers/                 Multi-model provider registry
+│   ├── orchestration/             Subagent composition
+│   ├── auth/                      JWT verification + tenant resolution
+│   ├── db/                        Postgres setup
+│   ├── tools/                     Generic agent tools
+│   └── observability/             Telemetry emission helpers ONLY
+│                                  (the Project Observatory itself lives in the-loom)
+│
+├── adapters/                      Layer 2 — project-type adapters (stubbed today)
+│   ├── classroom/
+│   ├── development/
+│   └── research-project/
+│
+├── services/                      API + admin surfaces
+│   ├── api/                       Entry point (uvicorn target)
+│   ├── skill-making/              Receives promotion candidates from the-loom
+│   └── admin/                     Inspectors, dev tooling
+│
+├── skills/ + skills_private/      Methodology skill library (bundled, per-project copies allowed)
+├── subagents/                     Subagent definitions
+├── deprecated/                    Old code retained for reference until proof unused
+└── docs/                          Proposals, plans, decisions, runbooks, architecture
+```
+
+## Quick start (self-host, current state)
 
 ```bash
 git clone https://github.com/Lizo-RoadTown/Make_Skills.git
 cd Make_Skills/platform/deploy
 cp .env.template .env
-# Edit .env -- at minimum set ANTHROPIC_API_KEY
+# Edit .env — at minimum set ANTHROPIC_API_KEY
 docker compose up -d --build
 ```
 
-The engine listens on `:8000`. Point a consumer app at it (the first one is humancensys-app).
+Engine listens on `:8001` (local) / `${PORT:-10000}` (Render). Point a consumer at it.
 
-## Relationship to other repos
+After the MVP migration (in flight), the entrypoint moves from `api.main:app` to `services.api.main:app`. The Quick start command stays the same — Docker layer abstracts it.
 
-| Repo | Role |
-|---|---|
-| `Lizo-RoadTown/Make_Skills` | This repo -- the engine |
-| `Lizo-RoadTown/humancensys-app` | The student-facing consumer (Next.js + Auth.js + lessons) |
-| `Lizo-RoadTown/the-loom` | Liz's dev substrate (project intelligence, observability) -- dev-time only |
-| `Lizo-RoadTown/project-starter` | Day-1 scaffolding for new projects |
-| `Lizo-RoadTown/claude-skills-marketplace` | Public skills marketplace |
+## Documentation map
 
-## Documentation
+**Front-facing:**
 
-- [Architecture overview](ARCHITECTURE.md)
-- [Contributing](CONTRIBUTING.md)
-- [Roadmap](ROADMAP.md)
-- [Proposals](docs/proposals/)
-- [Runbooks](docs/runbooks/)
+- [README.md](README.md) — you are here
+- [ARCHITECTURE.md](ARCHITECTURE.md) — module structure, two-mode discipline, contribution rules
+- [CONTRIBUTING.md](CONTRIBUTING.md) — how to contribute, dual-mode discipline
+- [ROADMAP.md](ROADMAP.md) — what's shipped, in flight, planned
+- [CHANGELOG.md](CHANGELOG.md) — per-version changes
+
+**Architecture (deep)**:
+
+- [`docs/proposals/2026-05-31-three-layer-engine-spec.md`](docs/proposals/2026-05-31-three-layer-engine-spec.md) — the canonical module spec
+- [`docs/proposals/2026-05-25-skill-making-bridge.md`](docs/proposals/2026-05-25-skill-making-bridge.md) — wire contract with the-loom
+- [`docs/proposals/make-skills-engine-vs-consumer-scope.md`](docs/proposals/make-skills-engine-vs-consumer-scope.md) — engine/consumer boundary
+- [`docs/proposals/application-vs-dev-tooling-scope.md`](docs/proposals/application-vs-dev-tooling-scope.md) — application/dev-tooling boundary
+
+**Plans (time-bounded execution)**:
+
+- [`docs/plans/2026-06-01-mvp-migration.md`](docs/plans/2026-06-01-mvp-migration.md) — staged migration to the three-layer shape
+
+**Adapter contracts** (Layer 2):
+
+- [`adapters/README.md`](adapters/README.md) — what an adapter is + the contract
+- [`adapters/classroom/`](adapters/classroom/), [`adapters/development/`](adapters/development/), [`adapters/research-project/`](adapters/research-project/)
+
+**Runbooks**:
+
+- [`docs/runbooks/`](docs/runbooks/) — operational guides
+
+## Two-mode commitment
+
+Every change considers BOTH self-host AND hosted-multitenant. `PLATFORM_MODE=self_host` (default) or `=hosted`. Tests cover both. Documented in [ARCHITECTURE.md](ARCHITECTURE.md) and enforced via [CONTRIBUTING.md](CONTRIBUTING.md).
+
+## Status (2026-06-01)
+
+- **Layer 1 (core):** code exists at `platform/api/`; MVP migration to `core/` staged across 5 phases (plan ratified)
+- **Layer 2 (adapters):** three stub directories landed with READMEs; populating awaits Phase 5 of migration
+- **Layer 3 (instances):** live in consuming projects (Hub has two: `ime4020-hub-app` + `ime4020-hub-dev`; SDE_Extraction has one: `sde-extraction-dev`)
+- **Skill-making bridge to the-loom:** spec ratified; implementation pending Phase 3 of migration
+- **the-loom integration:** memory MCP live at `https://loom-agent-context.onrender.com/mcp/memory/`, Project Registry at `https://loom-project-registry.onrender.com/`
 
 ## License
 
-Apache 2.0 -- see [LICENSE](LICENSE).
+Apache 2.0 — see [LICENSE](LICENSE).
