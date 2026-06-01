@@ -137,7 +137,7 @@ See [`docs/proposals/2026-05-25-skill-making-bridge.md`](docs/proposals/2026-05-
 Make_Skills/
 ├── core/                          Layer 1 — reusable core engine
 │   ├── runtime/                   Per-turn agent loop
-│   ├── skill-making/              Skill compilation pipeline
+│   ├── skill_making/              Skill compilation pipeline
 │   ├── providers/                 Multi-model provider registry
 │   ├── orchestration/             Subagent composition
 │   ├── auth/                      JWT verification + tenant resolution
@@ -153,7 +153,7 @@ Make_Skills/
 │
 ├── services/                      API + admin surfaces
 │   ├── api/                       Entry point (uvicorn target)
-│   ├── skill-making/              Receives promotion candidates from the-loom
+│   ├── skill_making/              Receives promotion candidates from the-loom
 │   └── admin/                     Inspectors, dev tooling
 │
 ├── skills/ + skills_private/      Methodology skill library (bundled, per-project copies allowed)
