@@ -12,10 +12,15 @@
 > **Old LanceDB memory MCP is deprecated, not deleted, until proof it's unused.**
 > **Compatibility-first: move toward clean architecture without breaking active consumers.**
 
-Final ownership division (re-stated for clarity):
+Final ownership division (re-stated for clarity, with the boundary-language guard Liz added on 2026-06-01):
 
 - **Make_Skills owns:** reusable agency-to-structure core, project-type adapters, local skill/workflow candidate generation, runtime loop, skill compilation
+- **Make_Skills owns local agency-pattern detection** inside a project instance. **The-loom owns cross-project structure recognition, promotion governance, and canonical durable structure.**
 - **the-loom owns:** cross-project memory, project registry, project observatory, policy/promotion governance, canonical durable structure
+
+The anchor sentence Liz wants preserved across every agent reading this plan:
+
+> **Make_Skills improves local agency and produces candidates. The-loom observes across projects, governs promotion, and stores durable structure.**
 
 ## Phase 0 — PROBE (complete, 2026-06-01)
 
@@ -129,7 +134,7 @@ Make_Skills/
 |---|---|---|
 | `platform/api/model_registry.py` | `core/providers/model_registry.py` | `platform/api/model_registry.py` → re-exports from `core.providers.model_registry` |
 | `platform/api/subagents.py` | `core/orchestration/subagents.py` | same pattern |
-| `platform/api/observability.py` | `core/observability/__init__.py` | same pattern |
+| `platform/api/observability.py` | `core/observability/__init__.py` (**telemetry emission helpers only — NOT the Project Observatory; that lives in the-loom**) | same pattern |
 | `platform/api/tenant_context.py` | `core/auth/tenant_context.py` | same pattern |
 | `platform/api/secrets.py` | `core/auth/secrets.py` | same pattern |
 
@@ -214,6 +219,15 @@ platform/api/memory/    → moved verbatim to deprecated/lancedb-memory/
 
 **Goal:** the last + highest-risk phase. Moves `main.py`, `agent.py`, `runtime.py`, `auth.py`, `db.py` to their target locations. Updates Dockerfile + render.yaml.
 
+**Pre-Phase-5 gate (added per Liz's ratification 2026-06-01):**
+
+Before Phase 5 begins, a real consumer of Make_Skills' API must exist — either:
+
+- **(a) `humancensys-app` is making actual HTTP calls into Make_Skills** (the original consumer; if it's ready, use it)
+- **(b) A minimal smoke-test consumer exists** — a small script or test harness that hits the engine's actual endpoints (e.g., `POST /chat/{agent_id}`) and verifies they respond correctly. Lives in `scripts/smoke-test-consumer.py` or similar.
+
+**Why:** Phase 5 reshapes the runtime entrypoint. Without a real consumer exercising the endpoints, we can't validate that the migration didn't break the API surface. **But don't block indefinitely on humancensys-app's production readiness** — if it's not ready when Phase 4 lands, create the smoke-test consumer (option b) so Phase 5 can proceed.
+
 **Moves:**
 
 | Old location | New location |
@@ -270,14 +284,16 @@ platform/api/memory/    → moved verbatim to deprecated/lancedb-memory/
 - **No endpoint URL changes** until humancensys-app's actual API consumption is known. Endpoint paths today are not load-bearing because humancensys-app makes zero calls (per Phase 0.4 finding).
 - **PROBE before each phase.** Re-run the relevant Phase 0 audit at the start of each phase to confirm assumptions still hold.
 
-## Open decisions for Liz
+## Resolved decisions (per Liz, 2026-06-01)
 
-These don't block Phase 1 but need resolution before Phase 3-5:
+All four open decisions are resolved. Captured here for execution.
 
-1. **Roadmap tools home** (Phase 3) — Option A/B/C above. Recommendation: B (stay in place).
-2. **Test archival strategy** (Phase 4) — `deprecated/lancedb-memory/tests/` vs `tests/_legacy/`. Recommendation: archive in `deprecated/`.
-3. **`platform/` directory's final state** (post-Phase 5) — fully empty + deleted? Kept as `platform/deploy/` only (Dockerfile lives there)? Recommendation: keep `platform/deploy/`, retire the rest.
-4. **Timing on Phase 5** — execute soon vs wait for humancensys-app to begin actual API consumption (so we can audit live calls before reshaping)? Recommendation: wait for humancensys-app to begin actually calling Make_Skills, even if just a smoke test. That gives us a real consumer to validate against.
+| Decision | Resolution | Reason |
+|---|---|---|
+| **Roadmap tools home** (Phase 3) | **Option B — stay in place** | Not worth moving during core migration; they're Make_Skills-specific dev tooling, low priority |
+| **Test archival strategy** (Phase 4) | **`deprecated/lancedb-memory/tests/`** | Keeps old memory tests beside the deprecated module they cover |
+| **`platform/` final state** (post-Phase 5) | **Keep `platform/deploy/`, retire the rest** | Deployment artifacts (Dockerfile) can stay under `platform/deploy/` until a later cleanup |
+| **Phase 5 timing** | **After a real consumer exists** (humancensys-app actual calls OR a smoke-test consumer at minimum). **Don't block indefinitely on humancensys-app readiness** — create the smoke-test consumer if needed. | Real validation required, but the migration can't stall waiting for production app readiness |
 
 ## Estimated effort
 
