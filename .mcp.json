@@ -1,5 +1,9 @@
 {
   "mcpServers": {
+    "loom-memory": {
+      "type": "http",
+      "url": "https://loom-agent-context.onrender.com/mcp/memory/"
+    },
     "llama_index_docs": {
       "url": "https://developers.llamaindex.ai/mcp"
     },

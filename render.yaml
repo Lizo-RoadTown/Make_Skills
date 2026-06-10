@@ -66,8 +66,6 @@ services:
         value: /app/deepagents.toml
       - key: AGENT_REPO_ROOT
         value: /app
-      - key: MEMORY_DATA_DIR
-        value: /data/memory
       - key: LANGSMITH_PROJECT
         value: make-skills
       - key: LANGSMITH_TRACING
@@ -87,10 +85,6 @@ services:
         sync: false
       - key: SENTRY_TRACES_SAMPLE_RATE
         value: "0.1"
-    disk:
-      name: memory-data
-      mountPath: /data/memory
-      sizeGB: 1            # plenty for tens of thousands of records; expand later if needed
 
 databases:
   - name: make-skills-db

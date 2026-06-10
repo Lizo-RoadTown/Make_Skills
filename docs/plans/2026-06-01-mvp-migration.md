@@ -213,7 +213,17 @@ platform/api/memory/    → moved verbatim to deprecated/lancedb-memory/
 
 **Render deploy impact:** the `memory-data` persistent disk in `render.yaml` can be marked for removal in a follow-up Render dashboard change after this PR ships. The disk persists for now (cheap, harmless).
 
-**PR title:** `chore(deprecate): retire LanceDB memory MCP — superseded by the-loom MCP`
+**PR title:** `feat(deprecate): mvp migration phase 4 — rip out lancedb memory subsystem`
+
+**Status:** ✅ Shipped 2026-06-10 in PR (TBD). Expanded scope vs the original plan section per the skeleton-never-shipped framing saved in memory:
+
+- The original plan said "deprecate, not delete" — preserved.
+- Original plan said `main.py` updates remove the mount + imports — actual cut went further: also removed the REST `/memory/*` endpoints, `/observability/*` endpoints, the `record_turn` background tasks at 5 chat-endpoint sites, and the `IngestRequest` + `MemorySearchRequest` Pydantic models. Per the skeleton framing, these were all obsolete scaffolding for a never-shipped product.
+- Original plan didn't touch `platform/requirements.txt`, `render.yaml`, or `agent.py` — actual cut went there too: 6 deps removed (`lancedb`, `fastembed`, `pyarrow`, `mcp`, `watchdog`, `PyYAML`), `MEMORY_DATA_DIR` env var + `disk:` block dropped from render.yaml, `recall` tool dropped from `agent.builtin_tools`.
+- Original plan didn't include the `.mcp.json` loom-memory wiring or the CLAUDE.md alignment — both folded into this PR because they were the same conceptual change (engine no longer self-hosts memory; loom-memory is canonical).
+- Original plan said `observability.py` had a deeper extract to defer until Phase 4 — actual cut: deleted entirely (zero importers after memory endpoints went).
+
+The "deprecate, not delete" discipline is preserved: the LanceDB modules + tests live at `deprecated/lancedb-memory/`, not erased. `deprecated/lancedb-memory/README.md` documents the audit checklist for eventual `git rm`.
 
 ### Phase 5 — Move runtime + main, update deploy
 

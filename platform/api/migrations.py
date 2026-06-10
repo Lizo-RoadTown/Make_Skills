@@ -382,48 +382,12 @@ async def migrate_user_agents(pool: AsyncConnectionPool) -> None:
             )
 
 
-async def migrate_lancedb() -> None:
-    """Add tenant_id + visibility columns to the LanceDB records table.
-
-    Uses Table.add_columns with SQL default expressions — metadata-only,
-    no data rewrite. Existing rows backfill to the default-tenant UUID.
-    """
-    # Imported here so the module is importable without lancedb installed
-    # (e.g. in CI environments that only run Postgres migrations).
-    from api.memory.lance import get_table
-
-    table, _ = get_table()
-    schema_names = {f.name for f in table.schema}
-    additions: dict[str, str] = {}
-    if "tenant_id" not in schema_names:
-        additions["tenant_id"] = f"'{DEFAULT_TENANT_ID}'"
-    if "visibility" not in schema_names:
-        additions["visibility"] = "'private'"
-
-    if additions:
-        log.info("lancedb migration: adding columns %s", list(additions.keys()))
-        table.add_columns(additions)
-    else:
-        log.info("lancedb migration: tenant_id + visibility already present")
-
-    # Build BTREE scalar indexes for prefilter pushdown. LanceDB's
-    # create_scalar_index is idempotent in the current stable release —
-    # it returns the existing index if one is already built on the column.
-    for col, idx_type in (("tenant_id", "BTREE"), ("visibility", "BTREE")):
-        try:
-            table.create_scalar_index(col, index_type=idx_type)
-            log.info("lancedb migration: scalar index on %s ready", col)
-        except Exception as e:
-            # Already exists is the common case after the first run;
-            # log at debug rather than warn to avoid alarm.
-            log.debug("lancedb scalar index on %s skipped: %s", col, e)
-
-
 async def run_all(pool: AsyncConnectionPool) -> None:
-    """Entrypoint called from main.py lifespan. Postgres first (auth-critical),
-    LanceDB second (recorder-related)."""
+    """Entrypoint called from main.py lifespan. Postgres only — LanceDB
+    memory subsystem was deprecated in Phase 4 of the MVP migration
+    (see docs/plans/2026-06-01-mvp-migration.md). The-loom MCP at
+    https://loom-agent-context.onrender.com/mcp/memory/ replaces it."""
     await migrate_postgres(pool)
     await migrate_auth_tables(pool)
     await migrate_student_secrets(pool)
     await migrate_user_agents(pool)
-    await migrate_lancedb()

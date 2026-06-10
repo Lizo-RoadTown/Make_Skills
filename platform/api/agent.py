@@ -104,8 +104,10 @@ async def build_agent(config_path: str | Path | None = None, repo_root: str | Pa
     subagents = load_subagents(subagents_dir, repo_root) if subagents_dir else []
 
     # Built-in tools — what the agent gets without uncommenting any MCPs.
+    # Memory recall now comes from the-loom MCP at
+    # https://loom-agent-context.onrender.com/mcp/memory/ (configured per-session
+    # in the consumer's MCP client), not from a Make_Skills-internal LanceDB tool.
     from api.tools.db import query_db
-    from api.memory.recall import recall
     from api.roadmap.tools import (
         add_roadmap_item,
         roadmap_overview,
@@ -113,7 +115,6 @@ async def build_agent(config_path: str | Path | None = None, repo_root: str | Pa
     )
     builtin_tools = [
         query_db,
-        recall,
         roadmap_overview,
         update_roadmap_status,
         add_roadmap_item,
