@@ -4,6 +4,24 @@ All notable changes to Make_Skills are documented here. Format follows [Keep a C
 
 ## [Unreleased]
 
+### Changed
+
+- **MVP migration Phase 4 — LanceDB memory subsystem deprecated** — Per [`docs/plans/2026-06-01-mvp-migration.md`](docs/plans/2026-06-01-mvp-migration.md) and the skeleton-never-shipped framing saved in memory, the entire LanceDB-backed memory subsystem is removed from the runtime and moved to `deprecated/lancedb-memory/`. Make_Skills no longer self-hosts a memory layer; the-loom MCP at `https://loom-agent-context.onrender.com/mcp/memory/` is canonical for both modes. Specifically:
+  - 7 modules moved via `git mv`: `platform/api/memory/{__init__,auth_bridge,lance,mcp_http,mcp_server,recall,recorder}.py` → `deprecated/lancedb-memory/`
+  - `platform/api/observability.py` deleted (zero importers after memory endpoints removed)
+  - `platform/api/main.py`: 4 import lines, the `MemorySearchRequest` + `IngestRequest` Pydantic models, `/memory/search`, `/memory/records`, `/memory/stats`, `/memory/ingest`, all 6 `/observability/*` endpoints, the `/mcp/memory` HTTP mount, `record_turn` background tasks at 5 sites, and the `session_lifespan` import inside the lifespan all removed. 1122 → 919 lines.
+  - `platform/api/agent.py`: `recall` tool removed from `builtin_tools`; comment notes the-loom MCP is the replacement
+  - `platform/api/migrations.py`: `migrate_lancedb()` function + its call from `run_all()` removed
+  - `platform/requirements.txt`: 6 deps dropped — `lancedb`, `fastembed`, `pyarrow`, `mcp`, `watchdog`, `PyYAML` — all orphaned after the deprecation
+  - `render.yaml`: `MEMORY_DATA_DIR` env var + the `disk:` block (`/data/memory`, 1GB) both removed — vestigial Render storage with no consumer
+  - `platform/tests/`: 4 test files moved to `deprecated/lancedb-memory/tests/` — `test_memory_mcp.py`, `test_memory_mcp_hosted.py`, `test_memory_shim.py`, `test_pillar_0_isolation.py`
+  - `deprecated/lancedb-memory/README.md` added with the audit checklist for eventual `git rm`
+  - `.mcp.json`: `loom-memory` MCP server entry added (HTTP transport, points at the-loom)
+  - `CLAUDE.md`: 5 edits per the loom agent's diff — CORE DIRECTIVE 1 banner on loom-memory access, engine-stack table updated, "How consumers integrate" section pointed at loom-memory, memory hierarchy promotes loom-memory and strikes out LanceDB, discipline note updated. The doc no longer describes the pre-split architecture.
+  - `.gitignore`: `**/__pycache__/` rule confirmed so deprecated module's pycache stays untracked
+
+  External-consumer audit confirmed zero callers of `/mcp/memory` on Make_Skills (humancensys-app, Hub, SDE_Extraction all use the-loom directly). Internal callers in Make_Skills' own code (recall, recorder, REST endpoints, observability, migrations bootstrap) were obsolete scaffolding for a never-shipped product — stripped without ceremony per the skeleton framing.
+
 ### Added
 
 - **Three-layer engine spec proposal** (`docs/proposals/2026-05-31-three-layer-engine-spec.md`) — module-spec doc that mirrors `the-loom/docs/proposals/2026-05-25-platform-data-model.md` on the engine side. Codifies the three-layer model Liz + Loom-agent + a third agent ratified on 2026-05-31: reusable core engine + project-type adapters + project-local instances. Defines the core's responsibilities, the adapter contract (manifest.json, watches.json, pattern-triggers.json, system-prompt-fragments, default-skills.json, observatory-events.json), the project-local instance contract, the runtime agent loop, the agency-vs-structure boundary, the two promotion paths (Path A local / Path B platform observatory), the skill-making pipeline, the recursive-skill loop, integration points with the-loom, and the migration path from current `platform/api/` to the target `core/` + `adapters/` shape. Companion to the skill-making bridge spec (PR #54).

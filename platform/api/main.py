@@ -16,7 +16,7 @@ import json
 import logging
 import asyncio
 import os
-from contextlib import AsyncExitStack, asynccontextmanager
+from contextlib import asynccontextmanager
 from uuid import UUID, uuid4
 
 from fastapi import BackgroundTasks, FastAPI, HTTPException, Query
@@ -69,10 +69,6 @@ from api.auth import TenantContext, get_current_tenant
 from api.db import close_pool, init_pool
 from api.runtime import AgentRuntime
 from api.tenant_context import current_tenant
-from api.memory.lance import count as memory_count
-from api.memory.lance import list_records as memory_list
-from api.memory.lance import search as memory_search
-from api.memory.recorder import record_turn
 from api.roadmap.file import (
     VALID_STATUSES,
     append_under_section,
@@ -83,7 +79,6 @@ from api.roadmap.file import (
 from api import (
     fileviewer,
     mcp_inspector,
-    observability,
     provider_inspector,
     secrets as secrets_module,
     sessions as sessions_inspector,
@@ -112,14 +107,7 @@ async def lifespan(app: FastAPI):
     # Application connection pool for tenant-scoped queries (separate from
     # the LangGraph checkpointer's pool — see api/db.py docstring).
     await init_pool()
-    # In hosted mode, compose the MCP session manager into our lifespan.
-    # Stdio (self-host) mode skips this — the developer's local sessions
-    # talk to the memory MCP via stdio (mcp_server.main), not HTTP.
-    async with AsyncExitStack() as stack:
-        if os.environ.get("PLATFORM_MODE", "self_host").lower() == "hosted":
-            from api.memory.mcp_http import session_lifespan
-            await stack.enter_async_context(session_lifespan(app))
-        yield
+    yield
     await close_pool()
 
 
@@ -217,11 +205,6 @@ async def chat(
         raise HTTPException(status_code=500, detail=str(e))
 
     response_text = result["response"]
-
-    # Fire-and-forget: extract memory records from this turn after the response is sent.
-    # tenant_id is the FIRST positional arg by Pillar 0 background-task discipline.
-    background.add_task(record_turn, ctx.tenant_id, thread_id, req.message, response_text)
-
     return ChatResponse(thread_id=thread_id, response=response_text)
 
 
@@ -261,14 +244,6 @@ async def chat_stream(
             log.exception("Stream failed")
             yield _sse({"event": "error", "detail": str(e)})
         yield _sse({"event": "done"})
-
-        # Fire-and-forget memory extraction. Run as a detached task so we don't
-        # block this generator's cleanup. tenant_id passed explicitly.
-        full_response = "".join(accumulated)
-        if full_response.strip():
-            asyncio.create_task(
-                record_turn(ctx.tenant_id, thread_id, req.message, full_response)
-            )
 
     return StreamingResponse(gen(), media_type="text/event-stream")
 
@@ -503,7 +478,6 @@ async def chat_with_agent(
         raise HTTPException(status_code=500, detail=str(e))
 
     response_text = result["response"]
-    background.add_task(record_turn, ctx.tenant_id, thread_id, req.message, response_text)
     return ChatResponse(thread_id=thread_id, response=response_text)
 
 
@@ -547,71 +521,7 @@ async def chat_with_agent_stream(
             yield _sse({"event": "error", "detail": str(e)})
         yield _sse({"event": "done"})
 
-        full_response = "".join(accumulated)
-        if full_response.strip():
-            asyncio.create_task(
-                record_turn(ctx.tenant_id, thread_id, req.message, full_response)
-            )
-
     return StreamingResponse(gen(), media_type="text/event-stream")
-
-
-# ----- Memory endpoints -----
-
-
-class MemorySearchRequest(BaseModel):
-    query: str
-    limit: int = Field(default=10, ge=1, le=50)
-    record_type: str | None = None
-    project_tag: str | None = None
-
-
-@app.post("/memory/search")
-async def memory_search_endpoint(
-    req: MemorySearchRequest,
-    ctx: TenantContext = Depends(get_current_tenant),
-):
-    """Semantic search across memory. Returns records ranked by relevance.
-
-    Tenant-scoped: returns the caller's records plus any rows marked
-    visibility='public' (the future Pillar 3c commons)."""
-    try:
-        rows = memory_search(
-            query=req.query,
-            tenant_id=ctx.tenant_id,
-            limit=req.limit,
-            record_type=req.record_type,
-            project_tags=[req.project_tag] if req.project_tag else None,
-        )
-        return {"query": req.query, "count": len(rows), "results": rows}
-    except Exception as e:
-        log.exception("Memory search failed")
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@app.get("/memory/records")
-async def memory_records_endpoint(
-    limit: int = Query(50, ge=1, le=200),
-    offset: int = Query(0, ge=0),
-    record_type: str | None = None,
-    project_tag: str | None = None,
-    ctx: TenantContext = Depends(get_current_tenant),
-):
-    """List records, newest first. Non-semantic; for browsing.
-
-    Tenant-scoped: caller's rows plus visibility='public'."""
-    try:
-        rows = memory_list(
-            tenant_id=ctx.tenant_id,
-            limit=limit,
-            offset=offset,
-            record_type=record_type,
-            project_tag=project_tag,
-        )
-        return {"count": len(rows), "results": rows}
-    except Exception as e:
-        log.exception("Memory list failed")
-        raise HTTPException(status_code=500, detail=str(e))
 
 
 # ----- File viewers (docs + skills) -----
@@ -726,9 +636,6 @@ async def skills_run_endpoint(
 
     final = result["messages"][-1] if isinstance(result, dict) and "messages" in result else result
     response_text = getattr(final, "content", None) or str(final)
-
-    background.add_task(record_turn, ctx.tenant_id, thread_id, composed_message, response_text)
-
     return {"thread_id": thread_id, "response": response_text, "skill": req.skill_name}
 
 
@@ -903,81 +810,6 @@ async def mcp_list_endpoint():
         raise HTTPException(status_code=500, detail=str(e))
 
 
-# ----- Memory stats / search / ingest -----
-
-
-@app.get("/memory/stats")
-async def memory_stats_endpoint(
-    ctx: TenantContext = Depends(get_current_tenant),
-):
-    """Quick stats — total record count for the calling tenant."""
-    try:
-        return {"total": memory_count(tenant_id=ctx.tenant_id)}
-    except Exception as e:
-        log.exception("Memory stats failed")
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-class IngestRequest(BaseModel):
-    user_message: str
-    agent_response: str
-    source_thread_id: str = "backfill"
-
-
-# ----- Observability endpoints -----
-
-
-@app.get("/observability/summary")
-async def observability_summary_endpoint(
-    ctx: TenantContext = Depends(get_current_tenant),
-):
-    """Top-of-dashboard KPIs for the calling tenant."""
-    try:
-        return observability.summary(ctx.tenant_id)
-    except Exception as e:
-        log.exception("observability summary failed")
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@app.get("/observability/records-by-type")
-async def observability_records_by_type_endpoint(
-    ctx: TenantContext = Depends(get_current_tenant),
-):
-    return {"data": observability.memory_records_by_type(ctx.tenant_id)}
-
-
-@app.get("/observability/records-by-day")
-async def observability_records_by_day_endpoint(
-    days: int = Query(30, ge=1, le=365),
-    ctx: TenantContext = Depends(get_current_tenant),
-):
-    return {"data": observability.memory_records_by_day(ctx.tenant_id, days)}
-
-
-@app.get("/observability/records-by-tag")
-async def observability_records_by_tag_endpoint(
-    top: int = Query(10, ge=1, le=50),
-    ctx: TenantContext = Depends(get_current_tenant),
-):
-    return {"data": observability.memory_records_by_tag(ctx.tenant_id, top)}
-
-
-@app.get("/observability/recent")
-async def observability_recent_endpoint(
-    limit: int = Query(10, ge=1, le=50),
-    ctx: TenantContext = Depends(get_current_tenant),
-):
-    return {"data": observability.recent_records(ctx.tenant_id, limit)}
-
-
-@app.get("/observability/threads-by-day")
-async def observability_threads_by_day_endpoint(
-    days: int = Query(30, ge=1, le=365),
-    ctx: TenantContext = Depends(get_current_tenant),
-):
-    return {"data": observability.threads_by_day(ctx.tenant_id, days)}
-
-
 # ----- Roadmap endpoints -----
 
 
@@ -1040,29 +872,6 @@ async def roadmap_overwrite_endpoint(req: RoadmapOverwrite):
     return {"ok": True, "bytes": len(req.content)}
 
 
-# ----- Memory ingest -----
-
-
-@app.post("/memory/ingest")
-async def memory_ingest_endpoint(
-    req: IngestRequest,
-    ctx: TenantContext = Depends(get_current_tenant),
-):
-    """Run the recorder on a single (user, agent) pair without going through the
-    chat loop. Used by backfill scripts that ingest historical transcripts
-    (Claude Code sessions, Copilot logs, etc.) into the same memory store the
-    live agent uses. Records land under the calling tenant.
-    """
-    try:
-        count_inserted = await record_turn(
-            ctx.tenant_id, req.source_thread_id, req.user_message, req.agent_response
-        )
-        return {"ingested": count_inserted}
-    except Exception as e:
-        log.exception("Memory ingest failed")
-        raise HTTPException(status_code=500, detail=str(e))
-
-
 @app.get("/threads/{thread_id}/state")
 async def thread_state(
     thread_id: str,
@@ -1108,15 +917,3 @@ def _serialize_chunk(chunk) -> str:
             if isinstance(block, dict) and block.get("type") == "text"
         )
     return ""
-
-
-# ----- Memory MCP HTTP transport (hosted mode only) -----
-#
-# Stdio (self-host) mode skips this mount entirely — the developer's local
-# Claude Code session talks to the memory MCP via stdio (mcp_server.main).
-# In hosted mode we expose the same Server instance over Streamable HTTP
-# under /mcp/memory, gated by MakeSkillsTokenVerifier (HS256 JWT shared
-# with the Next.js Auth.js app via AUTH_SECRET).
-if os.environ.get("PLATFORM_MODE", "self_host").lower() == "hosted":
-    from api.memory.mcp_http import mount_into
-    mount_into(app, path="/mcp/memory")

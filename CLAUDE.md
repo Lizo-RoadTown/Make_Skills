@@ -2,6 +2,12 @@
 
 Project context for Claude Code. Loaded into every conversation. Keep it tight; if a rule belongs to a subsystem, move it to a subdirectory `CLAUDE.md` (e.g., `platform/CLAUDE.md`) instead of growing this file.
 
+## CORE DIRECTIVE 1 — loom-memory access is mandatory
+
+Every session in this repo MUST have the `loom-memory` MCP server reachable. Tools: `memory_read`, `memory_write`, `memory_recall`, `memory_search`, `memory_list`, `memory_delete`. The full directive + the 8-layer enforcement pattern lives at [`the-loom/docs/CORE_DIRECTIVES.md`](https://github.com/Lizo-RoadTown/the-loom/blob/main/docs/CORE_DIRECTIVES.md).
+
+If the SessionStart additionalContext shows `*** CONCRETE-RULE VIOLATION DETECTED ***` — **halt all substantive work and report to Liz.** Do not proceed silently using only in-session context. The `.mcp.json` here is wired with the URL; v0.1.8 of loom-agent-context added a self-host fallback, so no JWT header is needed for Liz's tenant.
+
 ## What this repo is
 
 The **engine** — agent runtime, skill compilation, model registry, memory MCP, Pillar 0 tenant scoping. Consumed by separate apps over HTTPS + MCP.
@@ -30,11 +36,12 @@ The discipline-skills in `skills/` and `skills_private/` (`agentic-skill-design`
 | Layer | Tech |
 |---|---|
 | Runtime | FastAPI, deepagents, LangGraph, langchain (`model_registry` for swappable providers), psycopg, pgcrypto |
-| Memory | LanceDB (`platform/api/memory/`), tenant-scoped via Pillar 0, single typed table for episodic + session memory |
-| Auth | HS256 JWT (engine verifies tokens signed by consumers with shared `AUTH_SECRET`) |
+| Memory (dev-time) | loom-memory MCP at `https://loom-agent-context.onrender.com/mcp/memory/` (owned by `Lizo-RoadTown/the-loom`). Cross-machine, cross-project. Self-host fallback (no auth header) for Liz's tenant; RS256 Bearer for hosted-multitenant. |
+| Memory (runtime, deprecated) | `deprecated/lancedb-memory/` — torn out in Phase 4. Engine no longer self-hosts a memory subsystem; consumers integrate loom-memory directly if they need it. |
+| Engine ↔ consumer auth | HS256 JWT (engine verifies tokens signed by consumers with shared `AUTH_SECRET`). Distinct from the loom-memory MCP's RS256 — different systems, different keys. |
 | DB | Postgres on Render (external URL needed for tools), single schema, RLS on every tenant-owned table |
 | Deploy | Render for `platform/api` + Postgres (engine has no frontend) |
-| MCPs configured | github, context7, llama_index_docs, figma, firecrawl, huggingface (see `.mcp.json`) |
+| MCPs configured | loom-memory, github, context7, llama_index_docs, figma, firecrawl, huggingface (see `.mcp.json`) |
 
 **Two-mode commitment:** every change considers BOTH self-host AND hosted-multitenant. `PLATFORM_MODE=self_host` (default) or `=hosted`.
 
@@ -43,8 +50,8 @@ The discipline-skills in `skills/` and `skills_private/` (`agentic-skill-design`
 A consumer (e.g., humancensys-app, future health-app) integrates via:
 
 - **HTTPS REST** at `/chat/{agent_id}`, `/agents/*`, etc. — for agent management + chat
-- **MCP** at `/mcp/memory` (when `PLATFORM_MODE=hosted`) — for memory read/write/search; JWT-gated
 - **JWT contract** — consumer signs HS256 tokens with `AUTH_SECRET`; engine verifies via `platform/api/auth.py`
+- **Memory** — consumers connect to loom-memory directly at `https://loom-agent-context.onrender.com/mcp/memory/` (Phase 4 removed the engine-hosted `/mcp/memory` route; loom-memory is now the canonical cross-project memory layer).
 
 ## Persistent memory hierarchy
 
@@ -55,11 +62,12 @@ Use the right tool for the right horizon:
 3. **`docs/plans/*.md`** — time-bounded plans dated `YYYY-MM-DD-name.md`.
 4. **`docs/test-runs/*.md`** — friction-surface logs from real end-to-end runs.
 5. **Git history** — every commit message explains *why*.
-6. **LanceDB (engine runtime)** — tenant-scoped agent memory at runtime. NOT for Claude Code session context.
+6. **loom-memory MCP** (`https://loom-agent-context.onrender.com/mcp/memory/`) — cross-machine, cross-project semantic memory. The canonical store for everything that crosses sessions or projects. Use `memory_recall` at task start, `memory_write` at every correction or surprising-success moment. v0.1.8 (2026-06-09) added self-host fallback so no JWT is needed for Liz's tenant.
+7. ~~LanceDB (engine runtime)~~ — deprecated in Phase 4; moved to `deprecated/lancedb-memory/`. Do not reach for it.
 
-The-loom MCP (Phase 2 in flight) will be the cross-machine semantic memory layer; once live, the file-based MEMORY.md becomes the local cache + MCP becomes source-of-truth.
+**Discipline:** start with memory (loom-memory auto-recall fires at SessionStart + file-based MEMORY.md is already loaded). Then proposals (relevant only when the area was designed). Then plans (relevant only if work is in flight). Only then read code, smallest viable scope.
 
-**Discipline:** start with memory (already loaded). Then proposals (relevant only when the area was designed). Then plans (relevant only if work is in flight). Only then read code, smallest viable scope.
+When writing a memory: prefer `memory_write` (cross-project, surfaces in other sessions) over the file-based store. The file store is a local cache; loom-memory is source-of-truth.
 
 ## Token discipline
 

@@ -20,22 +20,9 @@ psycopg_pool>=3.2
 # the DSN in the Render dashboard.
 sentry-sdk[fastapi]>=2.0
 
-# Semantic memory (LanceDB) — embedded vector store, no separate service
-lancedb>=0.18
-fastembed>=0.5               # ONNX-based embeddings, ~10x lighter than sentence-transformers (no torch dep)
-pyarrow>=18.0                # LanceDB depends on this; pin explicitly
-
-# MCP server — exposes the LanceDB memory store as a Model Context Protocol
-# service so Claude Code (and other MCP clients) can read/write session
-# memory from any machine. See docs/proposals/lancedb-memory-mcp.md.
-mcp>=1.20,<2  # Phase 3 HTTP transport needs StreamableHTTPSessionManager
-
-# Memory sync shim (Phase 2) — daemon that mirrors LanceDB <-> the file-based
-# memory directory at ~/.claude/projects/<key>/memory/ so the existing file
-# protocol coexists with the MCP store. watchdog provides cross-platform
-# filesystem event notifications.
-watchdog>=4.0
-PyYAML>=6.0
+# Memory MCP — the engine no longer hosts its own. The-loom's pgvector MCP at
+# https://loom-agent-context.onrender.com/mcp/memory/ is the canonical memory
+# layer. See docs/plans/2026-06-01-mvp-migration.md Phase 4 for the deprecation.
 
 # Auth.js v5 JWT verification — HS256 token issued by web/, verified here.
 # Shared AUTH_SECRET between web/.env.local and platform/deploy/.env.

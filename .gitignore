@@ -54,3 +54,4 @@ docs/_pdfs/
 # describe how Make_Skills uniquely works. See:
 # docs/plans/2026-05-21-project-starter-recommendations.md §6
 skills_private/
+**/__pycache__/
