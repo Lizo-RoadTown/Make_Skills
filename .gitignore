@@ -42,16 +42,10 @@ platform/_reference/
 docs/_pdfs/
 *.pdf
 
-# ROADMAP.md is a per-tenant artifact — each user's roadmap is theirs.
-# The roadmap-maintenance skill writes here; gitignored so the platform
-# repo doesn't carry one user's status tracking. Public project planning
-# (the "what does Make_Skills aim to be" doc, separate from "where is
-# Liz right now") will live elsewhere — TBD per the open-source plan.
-/ROADMAP.md
-
-# Strategic skills — the upskilling triad, the proposal/roadmap house-style
-# skills, and project-specific scaffolding. Kept local because together they
-# describe how Make_Skills uniquely works. See:
-# docs/plans/2026-05-21-project-starter-recommendations.md §6
-skills_private/
 **/__pycache__/
+
+# Auto-generated architecture-tracker snapshots — discipline plugin writes
+# them here every session. Useful as local feedback; not useful in repo
+# history. Historical snapshots (manually preserved) live in
+# docs/_archive/architecture-snapshots/.
+docs/architecture-snapshots/

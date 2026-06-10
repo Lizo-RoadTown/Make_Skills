@@ -4,7 +4,7 @@ This document draws the **clean lines** between layers and modes inside the engi
 
 If you're a contributor: this is the map. If you're an agent: read this before structural changes.
 
-The engine has no frontend. Frontends live in separate consumer repos (the first one is [`Lizo-RoadTown/humancensys-app`](https://github.com/Lizo-RoadTown/humancensys-app)). See [`docs/proposals/make-skills-engine-vs-consumer-scope.md`](docs/proposals/make-skills-engine-vs-consumer-scope.md) for the engine/consumer boundary.
+The engine has no frontend. Frontends live in separate consumer repos (the first one is consuming application). See [`docs/proposals/make-skills-engine-vs-consumer-scope.md`](docs/proposals/make-skills-engine-vs-consumer-scope.md) for the engine/consumer boundary.
 
 ---
 
@@ -59,12 +59,12 @@ The old LanceDB memory MCP is being deprecated; the-loom's pgvector memory MCP a
 
 ### Hosted multi-tenant
 
-The same engine code runs as a hosted service. A consumer (e.g., humancensys-app deployed on Vercel) sits in front with its own auth and identity. Each consumer-issued JWT carries a `tenant_id`; the engine verifies the JWT (`AUTH_SECRET` shared with the consumer) and scopes all queries by tenant.
+The same engine code runs as a hosted service. A consumer application (typically deployed in front of the engine, e.g., on Vercel) sits in front with its own auth and identity. Each consumer-issued JWT carries a `tenant_id`; the engine verifies the JWT (`AUTH_SECRET` shared with the consumer) and scopes all queries by tenant.
 
 ```mermaid
 flowchart LR
-    U[Consumer users] --> C[Consumer app<br/>e.g., humancensys.com]
-    C -- "HTTPS + JWT<br/>HS256 via AUTH_SECRET" --> E[Make_Skills engine<br/>api.main:app]
+    U[Consumer users] --> C[Consumer app]
+    C -- "HTTPS + JWT<br/>HS256 via AUTH_SECRET" --> E[Make_Skills engine<br/>services.api.main:app]
     E -- "tenant_id from JWT" --> DB[(Postgres<br/>tenant_id col + RLS)]
     E -- "memory_recall / write<br/>tagged with project_tags" --> L[the-loom Memory MCP]
     E -- "telemetry OTLP" --> L
@@ -76,7 +76,7 @@ flowchart LR
 
 ## Make_Skills' position in the wider platform
 
-Make_Skills is Module 4 of the five-module platform documented at [`the-loom/docs/architecture/2026-05-31-five-module-platform.md`](https://github.com/Lizo-RoadTown/the-loom/blob/main/docs/architecture/2026-05-31-five-module-platform.md):
+Make_Skills sits inside a multi-module platform alongside the-loom (cross-project intelligence + memory + observatory + governance):
 
 ```mermaid
 flowchart LR
@@ -95,9 +95,9 @@ flowchart LR
     end
 
     subgraph CONS["Consuming projects"]
-        P1[Summer 2026 Hub]
-        P2[SDE_Extraction]
-        P3[humancensys-app]
+        P1["Consumer A (classroom)"]
+        P2["Consumer B (research)"]
+        P3["Consumer C (...)"]
     end
 
     CONS -- "agent endpoint requests" --> MS
@@ -208,9 +208,9 @@ Make_Skills/                       (this repo — the engine)
 
 Consumers (separate repos):
 
-- [`Lizo-RoadTown/humancensys-app`](https://github.com/Lizo-RoadTown/humancensys-app) — student-facing consumer
-- [`Lizo-RoadTown/summer-2026-hub`](https://github.com/Lizo-RoadTown/summer-2026-hub) — classroom hub (MVP at n=1)
-- [`Lizo-RoadTown/sde-extraction`](https://github.com/Lizo-RoadTown/sde-extraction) — research-heavy project
+- consuming application — student-facing consumer
+- consuming application (classroom example) — classroom hub (MVP at n=1)
+- consuming application (research example) — research-heavy project
 
 **Hard rule:** the engine doesn't import from any consumer. Consumers call the engine over HTTPS + MCP, never as a Python module.
 
@@ -268,6 +268,6 @@ PLATFORM_MODE=self_host    # or "hosted"
 - **`services/skill-making/` implementation** — receives promotion candidates from the-loom (per the bridge spec)
 - **Tenant abstraction refinement** — auth.py + auth_bridge.py share logic that should consolidate
 - **Config loader abstraction** — `FilesystemConfigLoader` (self-host) + `MultiTenantConfigLoader` (hosted)
-- **Smoke-test consumer** — pre-Phase-5 gate per the migration plan (humancensys-app actual calls OR a minimal script)
+- **Smoke-test consumer** — pre-Phase-5 gate per the migration plan (a real consumer's actual HTTP calls OR a minimal smoke-test script)
 
 See [ROADMAP.md](ROADMAP.md) for the broader pillar-level view.
