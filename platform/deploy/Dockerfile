@@ -19,7 +19,15 @@ RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir -r requirements.txt
 
 # Copy the runtime code.
+# platform/api/ holds the legacy paths + the compatibility shims that re-export
+# from core/ during the staged MVP migration (see docs/plans/2026-06-01-mvp-migration.md).
+# core/, services/, adapters/ are the target homes. All three get copied so
+# `from core.X` imports resolve in the container; services/ and adapters/ are
+# scaffold-only today (READMEs + empty subdirs) and add negligible image size.
 COPY platform/api /app/api
+COPY core /app/core
+COPY services /app/services
+COPY adapters /app/adapters
 
 # Bake in skills, subagents, and root config. In local docker-compose these
 # are SHADOWED by the read-only volume mount at /repo (so edits hot-reload).
