@@ -6,7 +6,7 @@ Project context for Claude Code. Loaded into every conversation. Keep it tight; 
 
 Every session in this repo MUST have the `loom-memory` MCP server reachable. Tools: `memory_read`, `memory_write`, `memory_recall`, `memory_search`, `memory_list`, `memory_delete`. The full directive + the 8-layer enforcement pattern lives in the-loom's docs (`docs/CORE_DIRECTIVES.md` in the-loom repo).
 
-If the SessionStart additionalContext shows `*** CONCRETE-RULE VIOLATION DETECTED ***` — **halt all substantive work and report to Liz.** Do not proceed silently using only in-session context. The `.mcp.json` here is wired with the URL; v0.1.8 of loom-agent-context added a self-host fallback, so no JWT header is needed for Liz's tenant.
+If the SessionStart additionalContext shows `*** CONCRETE-RULE VIOLATION DETECTED ***` — **halt all substantive work and report to the operator.** Do not proceed silently using only in-session context. The `.mcp.json` here is wired with the URL; v0.1.8 of loom-agent-context added a self-host fallback, so no JWT header is needed (each operator gets their own fallback tenant). Operators running their own the-loom instance can replace the URL in `.mcp.json` accordingly.
 
 ## What this repo is
 
@@ -57,12 +57,12 @@ A consumer application integrates via:
 
 Use the right tool for the right horizon:
 
-1. **`C:\Users\Liz\.claude\projects\c--Users-Liz-Make-Skills\memory\MEMORY.md` + sibling files** — auto-loaded every conversation. Project principles, user feedback, accumulated vision. Single source of truth for "things Liz already told me and I should not forget."
+1. **`~/.claude/projects/<this-project-key>/memory/MEMORY.md` + sibling files** — auto-loaded every conversation. Project principles, operator feedback, accumulated vision. Single source of truth for "things the operator already told me and I should not forget."
 2. **`docs/proposals/*.md`** — architectural decisions that took time to land. Every Pillar / major feature has one.
 3. **`docs/plans/*.md`** — time-bounded plans dated `YYYY-MM-DD-name.md`.
 4. **`docs/test-runs/*.md`** — friction-surface logs from real end-to-end runs.
 5. **Git history** — every commit message explains *why*.
-6. **loom-memory MCP** (`https://loom-agent-context.onrender.com/mcp/memory/`) — cross-machine, cross-project semantic memory. The canonical store for everything that crosses sessions or projects. Use `memory_recall` at task start, `memory_write` at every correction or surprising-success moment. v0.1.8 (2026-06-09) added self-host fallback so no JWT is needed for Liz's tenant.
+6. **loom-memory MCP** (`https://loom-agent-context.onrender.com/mcp/memory/` — or your own the-loom instance if you self-host) — cross-machine, cross-project semantic memory. The canonical store for everything that crosses sessions or projects. Use `memory_recall` at task start, `memory_write` at every correction or surprising-success moment. v0.1.8 added a self-host fallback so the MCP works without a JWT header (each operator gets their own fallback tenant).
 7. ~~LanceDB (engine runtime)~~ — deprecated in Phase 4; moved to `deprecated/lancedb-memory/`. Do not reach for it.
 
 **Discipline:** start with memory (loom-memory auto-recall fires at SessionStart + file-based MEMORY.md is already loaded). Then proposals (relevant only when the area was designed). Then plans (relevant only if work is in flight). Only then read code, smallest viable scope.
