@@ -43,7 +43,7 @@ async def build_agent(config_path: str | Path | None = None, repo_root: str | Pa
     from psycopg.rows import dict_row
     from psycopg_pool import AsyncConnectionPool
 
-    from api.tenant_context import current_tenant
+    from core.auth.tenant_context import current_tenant
 
     class TenantScopedSaver(AsyncPostgresSaver):
         """Wrap _cursor() to inject `SET LOCAL app.tenant_id` on every
@@ -95,7 +95,7 @@ async def build_agent(config_path: str | Path | None = None, repo_root: str | Pa
     # Pillar 0 — tenant abstraction. Run before checkpointer.setup() so
     # the conversations sidecar table (which gates checkpoint access via
     # RLS) is in place before any chat traffic.
-    from api import migrations
+    from core.db import migrations
     await migrations.run_all(pool)
 
     checkpointer = TenantScopedSaver(pool)
@@ -107,8 +107,8 @@ async def build_agent(config_path: str | Path | None = None, repo_root: str | Pa
     # Memory recall now comes from the-loom MCP at
     # https://loom-agent-context.onrender.com/mcp/memory/ (configured per-session
     # in the consumer's MCP client), not from a Make_Skills-internal LanceDB tool.
-    from api.tools.db import query_db
-    from api.roadmap.tools import (
+    from core.tools.db import query_db
+    from services.admin.roadmap.tools import (
         add_roadmap_item,
         roadmap_overview,
         update_roadmap_status,
@@ -120,7 +120,7 @@ async def build_agent(config_path: str | Path | None = None, repo_root: str | Pa
         add_roadmap_item,
     ]
 
-    from api.model_registry import resolve_model
+    from core.providers.model_registry import resolve_model
 
     agent = create_deep_agent(
         model=resolve_model(model_cfg),
@@ -162,7 +162,7 @@ def load_subagents(subagents_dir: Path, repo_root: Path) -> list[dict[str, Any]]
         if skill_paths:
             sub["skills"] = [str((repo_root / p).resolve()) for p in skill_paths]
         if model_block and model_block.get("name"):
-            from api.model_registry import resolve_model
+            from core.providers.model_registry import resolve_model
 
             try:
                 sub["model"] = resolve_model(model_block)

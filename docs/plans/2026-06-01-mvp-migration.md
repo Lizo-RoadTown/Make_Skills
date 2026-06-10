@@ -243,6 +243,24 @@ The "deprecate, not delete" discipline is preserved: the LanceDB modules + tests
 
 ### Phase 5 — Move runtime + main, update deploy
 
+**Status:** ✅ Shipped 2026-06-10. Per the skeleton-never-shipped framing, the original Phase-5 gate (real or smoke-test consumer) was moot — the never-shipped product had no consumers to break, so the migration could land without that gate.
+
+**Actual cut:**
+
+- Moved 11 .py files + 2 dirs out of `platform/api/`:
+  - `main.py` → `services/api/main.py`
+  - `agent.py` + `runtime.py` → `core/runtime/`
+  - `auth.py` → `core/auth/`
+  - `db.py` + `migrations.py` → `core/db/`
+  - `tools/` → `core/tools/`
+  - `fileviewer.py`, `mcp_inspector.py`, `provider_inspector.py`, `sessions.py` → `services/admin/`
+  - `roadmap/` → `services/admin/roadmap/`
+- Deleted Phase 2/3 compatibility shims (5 files): `model_registry.py`, `subagents.py`, `tenant_context.py`, `secrets.py`, `skill_compiler.py`. Nothing imported through them once main moved.
+- Bulk-rewrote internal imports across 10 moved files: every `from api.X` now reads `from core.X` or `from services.X`. Verified zero `from api.X` remain via grep.
+- Dockerfile CMD: `uvicorn api.main:app` → `uvicorn services.api.main:app`. Dropped the now-empty `COPY platform/api /app/api`.
+- docker-compose: same entrypoint change. Also removed the `memory-data:/data/memory` volume + the volume definition (LanceDB was deprecated in Phase 4).
+- `platform/api/` no longer exists; only `platform/deploy/` remains under `platform/`.
+
 **Goal:** the last + highest-risk phase. Moves `main.py`, `agent.py`, `runtime.py`, `auth.py`, `db.py` to their target locations. Updates Dockerfile + render.yaml.
 
 **Pre-Phase-5 gate (added per Liz's ratification 2026-06-01):**

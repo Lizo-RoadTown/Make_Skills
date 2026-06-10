@@ -18,13 +18,10 @@ COPY platform/requirements.txt /app/requirements.txt
 RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir -r requirements.txt
 
-# Copy the runtime code.
-# platform/api/ holds the legacy paths + the compatibility shims that re-export
-# from core/ during the staged MVP migration (see docs/plans/2026-06-01-mvp-migration.md).
-# core/, services/, adapters/ are the target homes. All three get copied so
-# `from core.X` imports resolve in the container; services/ and adapters/ are
-# scaffold-only today (READMEs + empty subdirs) and add negligible image size.
-COPY platform/api /app/api
+# Copy the runtime code. Post-Phase-5 layout:
+#   core/     — universal engine logic (runtime, auth, db, providers, etc.)
+#   services/ — API + admin surfaces (services/api/main.py is the uvicorn target)
+#   adapters/ — project-type adapters (Layer 2; stub-only today)
 COPY core /app/core
 COPY services /app/services
 COPY adapters /app/adapters
@@ -42,4 +39,4 @@ COPY .mcp.json /app/.mcp.json
 # Default command:
 #   - Local docker-compose: overridden by `command:` in docker-compose.yml (port 8001)
 #   - Render: respects $PORT (typically 10000); falls back to 8001 if unset
-CMD ["sh", "-c", "exec uvicorn api.main:app --host 0.0.0.0 --port ${PORT:-8001}"]
+CMD ["sh", "-c", "exec uvicorn services.api.main:app --host 0.0.0.0 --port ${PORT:-8001}"]

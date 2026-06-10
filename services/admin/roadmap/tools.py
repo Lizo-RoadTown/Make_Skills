@@ -11,7 +11,7 @@ from typing import Optional
 
 from langchain_core.tools import tool
 
-from api.roadmap.file import (
+from services.admin.roadmap.file import (
     VALID_STATUSES,
     append_under_section,
     apply_status_update,
@@ -91,7 +91,7 @@ def add_roadmap_item(
     """
     if status not in VALID_STATUSES:
         return f"ERROR: invalid status {status!r}; must be one of {sorted(VALID_STATUSES)}"
-    from api.roadmap.file import STATUS_EMOJI
+    from services.admin.roadmap.file import STATUS_EMOJI
 
     emoji = STATUS_EMOJI[status]
     why_text = why or ""

@@ -64,26 +64,26 @@ if _sentry_dsn and os.environ.get("PLATFORM_MODE") == "hosted":
         # but not worth crashing the API over.
         pass
 
-from api.agent import build_agent
-from api.auth import TenantContext, get_current_tenant
-from api.db import close_pool, init_pool
-from api.runtime import AgentRuntime
-from api.tenant_context import current_tenant
-from api.roadmap.file import (
+from core.runtime.agent import build_agent
+from core.auth.auth import TenantContext, get_current_tenant
+from core.db.db import close_pool, init_pool
+from core.runtime.runtime import AgentRuntime
+from core.auth.tenant_context import current_tenant
+from services.admin.roadmap.file import (
     VALID_STATUSES,
     append_under_section,
     apply_status_update,
     read_roadmap,
     write_roadmap,
 )
-from api import (
+from services.admin import (
     fileviewer,
     mcp_inspector,
     provider_inspector,
-    secrets as secrets_module,
     sessions as sessions_inspector,
-    subagents as subagents_inspector,
 )
+from core.auth import secrets as secrets_module
+from core.orchestration import subagents as subagents_inspector
 from fastapi import Depends
 
 log = logging.getLogger("api")
@@ -154,7 +154,7 @@ async def _ensure_thread_belongs_to_tenant(thread_id: str, ctx: TenantContext) -
     already exists under a different tenant. RLS enforces the rejection at
     the DB level — even if an attacker knows another tenant's thread_id
     UUID, the SELECT returns 0 rows."""
-    from api.db import tenant_conn  # local import to keep startup order clean
+    from core.db.db import tenant_conn  # local import to keep startup order clean
     async with tenant_conn(ctx) as conn:
         await conn.execute(
             """
@@ -285,7 +285,7 @@ async def agents_create_endpoint(
     if not req.starter or not req.provider:
         raise HTTPException(status_code=400, detail="starter and provider are required")
 
-    from api.db import tenant_conn
+    from core.db.db import tenant_conn
     async with tenant_conn(ctx) as conn:
         cur = await conn.execute(
             """
@@ -345,7 +345,7 @@ async def agents_list_endpoint(
 ):
     """List the calling tenant's stable. RLS enforces scoping. Returns
     newest-first; soft-deleted rows excluded."""
-    from api.db import tenant_conn
+    from core.db.db import tenant_conn
     async with tenant_conn(ctx) as conn:
         cur = await conn.execute(
             """
@@ -392,7 +392,7 @@ async def agents_get_endpoint(
     except ValueError:
         raise HTTPException(status_code=400, detail="agent_id must be a UUID")
 
-    from api.db import tenant_conn
+    from core.db.db import tenant_conn
     async with tenant_conn(ctx) as conn:
         cur = await conn.execute(
             """
@@ -851,7 +851,7 @@ async def roadmap_add_item_endpoint(req: RoadmapAppendItem):
     """Append a new row under the given roadmap section."""
     if req.status not in VALID_STATUSES:
         raise HTTPException(status_code=400, detail=f"invalid status {req.status!r}")
-    from api.roadmap.file import STATUS_EMOJI
+    from services.admin.roadmap.file import STATUS_EMOJI
 
     block = f"| {req.item_title} | {STATUS_EMOJI[req.status]} | {req.why or ''} |"
     res = append_under_section(req.section_heading, block)
