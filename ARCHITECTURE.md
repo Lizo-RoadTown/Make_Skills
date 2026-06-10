@@ -169,7 +169,7 @@ Memory storage now lives in the-loom (the LanceDB-in-Make_Skills predecessor is 
 Make_Skills/                       (this repo — the engine)
 ├── core/                          Layer 1 (target; today at platform/api/)
 │   ├── runtime/
-│   ├── skill-making/
+│   ├── skill_making/
 │   ├── providers/
 │   ├── orchestration/
 │   ├── auth/
@@ -185,7 +185,7 @@ Make_Skills/                       (this repo — the engine)
 │
 ├── services/
 │   ├── api/                       FastAPI entry (uvicorn target)
-│   ├── skill-making/              Receives promotion candidates from the-loom
+│   ├── skill_making/              Receives promotion candidates from the-loom
 │   └── admin/                     Inspectors, dev tooling
 │
 ├── skills/ + skills_private/      Methodology skill library (bundled)
