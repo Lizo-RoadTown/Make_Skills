@@ -4,7 +4,7 @@
 
 The **recursive skill engine** — the piece that watches a user's agent work, notices repeated patterns, generates skill candidates, and compiles approved candidates into runnable capability. Three layers: reusable core + project-type adapters + project-local instances.
 
-Sits inside a five-module platform with `the-loom` (cross-project intelligence + memory) and per-project consumers (Summer 2026 Hub, SDE_Extraction, humancensys-app, etc.).
+Sits inside a multi-module platform alongside `the-loom` (cross-project intelligence + memory + observatory + governance) and per-project consumers (your applications).
 
 ## The boundary rule
 
@@ -37,7 +37,7 @@ flowchart TB
         direction LR
         I1[Hub ime4020-hub-app]
         I2[Hub ime4020-hub-dev]
-        I3[SDE_Extraction sde-extraction-dev]
+        I3[Consumer project &lt;instance&gt;]
         I4["..."]
     end
 
@@ -73,9 +73,9 @@ flowchart LR
 
     subgraph CONS["Consuming projects"]
         direction TB
-        P1[Summer 2026 Hub]
-        P2[SDE_Extraction]
-        P3[humancensys-app]
+        P1["Consumer A (classroom)"]
+        P2["Consumer B (research)"]
+        P3["..."]
         P4["..."]
     end
 
@@ -87,16 +87,11 @@ flowchart LR
     MS -- "compiled skills" --> CONS
 ```
 
-| Module | Role | Repo |
-|---|---|---|
-| **Make_Skills** | The skill engine. Detects local patterns, compiles skills, runs the agent loop. (You are here.) | [`Lizo-RoadTown/Make_Skills`](https://github.com/Lizo-RoadTown/Make_Skills) |
-| **the-loom** | The platform. Memory MCP, project registry, observatory, governance, durable structure. | [`Lizo-RoadTown/the-loom`](https://github.com/Lizo-RoadTown/the-loom) |
-| **humancensys-app** | Consumer: student-facing product. | [`Lizo-RoadTown/humancensys-app`](https://github.com/Lizo-RoadTown/humancensys-app) |
-| **Summer 2026 Hub** | Consumer: classroom hub (MVP at n=1 student). | [`Lizo-RoadTown/summer-2026-hub`](https://github.com/Lizo-RoadTown/summer-2026-hub) |
-| **SDE_Extraction** | Consumer: research-heavy project. | [`Lizo-RoadTown/sde-extraction`](https://github.com/Lizo-RoadTown/sde-extraction) |
-| **docs-agent / ux-starter / web-starter** | Template repos for spawning new consumers. | [Lizo-RoadTown templates](https://github.com/Lizo-RoadTown) |
-| **project-starter** | Day-1 scaffolding for new projects (pre-template-era). | [`Lizo-RoadTown/project-starter`](https://github.com/Lizo-RoadTown/project-starter) |
-| **claude-skills-marketplace** | Public skills marketplace. | [`Lizo-RoadTown/claude-skills-marketplace`](https://github.com/Lizo-RoadTown/claude-skills-marketplace) |
+| Module | Role |
+|---|---|
+| **Make_Skills** | The skill engine. Detects local patterns, compiles skills, runs the agent loop. (You are here.) |
+| **the-loom** | The platform. Memory MCP, project registry, observatory, governance, durable structure. |
+| **Consuming applications** | Each consumer is its own repo. Different consumer shapes (classroom, development, research-project) attach a Layer-2 adapter that customizes the engine. |
 
 ## The two promotion paths
 
@@ -210,13 +205,13 @@ After the MVP migration (in flight), the entrypoint moves from `api.main:app` to
 
 Every change considers BOTH self-host AND hosted-multitenant. `PLATFORM_MODE=self_host` (default) or `=hosted`. Tests cover both. Documented in [ARCHITECTURE.md](ARCHITECTURE.md) and enforced via [CONTRIBUTING.md](CONTRIBUTING.md).
 
-## Status (2026-06-01)
+## Status
 
-- **Layer 1 (core):** code exists at `platform/api/`; MVP migration to `core/` staged across 5 phases (plan ratified)
-- **Layer 2 (adapters):** three stub directories landed with READMEs; populating awaits Phase 5 of migration
-- **Layer 3 (instances):** live in consuming projects (Hub has two: `ime4020-hub-app` + `ime4020-hub-dev`; SDE_Extraction has one: `sde-extraction-dev`)
-- **Skill-making bridge to the-loom:** spec ratified; implementation pending Phase 3 of migration
-- **the-loom integration:** memory MCP live at `https://loom-agent-context.onrender.com/mcp/memory/`, Project Registry at `https://loom-project-registry.onrender.com/`
+- **Layer 1 (`core/`):** populated. The MVP migration moved every runtime module out of `platform/api/` into `core/` + `services/`.
+- **Layer 2 (`adapters/`):** stubs only — three `README.md` files defining the adapter contract for `classroom`, `development`, `research-project`. Populating per-adapter is post-MVP work.
+- **Layer 3 (project-local instances):** live in each consuming repo's `.project-intelligence/<instance-id>/`, not in this repo.
+- **Skill-making bridge to the-loom:** wire spec ratified; receiver stub in [`services/skill_making/bridge_receiver.py`](services/skill_making/bridge_receiver.py); full implementation pending.
+- **Memory layer:** delegated to the-loom MCP (see [CLAUDE.md](CLAUDE.md) CORE DIRECTIVE 1).
 
 ## License
 

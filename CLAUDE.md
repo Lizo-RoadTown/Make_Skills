@@ -4,7 +4,7 @@ Project context for Claude Code. Loaded into every conversation. Keep it tight; 
 
 ## CORE DIRECTIVE 1 — loom-memory access is mandatory
 
-Every session in this repo MUST have the `loom-memory` MCP server reachable. Tools: `memory_read`, `memory_write`, `memory_recall`, `memory_search`, `memory_list`, `memory_delete`. The full directive + the 8-layer enforcement pattern lives at [`the-loom/docs/CORE_DIRECTIVES.md`](https://github.com/Lizo-RoadTown/the-loom/blob/main/docs/CORE_DIRECTIVES.md).
+Every session in this repo MUST have the `loom-memory` MCP server reachable. Tools: `memory_read`, `memory_write`, `memory_recall`, `memory_search`, `memory_list`, `memory_delete`. The full directive + the 8-layer enforcement pattern lives in the-loom's docs (`docs/CORE_DIRECTIVES.md` in the-loom repo).
 
 If the SessionStart additionalContext shows `*** CONCRETE-RULE VIOLATION DETECTED ***` — **halt all substantive work and report to Liz.** Do not proceed silently using only in-session context. The `.mcp.json` here is wired with the URL; v0.1.8 of loom-agent-context added a self-host fallback, so no JWT header is needed for Liz's tenant.
 
@@ -14,8 +14,8 @@ The **engine** — agent runtime, skill compilation, model registry, memory MCP,
 
 This is NOT:
 
-- A student-facing product — that's [`Lizo-RoadTown/humancensys-app`](https://github.com/Lizo-RoadTown/humancensys-app) (the first consumer, extracted 2026-05-26 in PR #52)
-- A dev tool for Liz — that's [`Lizo-RoadTown/the-loom`](https://github.com/Lizo-RoadTown/the-loom) (personal AI substrate, dev-time only, never touches deployed runtime)
+- A student-facing product — that's consuming application (the first consumer, extracted 2026-05-26 in PR #52)
+- A dev tool for Liz — that's the-loom (personal AI substrate, dev-time only, never touches deployed runtime)
 - A specific UI, identity provider, or branding — consumers bring those
 
 See [`docs/proposals/make-skills-engine-vs-consumer-scope.md`](docs/proposals/make-skills-engine-vs-consumer-scope.md) for the engine/consumer boundary.
@@ -47,7 +47,7 @@ The discipline-skills in `skills/` and `skills_private/` (`agentic-skill-design`
 
 ## How consumers integrate
 
-A consumer (e.g., humancensys-app, future health-app) integrates via:
+A consumer application integrates via:
 
 - **HTTPS REST** at `/chat/{agent_id}`, `/agents/*`, etc. — for agent management + chat
 - **JWT contract** — consumer signs HS256 tokens with `AUTH_SECRET`; engine verifies via `platform/api/auth.py`
