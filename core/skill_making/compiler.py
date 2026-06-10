@@ -23,7 +23,7 @@ from pydantic import BaseModel, Field
 if TYPE_CHECKING:
     from langchain_core.language_models.chat_models import BaseChatModel
 
-    from api.runtime import StudentSkill
+    from core.runtime.runtime import StudentSkill
 
 log = logging.getLogger("skill_compiler")
 

@@ -26,8 +26,8 @@ from dataclasses import dataclass, field
 from typing import Any, AsyncIterator
 from uuid import UUID
 
-from api.auth import TenantContext
-from api.db import tenant_conn
+from core.auth.auth import TenantContext
+from core.db.db import tenant_conn
 
 log = logging.getLogger("runtime")
 
@@ -258,8 +258,8 @@ class AgentRuntime:
         """
         from deepagents import create_deep_agent
 
-        from api.model_registry import RECOMMENDED_STARTERS, resolve_model
-        from api.skill_compiler import compile_skill_to_tool
+        from core.providers.model_registry import RECOMMENDED_STARTERS, resolve_model
+        from core.skill_making.compiler import compile_skill_to_tool
 
         # Resolve model. Use the agent's saved model, falling back to
         # the platform's recommended starter for that provider if the

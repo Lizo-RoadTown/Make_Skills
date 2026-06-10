@@ -72,11 +72,9 @@ services:
       # AND can update ROADMAP.md as it ships work. (On Render, no volume mount; the
       # baked-in /app copy is read-only there until a future git-commit-from-container path.)
       - ../..:/repo
-      # Persistent semantic memory store (LanceDB directory)
-      - memory-data:/data/memory
     ports:
       - "${API_PORT:-8001}:8001"
-    command: ["uvicorn", "api.main:app", "--host", "0.0.0.0", "--port", "8001"]
+    command: ["uvicorn", "services.api.main:app", "--host", "0.0.0.0", "--port", "8001"]
 
   grafana:
     image: grafana/grafana:11.3.0
@@ -133,5 +131,4 @@ services:
 volumes:
   postgres-data:
   grafana-data:
-  memory-data:
   loki-data:

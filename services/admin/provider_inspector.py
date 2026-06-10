@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import os
 
-from api.model_registry import RECOMMENDED_STARTERS, supported_providers
+from core.providers.model_registry import RECOMMENDED_STARTERS, supported_providers
 
 
 # Env vars that indicate a provider is usable in the current process.

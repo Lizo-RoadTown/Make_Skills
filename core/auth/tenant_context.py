@@ -19,7 +19,7 @@ from __future__ import annotations
 
 from contextvars import ContextVar
 
-from api.migrations import DEFAULT_TENANT_ID
+from core.db.migrations import DEFAULT_TENANT_ID
 
 current_tenant: ContextVar[str] = ContextVar(
     "current_tenant", default=DEFAULT_TENANT_ID

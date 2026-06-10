@@ -30,7 +30,7 @@ from typing import AsyncIterator
 from psycopg import AsyncConnection
 from psycopg_pool import AsyncConnectionPool
 
-from api.auth import TenantContext
+from core.auth.auth import TenantContext
 
 log = logging.getLogger("db")
 

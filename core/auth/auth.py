@@ -31,7 +31,7 @@ from typing import Annotated
 
 from fastapi import Header, HTTPException, status
 
-from api.migrations import DEFAULT_TENANT_ID
+from core.db.migrations import DEFAULT_TENANT_ID
 
 PLATFORM_MODE = os.environ.get("PLATFORM_MODE", "self_host").lower()
 AUTH_SECRET = os.environ.get("AUTH_SECRET")  # required when PLATFORM_MODE=hosted

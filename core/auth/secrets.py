@@ -19,8 +19,8 @@ from __future__ import annotations
 
 import os
 
-from api.auth import TenantContext
-from api.db import tenant_conn
+from core.auth.auth import TenantContext
+from core.db.db import tenant_conn
 
 
 def _ensure_key_configured() -> None:
