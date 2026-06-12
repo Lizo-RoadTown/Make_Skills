@@ -160,7 +160,7 @@ The receiver only matters when candidates are being POST'd at it. The compiler-e
 
 ## What's NOT in scope here
 
-- The Pillar 2 page in `loom-platform`. Phase 6. Not until the candidate flow is real.
+- The Atelier page in `loom-platform` (formerly referred to as "the Pillar 2 page" before the 2026-06-12 rename). Phase 6. Not until the candidate flow is real.
 - The candidate registry's full ontology (just-enough fields per Loom-agent's Phase 1 plan).
 - The seven-signal compute. Lives in the local observer + cross-project pattern detection (Phases 2-3).
 - The agentic-upskilling skill body changes. Phase 0 forcing-function may reveal them; sketch them when they surface.

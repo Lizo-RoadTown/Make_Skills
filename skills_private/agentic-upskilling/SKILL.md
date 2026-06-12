@@ -1,6 +1,6 @@
 ---
 name: agentic-upskilling
-description: Active practice — observe how the user actually works, identify which skills they invoke repeatedly, and promote those into tools when promotion criteria are met. Each user's tool library grows to reflect THEIR workflow over time. Use continuously, not as a one-shot. Lives at /skills/upskilling on the site (planned). Drives Pillar 2's "Make skills together" surface.
+description: Active practice — observe how the user actually works, identify which skills they invoke repeatedly, and promote those into tools when promotion criteria are met. Each user's tool library grows to reflect THEIR workflow over time. Use continuously, not as a one-shot. Surfaces in the Atelier (the personal upskilling-observability page, URL /atelier, planned). The Atelier is what "Make skills together" looks like for one user.
 ---
 
 # Agentic upskilling
@@ -17,7 +17,7 @@ Three roles in the loop:
 |------|----------------|
 | **The user** | Works naturally — chats, asks for things, runs into recurring needs |
 | **The agent** | Observes patterns over time. Notices which skills they invoke 3+ times the same way, which steps they manually repeat, which manual workarounds keep recurring. Surfaces candidates. |
-| **The shared interface** (Pillar 2 site page, planned) | Lists candidates, lets the user approve promotions, shows the evolving tool library, tracks which tools are actually getting used vs sitting idle |
+| **The shared interface** (the Atelier — personal upskilling-observability page, planned at `/atelier`) | Lists candidates, lets the user approve promotions, shows the evolving tool library, tracks which tools are actually getting used vs sitting idle |
 
 Three artifacts that grow over time:
 
@@ -112,9 +112,9 @@ Recommendations:
   - <none>
 ```
 
-## The eventual Pillar 2 page
+## The eventual Atelier page
 
-`/skills/upskilling` (planned) — same interface for every user, content unique to each:
+`/atelier` (planned; was previously referred to as `/skills/upskilling` and "the Pillar 2 page" before the 2026-06-12 rename) — same interface for every user, content unique to each:
 
 - **Skill library** with usage counts (your skills, sorted by recency / use)
 - **Tool library** with usage counts (your tools)
@@ -147,7 +147,7 @@ The skill itself (this `SKILL.md`) is platform code — same wisdom for every us
 - [`agentic-skill-design`](../agentic-skill-design/SKILL.md) — the parent meta-skill; this skill is its operational counterpart for skill→tool growth
 - [`lessons-learned`](../lessons-learned/SKILL.md) — overlaps in observing user patterns; the lessons-learned pass should flag promotion candidates as a side effect
 - [`roadmap-maintenance`](../roadmap-maintenance/SKILL.md) — the canonical example of a successfully-promoted skill+tool pair
-- ROADMAP.md (per-tenant, gitignored) — has Pillar 2 entry tracking the active project status
+- ROADMAP.md (per-tenant, gitignored) — has an Atelier entry tracking the active project status (formerly tracked under "Pillar 2")
 
 ## Pair with the public stack
 
