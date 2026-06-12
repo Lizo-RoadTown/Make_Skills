@@ -1,0 +1,22 @@
+{
+  "_schema": "loom-project-context v0",
+  "repo_local_path": "{{repo-local-path}}",
+  "git_origin": "{{git-origin}}",
+  "visibility": "{{visibility}}",
+  "stack": {
+    "_operator_fills_after_spawn": true,
+    "frontend": null,
+    "backend": null,
+    "auth": null,
+    "db": null,
+    "deploy": null
+  },
+  "key_files": {
+    "claude_md": "CLAUDE.md",
+    "readme": "README.md",
+    "env_template": ".env.template",
+    "instance_manifest": ".project-intelligence/instances.json"
+  },
+  "current_state_at_spawn": "Seed only; operator updates this field as the project takes shape",
+  "active_dev_focus": null
+}

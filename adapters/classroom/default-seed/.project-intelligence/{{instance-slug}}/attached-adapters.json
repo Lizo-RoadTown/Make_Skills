@@ -1,0 +1,14 @@
+{
+  "_schema": "loom-attached-adapters v0",
+  "adapters": [
+    {
+      "name": "classroom",
+      "type": "project-type-adapter",
+      "source_repo": "Lizo-RoadTown/Make_Skills",
+      "source_path": "adapters/classroom/",
+      "version": "0.0.0-pending",
+      "status": "intended; not yet implemented in Make_Skills",
+      "purpose": "Customizes the core Agency-to-Structure Engine for classroom-support-apps: defines what to watch (class info, assignments, repeated confusion, study patterns, learning workflows). Provides a student-facing agency: the agent helps the student learn, take notes, synthesize, ask questions."
+    }
+  ]
+}

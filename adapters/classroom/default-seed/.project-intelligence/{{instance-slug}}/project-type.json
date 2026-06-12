@@ -1,0 +1,10 @@
+{
+  "_schema": "loom-project-type v0",
+  "project_type": "classroom-support-app",
+  "instance_surface": "{{instance-surface}}",
+  "loom_project_id": "{{instance-slug}}",
+  "loom_display_name": "{{instance-display-name}}",
+  "loom_description": "{{instance-description}}",
+  "scope": "single-student or small-set (per the operator's classroom)",
+  "related_instance": null
+}

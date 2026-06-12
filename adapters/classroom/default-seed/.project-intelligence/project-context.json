@@ -1,0 +1,7 @@
+{
+  "project_id": null,
+  "slug": "{{project-slug}}",
+  "name": "{{project-display-name}}",
+  "hostname": null,
+  "registered_via": "pending — manual POST to Project Registry"
+}
