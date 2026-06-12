@@ -159,8 +159,10 @@ async def bridge_promotion_candidate(
     here; this is the engine side of the wire contract at
     `docs/proposals/2026-05-25-skill-making-bridge.md`.
 
-    Authentication is HMAC-SHA256 over the raw body via the
-    `X-Loom-Signature` header (NOT the consumer-app JWT) — the bridge
+    Authentication is HMAC-SHA256 via the `X-Loom-Signature` header
+    in Stripe-style format `t=<unix_seconds>,v1=<sha256_hex>`, where the
+    HMAC is computed over `"<ts>.<raw_body>"` with a ±5 minute timestamp
+    window for replay protection. NOT the consumer-app JWT — the bridge
     is a service-to-service contract between the-loom and the engine,
     not user-facing. The shared secret is `LOOM_SKILL_BRIDGE_SECRET`,
     set as an env var on both sides.

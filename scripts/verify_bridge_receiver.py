@@ -23,12 +23,10 @@ any HTTP plumbing.
 from __future__ import annotations
 
 import asyncio
-import hmac
 import json
 import os
 import sys
 import uuid
-from hashlib import sha256
 
 # Allow running from repo root: `python scripts/verify_bridge_receiver.py`.
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -42,13 +40,18 @@ from core.db.migrations import (  # noqa: E402
 from services.skill_making.bridge_receiver import (  # noqa: E402
     receive_promotion_candidate,
 )
+from services.skill_making.hmac_verify import sign_payload  # noqa: E402
 
 
 SECRET = os.environ.setdefault("LOOM_SKILL_BRIDGE_SECRET", "verify-script-secret")
 
 
 def _sign(body: bytes) -> str:
-    return hmac.new(SECRET.encode("utf-8"), body, sha256).hexdigest()
+    """Emit a Stripe-style `t=<ts>,v1=<hex>` signature.
+
+    Matches the on-wire format from loom's PR #21 + my hmac_verify.py.
+    """
+    return sign_payload(body, secret=SECRET)
 
 
 def _make_payload(
@@ -137,8 +140,10 @@ async def main() -> None:
         # ---- 1. HMAC mismatch ----
         print("\n[1] HMAC mismatch -> 401 hmac_invalid")
         body = json.dumps(_make_payload()).encode("utf-8")
+        # "wrong-sig" is malformed (no t=,v1=) — hmac_verify rejects with 401
+        # before timestamp/digest check. Tests the same failure path.
         result = await receive_promotion_candidate(
-            raw_body=body, signature="wrong-sig-12345", pool=pool_obj
+            raw_body=body, signature="t=1,v1=deadbeef", pool=pool_obj
         )
         _assert(result.status_code == 401, f"status_code == 401 (got {result.status_code})")
         _assert(result.body["code"] == "hmac_invalid", "code == hmac_invalid")

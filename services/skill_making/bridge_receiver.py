@@ -5,7 +5,8 @@ Architecture Registry over the wire contract defined at
 `docs/proposals/2026-05-25-skill-making-bridge.md` and shaped per
 `docs/proposals/2026-06-12-bridge-receiver-and-compiler-phase-4-sketch.md`
 (revised 2026-06-12 to incorporate Loom-agent's 5 ratification
-adjustments).
+adjustments + `loom_agent_bridge_complete_status_and_secret_2026_06_12_evening`
+for the Stripe-style HMAC format).
 
 This module is the deterministic guard + intake layer. The compile +
 ack layer ships in PR B. v1.0 receiver fully handles `kind=skill`
