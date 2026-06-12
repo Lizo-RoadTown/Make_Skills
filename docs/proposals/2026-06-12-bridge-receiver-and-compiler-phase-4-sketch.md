@@ -1,7 +1,7 @@
 # Bridge receiver + compiler — Phase 4 shape sketch
 
-**Date:** 2026-06-12
-**Status:** Sketch only. Not for implementation until Phase 4 of the ratified upskilling sequence ([`loom_agent_to_ms_agent_pillar_2_sequence_ratified_2026_06_12`](https://loom-agent-context.onrender.com)) is reached. Phases 0-3 (Stop-hook enforcement, candidate registry slice, local observer, cross-project pattern detection) must land in the-loom first.
+**Date:** 2026-06-12 (revised same day to incorporate Loom-agent's bridge-spec ratification adjustments — see `loom_agent_skill_bridge_ratification_2026_06_12_evening`)
+**Status:** Sketch only. Phases 0-3 have landed in the-loom; Phase 6 (upskilling dashboard) exercised end-to-end on 2026-06-12 evening and confirmed the loop stalls at `status='promoted'` until this receiver exists. Implementation is unblocked — gated only on Liz's go.
 **Companion to:** [`2026-05-25-skill-making-bridge.md`](2026-05-25-skill-making-bridge.md) (wire contract), [`2026-05-31-three-layer-engine-spec.md`](2026-05-31-three-layer-engine-spec.md) (engine layout).
 
 ## Why this exists
@@ -19,6 +19,16 @@ Loom-agent asked, on 2026-06-12, that MS-agent sketch the bridge_receiver + comp
 ## What changes at Phase 4
 
 The receiver becomes a real endpoint that consumes candidates from the-loom's candidate registry (built in Loom-agent's Phase 1) AFTER the local observer (Phase 2) and pattern detection (Phase 3) have populated it with stable candidates. The compiler extends to accept receiver-delivered skill source (not just the existing in-runtime path) and emits the registration ack + telemetry callbacks.
+
+## Loom-agent's 5 adjustments (2026-06-12 ratification)
+
+Incorporated throughout this sketch:
+
+1. **`tenant_id` is non-nullable UUID** — not `null` for "global." Catalog-scope is a separate `is_global: bool` flag. Today both sides use `SELF_HOST_TENANT_ID = 1d8ec1b3-d62a-5fab-9a52-eb6a3e09f1c8` (the 6-fleet-locations constant). See §"Tenant resolution."
+2. **`capability_tags` + `triggers` are derived, not required in source frontmatter** — the-loom's `promote_dispatcher.py` computes these from observer signals (`signals.skill_name`, `evidence_refs[].kind`, repeat-count thresholds) and injects them into the payload. Receiver treats them as authoritative.
+3. **Top-level `candidate_kind`** — added for the 9-kind taxonomy (skill / inline_tool / external_tool / architecture_pattern / service / machine_support / process / agent / orchestration). v1.0 receiver handles `kind=skill`; other kinds ack-but-defer (record candidate, return 202, no compile) so the audit chain stays unbroken while handlers are added in v1.1+.
+4. **Callback URLs point at Render services**, not the dashboard's Vercel hostname. `loom-architecture-registry.onrender.com` (skill-registered), `loom-telemetry-ingestion.onrender.com` (skill-used). Env-var configurable.
+5. **Engine side is NOT blocked** — Loom-agent's original adjustment cited the MVP layout migration as a blocker, but phases 2/3/5 have all merged (commits `ff0d206`, `2050128`, `e0ed6fb`); `services/skill_making/bridge_receiver.py` already exists as a stub. The build is unblocked on both sides; sequencing is Liz's call.
 
 ## Receiver shape
 
@@ -47,15 +57,18 @@ async def receive_promotion_candidate(
 
 1. **HMAC verify** — `hmac.compare_digest(expected, signature)` against `secret`. 401 on mismatch. No further work.
 2. **Idempotency check** — lookup `payload["promotion_id"]` in `idempotency_store`. If present: return `409 Conflict` with the stored `existing_skill_id`. Move on.
-3. **Schema validate** — pydantic model `PromotionCandidatePayload`; per the wire spec's field set. `400` with field-level errors on failure (helpful for the-loom to fix and retry).
-4. **Tenant resolution** — `payload["tenant_id"]` is `null` (global) or a UUID. Engine reads the existing `core/auth/tenant_context.py`'s tenancy machinery to scope downstream storage. Global candidates go to a shared catalog row.
-5. **Persist as queued** — write the candidate to a `promoted_skills` table with `status="queued"` keyed by `promotion_id`. This row is what later compile/ack callbacks reference.
-6. **Return 202 immediately** — `{"promotion_id": "...", "status": "queued"}`. Compilation runs out-of-band.
-7. **Dispatch to compiler** — async task. Three outcomes:
+3. **Schema validate** — pydantic model `PromotionCandidatePayload`; per the wire spec's field set. Top-level fields include `schema_version`, `promotion_id`, `tenant_id` (non-nullable UUID), `candidate_kind` (one of the 9-kind taxonomy), `pattern_signature`, `source` (with frontmatter `{name, description}` only; `capability_tags` + `triggers` are derived and injected by the-loom's promote_dispatcher.py per adjustment #2), `evidence_refs`, `signals`, `is_global` (default `false`), `callbacks`. `400` with field-level errors on failure (helpful for the-loom to fix and retry).
+4. **Tenant resolution** — `payload["tenant_id"]` is always a UUID (per adjustment #1). Engine reads the existing `core/auth/tenant_context.py`'s tenancy machinery to scope downstream storage. Catalog-scope is a separate `is_global` flag; if true, the row is visible cross-tenant via a system-tenant UUID owner (still a real UUID, not null).
+5. **Kind dispatch** — branch on `candidate_kind`:
+   - `skill` → continue to step 6 (full compile + persist + ack flow below)
+   - Any other kind (inline_tool, external_tool, architecture_pattern, service, machine_support, process, agent, orchestration) → record candidate row with `status="kind_not_yet_handled"`, return 202 with `outcome="ack_deferred"`, no compile dispatch. v1.0 supports `kind=skill`; v1.1+ extends to additional kinds. Preserves audit chain; makes the gap loud-but-not-broken.
+6. **Persist as queued** — write the candidate to a `promoted_skills` table with `status="queued"` keyed by `promotion_id`. This row is what later compile/ack callbacks reference.
+7. **Return 202 immediately** — `{"promotion_id": "...", "status": "queued"}`. Compilation runs out-of-band.
+8. **Dispatch to compiler** — async task. Three outcomes:
    - **Compiled** → `status="compiled"`, `skill_id` minted, ack sent.
    - **Rejected** → `status="rejected"`, reason recorded, ack sent with `outcome="rejected"`.
    - **Queued for human review** → `status="queued_human_review"`, ack sent with `outcome="queued_human_review"`.
-8. **Telemetry callback** — when the compiled skill is first invoked by a real agent turn (later, in the runtime), `services/skill_making/` emits a `TelemetryCallback` per the bridge spec's message type 3.
+9. **Telemetry callback** — when the compiled skill is first invoked by a real agent turn (later, in the runtime), `services/skill_making/` emits a `TelemetryCallback` per the bridge spec's message type 3 to `https://loom-telemetry-ingestion.onrender.com/skill-used` (env-var configurable: `LOOM_TELEMETRY_CALLBACK_URL`). The ack from step 8 goes to `https://loom-architecture-registry.onrender.com/skill-registered` (env-var: `LOOM_REGISTRATION_ACK_URL`).
 
 ### Status transitions (engine side)
 
@@ -75,6 +88,8 @@ Engine-side `status` values are distinct from the-loom-side candidate registry `
 | HMAC mismatch | 401, no row written, no work | n/a | n/a |
 | Duplicate `promotion_id` | 409, return stored `existing_skill_id` | unchanged | n/a |
 | Schema validation fail | 400, field errors | n/a | n/a |
+| `candidate_kind` not in 9-kind taxonomy | 400, field error on `candidate_kind` | n/a | n/a |
+| `candidate_kind` valid but not yet handled (v1.0: anything ≠ `skill`) | 202, candidate row written | `kind_not_yet_handled` | `outcome="ack_deferred"`, `reason="kind not supported in receiver vN"` |
 | Compiler error (markdown malformed, frontmatter missing required field) | n/a | `rejected` | `outcome="rejected"`, `error.field`, `error.issue` |
 | Compiler timeout / engine overload | 503 + Retry-After header on the inbound POST | n/a (no row) | n/a |
 | Ack callback POST fails | engine state stays at `compiled`; retry queue picks it up; the-loom dedups by `promotion_id` | `compiled` | (resent) |
@@ -153,10 +168,11 @@ The receiver only matters when candidates are being POST'd at it. The compiler-e
 ## Open questions for Phase-4-time decision
 
 1. **`promoted_skills` table schema** — should this be a separate table from human-authored skills, a discriminator column on the existing skills table, or a polymorphic `source_origin` field? Affects how the runtime catalog query looks.
-2. **Tenant scoping for global candidates (`tenant_id: null`)** — does a global candidate become a shared row visible to every tenant, or a per-tenant copy at promote time? Affects RLS policy on `promoted_skills`.
+2. **`is_global=true` semantics** (reframed per adjustment #1) — when a candidate sets `is_global: true`, does the row land under a designated system-tenant UUID with cross-tenant read visibility (single source of truth), OR get copied per-tenant at promote time (independent rows)? Affects RLS policy on `promoted_skills`. Lean: system-tenant ownership + cross-tenant read grant for queryable global catalog.
 3. **Version bumps** — when the-loom POSTs an updated version of an existing skill (same `pattern_signature`, new content), do we bump `version` automatically or require a different `promotion_id`?
 4. **Compiler model selection** — `compile_from_bridge_candidate` is model-agnostic (no LLM call at promote time), but `compile_skill_to_tool` needs a model. When a runtime instance loads a promoted skill, which model does it use — the agent's configured model, or one specified in the candidate's frontmatter? (Probably the agent's; candidate frontmatter shouldn't dictate runtime choices.)
 5. **What happens to the rejection rate** — if the compiler rejects > X% of incoming candidates, that's signal the-loom's stability detection is too loose. Worth emitting as a telemetry callback so the-loom can tune its detection threshold.
+6. **Non-skill kinds — ack-defer vs hard-501** (new per adjustment #3) — v1.0 currently sketched as ack-defer (record candidate, return 202 with `outcome="ack_deferred"`). Alternative: return 501 Not Implemented, no row written. Ack-defer preserves the audit chain and lets the-loom show "queued for handler" to the operator; hard-501 makes the gap loud. Lean: ack-defer.
 
 ## What's NOT in scope here
 
