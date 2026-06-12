@@ -1,0 +1,29 @@
+{
+  "_schema": "loom-instance-manifest v0",
+  "_description": "Top-level manifest of the project-local Agency-to-Structure Engine instances in this repo. Per the three-layer model, each instance has its own folder under .project-intelligence/, its own LOOM_PROJECT_ID, and MUST NOT share memory or context with other instances.",
+  "core_engine_source": "Lizo-RoadTown/Make_Skills (core + adapters)",
+  "platform": "Lizo-RoadTown/the-loom",
+  "instances": [
+    {
+      "id": "{{instance-slug}}",
+      "surface": "{{instance-surface}}",
+      "where_it_runs": "{{instance-description}}",
+      "adapter": "development",
+      "watches": [
+        "Repeated dev tasks (same multi-step edit sequence across sessions)",
+        "Architecture corrections",
+        "Naming patterns",
+        "Module boundaries",
+        "UI/API workflow patterns",
+        "Repo structure",
+        "Agent mistakes",
+        "Project formation decisions"
+      ],
+      "memory_tag": "{{instance-slug}}",
+      "boundary": "Developer-facing agency only. MUST NOT share memory or context with sibling instances."
+    }
+  ],
+  "registration_status": {
+    "{{instance-slug}}": "pending — POST https://loom-project-registry.onrender.com/projects"
+  }
+}

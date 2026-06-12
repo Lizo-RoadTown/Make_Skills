@@ -1,0 +1,14 @@
+{
+  "_schema": "loom-attached-adapters v0",
+  "adapters": [
+    {
+      "name": "development",
+      "type": "project-type-adapter",
+      "source_repo": "Lizo-RoadTown/Make_Skills",
+      "source_path": "adapters/development/",
+      "version": "0.0.0-pending",
+      "status": "intended; not yet implemented in Make_Skills",
+      "purpose": "Customizes the core Agency-to-Structure Engine for software development repos: defines what to watch (repeated dev tasks, architecture corrections, naming patterns, module boundaries, UI/API workflow patterns, agent mistakes, project formation decisions)."
+    }
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "_schema": "loom-attached-adapters v0",
+  "adapters": [
+    {
+      "name": "research-project",
+      "type": "project-type-adapter",
+      "source_repo": "Lizo-RoadTown/Make_Skills",
+      "source_path": "adapters/research-project/",
+      "version": "0.0.0-pending",
+      "status": "intended; not yet implemented in Make_Skills",
+      "purpose": "Customizes the core Agency-to-Structure Engine for research-heavy projects: defines what to watch (literature review patterns, recurring research questions, data analysis workflows, findings synthesis, decision points, friction sources). Provides a researcher-and-developer-facing agency: the agent helps surface what is true, not produce a product."
+    }
+  ]
+}
