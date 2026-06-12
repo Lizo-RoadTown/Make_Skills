@@ -19,9 +19,9 @@ import os
 from contextlib import asynccontextmanager
 from uuid import UUID, uuid4
 
-from fastapi import BackgroundTasks, FastAPI, HTTPException, Query
+from fastapi import BackgroundTasks, FastAPI, Header, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import StreamingResponse
+from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel, Field
 
 # --------------------------------------------------------------------------
@@ -66,8 +66,9 @@ if _sentry_dsn and os.environ.get("PLATFORM_MODE") == "hosted":
 
 from core.runtime.agent import build_agent
 from core.auth.auth import TenantContext, get_current_tenant
-from core.db.db import close_pool, init_pool
+from core.db.db import close_pool, get_pool, init_pool
 from core.runtime.runtime import AgentRuntime
+from services.skill_making.bridge_receiver import receive_promotion_candidate
 from core.auth.tenant_context import current_tenant
 from services.admin.roadmap.file import (
     VALID_STATUSES,
@@ -147,6 +148,39 @@ class ChatResponse(BaseModel):
 @app.get("/healthz")
 def healthz():
     return {"status": "ok"}
+
+
+@app.post("/bridge/promotion-candidate")
+async def bridge_promotion_candidate(
+    request: Request,
+    x_loom_signature: str | None = Header(default=None, alias="X-Loom-Signature"),
+):
+    """Bridge receiver entry point. The-loom POSTs promotion candidates
+    here; this is the engine side of the wire contract at
+    `docs/proposals/2026-05-25-skill-making-bridge.md`.
+
+    Authentication is HMAC-SHA256 over the raw body via the
+    `X-Loom-Signature` header (NOT the consumer-app JWT) — the bridge
+    is a service-to-service contract between the-loom and the engine,
+    not user-facing. The shared secret is `LOOM_SKILL_BRIDGE_SECRET`,
+    set as an env var on both sides.
+
+    Tenant resolution happens INSIDE the receiver via the explicit
+    `tenant_id_mapping` table — see
+    `decision_tenant_id_mapping_option_b_2026_06_12`. The receiver
+    is responsible for translating the payload's source-side tenant
+    UUID to the engine-side UUID before any tenant-scoped write.
+
+    No FastAPI dependency on `get_current_tenant`: the bridge does
+    NOT speak the consumer JWT contract; it speaks HMAC.
+    """
+    raw_body = await request.body()
+    result = await receive_promotion_candidate(
+        raw_body=raw_body,
+        signature=x_loom_signature or "",
+        pool=get_pool(),
+    )
+    return JSONResponse(status_code=result.status_code, content=result.body)
 
 
 async def _ensure_thread_belongs_to_tenant(thread_id: str, ctx: TenantContext) -> None:

@@ -63,6 +63,17 @@ async def close_pool() -> None:
     _pool = None
 
 
+def get_pool() -> AsyncConnectionPool:
+    """Return the open pool. Use only for queries that must NOT go through
+    `tenant_conn` — i.e. queries that run BEFORE tenant context is
+    resolved (the bridge receiver's tenant_id_mapping lookup is the
+    canonical case). Tenant-scoped reads/writes must go through
+    `tenant_conn(ctx)` so RLS gates them."""
+    if _pool is None:
+        raise RuntimeError("db pool not initialized; call init_pool() first")
+    return _pool
+
+
 @asynccontextmanager
 async def tenant_conn(ctx: TenantContext) -> AsyncIterator[AsyncConnection]:
     """Per-request tenant-scoped connection.
