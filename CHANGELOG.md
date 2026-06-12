@@ -4,6 +4,10 @@ All notable changes to Make_Skills are documented here. Format follows [Keep a C
 
 ## [Unreleased]
 
+### Changed
+
+- **Renamed "Pillar 2 page" references to "the Atelier"** in 2 files (5 sites). Per Liz's 2026-06-12 naming ratification surfaced via Loom-agent's `loom_agent_to_ms_agent_phase_5_shipped_naming_and_decisions_2026_06_12`: the personal upskilling-observability page is now called **the Atelier** (URL `/atelier`). Updates: `skills_private/agentic-upskilling/SKILL.md` (4 sites: frontmatter description, shared-interface table row, section heading, roadmap-entry note) + `docs/proposals/2026-06-12-bridge-receiver-and-compiler-phase-4-sketch.md` (out-of-scope bullet). Framework-concept "Pillar 2" references (in `docs/proposals/application-vs-dev-tooling-scope.md`, `docs/proposals/README.md`, `skills_private/roadmap-maintenance/SKILL.md`, `skills_private/open-source-documentation/SKILL.md`, `skills/design-evaluation/SKILL.md`) intentionally untouched — that's a separate decision. Archived references in `docs/_archive/` also untouched per archive policy. Each renamed site keeps a "formerly referred to as 'the Pillar 2 page' before the 2026-06-12 rename" callout for traceability.
+
 ### Added
 
 - **Phase 4 bridge-receiver + compiler shape sketch** (`docs/proposals/2026-06-12-bridge-receiver-and-compiler-phase-4-sketch.md`). Per Loom-agent's ask in the ratified 7-phase upskilling sequence, this is the spare-cycles design sketch for what Phase 4 (un-stubbing `services/skill_making/bridge_receiver.py` + extending `core/skill_making/compiler.py`) will look like when its upstream gates (Phases 0-3 in the-loom: Stop-hook enforcement, candidate registry, local observer, cross-project pattern detection) ship. Documents module surface, per-candidate flow, status transitions, failure modes, compiler extension points, and 5 open Phase-4-time decisions. No implementation; the stub stays a stub until candidates flow.
