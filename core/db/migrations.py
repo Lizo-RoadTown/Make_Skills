@@ -382,6 +382,139 @@ async def migrate_user_agents(pool: AsyncConnectionPool) -> None:
             )
 
 
+# The-loom's self-host tenant UUID. The bridge receiver maps the-loom-side
+# tenant UUIDs (carried in promotion-candidate payloads) to engine-side
+# tenant UUIDs via the tenant_id_mapping table. The mapping table is
+# seeded with this one row at migration time so self-host bridge POSTs
+# work out of the box without any operator step.
+#
+# This is the UUID the-loom uses on its side; Make_Skills' own
+# DEFAULT_TENANT_ID stays "00000000-0000-0000-0000-000000000000" and is
+# the engine-side row it maps to. See
+# `decision_tenant_id_mapping_option_b_2026_06_12` for the full reasoning.
+LOOM_SELF_HOST_TENANT_ID = "1d8ec1b3-d62a-5fab-9a52-eb6a3e09f1c8"
+
+
+async def migrate_skill_making_bridge(pool: AsyncConnectionPool) -> None:
+    """Phase 4 — skill-making bridge receiver tables.
+
+    Three tables:
+      1. tenant_id_mapping  — cross-system tenant UUID reconciliation
+         (`source_system`, `source_tenant_id`) -> `engine_tenant_id`.
+         Seeded with one self-host row mapping the-loom's
+         SELF_HOST_TENANT_ID to Make_Skills' DEFAULT_TENANT_ID.
+      2. bridge_idempotency — `promotion_id`-keyed dedup store. The
+         receiver checks here before doing any work. Stores the engine's
+         response for replay so retries get the same answer.
+      3. promoted_skills    — candidate rows the receiver writes when a
+         promotion candidate arrives. RLS-scoped by `engine_tenant_id`
+         (which is what `app.tenant_id` is set to). `kind` carries the
+         9-kind taxonomy; v1.0 receiver only compiles `kind='skill'`,
+         other kinds land with `status='kind_not_yet_handled'` so the
+         audit chain stays intact.
+
+    Idempotent. Safe to call on every container start.
+    """
+    async with pool.connection() as conn:
+        async with conn.transaction():
+            # ---- 1. tenant_id_mapping ----
+            # No RLS — this is operator-configured infrastructure. The
+            # receiver looks up the mapping with a superuser-equivalent
+            # query (no `app.tenant_id` set yet at lookup time; that's
+            # exactly what we're resolving). Reads/writes here go through
+            # an unscoped connection helper, not `tenant_conn`.
+            await conn.execute("""
+                CREATE TABLE IF NOT EXISTS tenant_id_mapping (
+                    id                UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                    source_system     TEXT NOT NULL,          -- 'loom' for now
+                    source_tenant_id  UUID NOT NULL,
+                    engine_tenant_id  UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+                    created_at        TIMESTAMPTZ NOT NULL DEFAULT now(),
+                    UNIQUE (source_system, source_tenant_id)
+                )
+            """)
+            await conn.execute("""
+                CREATE INDEX IF NOT EXISTS tenant_id_mapping_engine_idx
+                    ON tenant_id_mapping (engine_tenant_id)
+            """)
+            # Self-host seed: the-loom's SELF_HOST_TENANT_ID -> our DEFAULT_TENANT_ID.
+            # ON CONFLICT keeps reruns idempotent.
+            await conn.execute(
+                """
+                INSERT INTO tenant_id_mapping
+                    (source_system, source_tenant_id, engine_tenant_id)
+                VALUES ('loom', %s::uuid, %s::uuid)
+                ON CONFLICT (source_system, source_tenant_id) DO NOTHING
+                """,
+                (LOOM_SELF_HOST_TENANT_ID, DEFAULT_TENANT_ID),
+            )
+
+            # ---- 2. bridge_idempotency ----
+            # promotion_id is the wire-contract idempotency key per the
+            # bridge spec. Stores the response we returned so retries on
+            # the same promotion_id get the same answer (per spec).
+            # No RLS — this is bridge infrastructure, the receiver checks
+            # it before tenant scoping is even resolved.
+            await conn.execute("""
+                CREATE TABLE IF NOT EXISTS bridge_idempotency (
+                    promotion_id    UUID PRIMARY KEY,
+                    response_json   JSONB NOT NULL,
+                    status_code     INTEGER NOT NULL,
+                    received_at     TIMESTAMPTZ NOT NULL DEFAULT now()
+                )
+            """)
+
+            # ---- 3. promoted_skills ----
+            # The candidate's landing place. body_md holds the SKILL.md
+            # source the-loom sent; the compiler reads it later (PR B).
+            # source_signature is the `pattern_signature` from the wire
+            # contract — used for semantic dedup so the same pattern
+            # collapses to one skill even across different promotion_ids.
+            await conn.execute("""
+                CREATE TABLE IF NOT EXISTS promoted_skills (
+                    id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                    promotion_id        UUID NOT NULL UNIQUE,
+                    engine_tenant_id    UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+                    source_system       TEXT NOT NULL,
+                    source_tenant_id    UUID NOT NULL,
+                    is_global           BOOLEAN NOT NULL DEFAULT FALSE,
+                    candidate_kind      TEXT NOT NULL,
+                    pattern_signature   TEXT NOT NULL,
+                    source_name         TEXT NOT NULL,
+                    source_description  TEXT NOT NULL,
+                    body_md             TEXT NOT NULL,
+                    capability_tags     JSONB NOT NULL DEFAULT '[]'::jsonb,
+                    triggers            JSONB NOT NULL DEFAULT '[]'::jsonb,
+                    callbacks           JSONB NOT NULL DEFAULT '{}'::jsonb,
+                    status              TEXT NOT NULL,         -- 'queued' | 'kind_not_yet_handled' | 'compiled' | 'rejected' | 'queued_human_review'
+                    skill_id            UUID,                  -- set when status='compiled' (PR B)
+                    rejection_reason    TEXT,
+                    created_at          TIMESTAMPTZ NOT NULL DEFAULT now(),
+                    updated_at          TIMESTAMPTZ NOT NULL DEFAULT now()
+                )
+            """)
+            await conn.execute("""
+                CREATE INDEX IF NOT EXISTS promoted_skills_tenant_idx
+                    ON promoted_skills (engine_tenant_id, created_at DESC)
+            """)
+            await conn.execute("""
+                CREATE INDEX IF NOT EXISTS promoted_skills_pattern_idx
+                    ON promoted_skills (engine_tenant_id, pattern_signature)
+            """)
+            await conn.execute("ALTER TABLE promoted_skills ENABLE ROW LEVEL SECURITY")
+            await conn.execute("ALTER TABLE promoted_skills FORCE ROW LEVEL SECURITY")
+            await conn.execute("DROP POLICY IF EXISTS promoted_skills_rls ON promoted_skills")
+            await conn.execute("""
+                CREATE POLICY promoted_skills_rls ON promoted_skills
+                    USING (engine_tenant_id = current_setting('app.tenant_id', true)::uuid)
+                    WITH CHECK (engine_tenant_id = current_setting('app.tenant_id', true)::uuid)
+            """)
+
+            log.info(
+                "postgres migration: tenant_id_mapping + bridge_idempotency + promoted_skills ready"
+            )
+
+
 async def run_all(pool: AsyncConnectionPool) -> None:
     """Entrypoint called from main.py lifespan. Postgres only — LanceDB
     memory subsystem was deprecated in Phase 4 of the MVP migration
@@ -391,3 +524,4 @@ async def run_all(pool: AsyncConnectionPool) -> None:
     await migrate_auth_tables(pool)
     await migrate_student_secrets(pool)
     await migrate_user_agents(pool)
+    await migrate_skill_making_bridge(pool)
