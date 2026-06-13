@@ -60,3 +60,42 @@ async def resolve_engine_tenant(
         if not row:
             raise UnknownSourceTenantError(source_system, source_tenant_id)
         return row[0]
+
+
+async def lookup_source_tenant(
+    pool: AsyncConnectionPool,
+    engine_tenant_id: str,
+    *,
+    source_system: str = "loom",
+) -> str | None:
+    """Reverse-lookup: given an engine-side tenant UUID, return the
+    source-side UUID for `source_system`.
+
+    Used by the telemetry collector: the runtime knows the engine-side
+    UUID (e.g. `00000000-...` for self-host), but the wire contract's
+    TelemetryEvent + RegistrationAck.skill.tenant_id both carry the
+    SOURCE-side UUID (the-loom's `1d8ec1b3-...` for self-host) so the
+    consumer can scope by their native tenancy.
+
+    Returns `None` if no mapping exists for this engine_tenant_id (e.g.
+    the runtime spun up with a tenant that was never registered for
+    bridge traffic). Caller should skip the telemetry event in that case
+    — better than poisoning the wire with a wrong UUID.
+
+    Same unscoped-query rationale as `resolve_engine_tenant`: the
+    `tenant_id_mapping` table has no RLS.
+    """
+    async with pool.connection() as conn:
+        cur = await conn.execute(
+            """
+            SELECT source_tenant_id::text
+            FROM tenant_id_mapping
+            WHERE engine_tenant_id = %s::uuid AND source_system = %s
+            LIMIT 1
+            """,
+            (engine_tenant_id, source_system),
+        )
+        row = await cur.fetchone()
+        if not row:
+            return None
+        return row[0]
