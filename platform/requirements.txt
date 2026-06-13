@@ -15,6 +15,12 @@ uvicorn[standard]>=0.30
 psycopg[binary]>=3.2
 psycopg_pool>=3.2
 
+# HTTP client — used by services/skill_making/ack_sender.py to POST
+# RegistrationAcks back to the-loom over the bridge wire contract.
+# Already pulled transitively by langchain, but pinning here so future
+# dependency updates don't accidentally drop it.
+httpx>=0.27
+
 # Error tracking — initialised at FastAPI startup, gated by SENTRY_DSN env var.
 # Self-host leaves SENTRY_DSN unset (no telemetry). Hosted-multitenant sets
 # the DSN in the Render dashboard.
