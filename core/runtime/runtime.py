@@ -247,7 +247,12 @@ class AgentRuntime:
 
     # ---- Internal: build a deepagents instance from saved config ----
 
-    def _build_agent_from_config(self, config: "AgentConfig") -> object:
+    def _build_agent_from_config(
+        self,
+        config: "AgentConfig",
+        *,
+        source_tenant_id: str | None = None,
+    ) -> object:
         """Materialize a per-student agent from its AgentConfig.
 
         Resolves the LLM provider with the student's decrypted key (or
@@ -255,6 +260,13 @@ class AgentRuntime:
         for this provider). Compiles each saved skill into a callable
         tool. Wires the persona as the agent's instructions/system
         prompt. Uses the shared checkpointer so threads persist.
+
+        Telemetry (PR-prep-1): when `source_tenant_id` is provided (the
+        loom-side UUID, resolved upstream by `_resolve_agent` via
+        `tenant_mapping.lookup_source_tenant`), each compiled skill
+        emits a TelemetryEvent to the in-process collector on invocation.
+        Passed as a kwarg to keep this method sync — the async lookup
+        happens in `_resolve_agent` before calling here.
         """
         from deepagents import create_deep_agent
 
@@ -281,8 +293,16 @@ class AgentRuntime:
 
         # Compile skills to tools. Each skill becomes a callable named
         # by skill.name; the LLM picks among them by their `description`.
+        # `source_tenant_id` + `model_name` are baked into each tool's
+        # closure so telemetry events carry the correct identifiers at
+        # invocation time without reading ambient context.
         tools = [
-            compile_skill_to_tool(skill, model)
+            compile_skill_to_tool(
+                skill,
+                model,
+                source_tenant_id=source_tenant_id,
+                model_name=model_name,
+            )
             for skill in config.skills
         ]
 
@@ -334,11 +354,40 @@ class AgentRuntime:
                 f"(deleted, wrong tenant, or never created)."
             )
 
-        agent = self._build_agent_from_config(config)
+        # Reverse-look-up the source-side tenant UUID for telemetry.
+        # The TelemetryEvent's tenant_id field carries the loom-side UUID
+        # (the consumer scopes by it), NOT the engine_tenant_id. Done
+        # here (async, once per cache miss) rather than per-invocation.
+        # If the tenant has no mapping row, source_tenant_id stays None
+        # and telemetry is silently skipped — see lookup_source_tenant's
+        # docstring for the rationale.
+        source_tenant_id: str | None = None
+        try:
+            from core.db.db import get_pool
+            from services.skill_making.tenant_mapping import lookup_source_tenant
+
+            source_tenant_id = await lookup_source_tenant(
+                get_pool(), ctx.tenant_id, source_system="loom"
+            )
+        except Exception:
+            # Resolution failures (DB blip, pool not initialised in tests)
+            # MUST NOT block agent invocation. Telemetry silently degrades.
+            log.debug(
+                "lookup_source_tenant failed for tenant=%s; telemetry "
+                "will be skipped for this agent build",
+                ctx.tenant_id,
+                exc_info=True,
+            )
+
+        agent = self._build_agent_from_config(
+            config, source_tenant_id=source_tenant_id
+        )
         self._built_agents[key] = agent
         log.info(
-            "built per-agent runtime: tenant=%s agent=%s provider=%s skills=%d",
+            "built per-agent runtime: tenant=%s agent=%s provider=%s "
+            "skills=%d telemetry=%s",
             ctx.tenant_id, agent_id, config.provider, len(config.skills),
+            "on" if source_tenant_id else "off",
         )
         return agent
 

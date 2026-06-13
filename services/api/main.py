@@ -70,6 +70,10 @@ from core.db.db import close_pool, get_pool, init_pool
 from core.runtime.runtime import AgentRuntime
 from services.skill_making.bridge_receiver import receive_promotion_candidate
 from services.skill_making.compile_worker import compile_and_ack
+from services.skill_making.telemetry_collector import (
+    start_collector,
+    stop_collector,
+)
 from core.auth.tenant_context import current_tenant
 from services.admin.roadmap.file import (
     VALID_STATUSES,
@@ -109,7 +113,15 @@ async def lifespan(app: FastAPI):
     # Application connection pool for tenant-scoped queries (separate from
     # the LangGraph checkpointer's pool — see api/db.py docstring).
     await init_pool()
+    # In-process telemetry collector for compiled-skill invocations
+    # (PR-prep-1). Drains skill_making.telemetry_collector's queue into
+    # batches POSTed to loom-telemetry-ingestion. Lifecycle is bound to
+    # the FastAPI worker — collector starts AFTER db init (so the
+    # runtime's lookup_source_tenant can read tenant_id_mapping) and
+    # stops BEFORE close_pool so in-flight batches still have a pool.
+    await start_collector()
     yield
+    await stop_collector()
     await close_pool()
 
 

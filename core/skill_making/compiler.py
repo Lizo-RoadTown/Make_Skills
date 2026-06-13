@@ -53,6 +53,9 @@ class _SkillInput(BaseModel):
 def compile_skill_to_tool(
     skill: "StudentSkill",
     model: "BaseChatModel",
+    *,
+    source_tenant_id: str | None = None,
+    model_name: str | None = None,
 ) -> StructuredTool:
     """Turn a StudentSkill row into a langchain StructuredTool.
 
@@ -60,10 +63,25 @@ def compile_skill_to_tool(
     runs a sub-call to the *same* model with the skill body prepended
     to the user's task. The skill body is treated as authoritative
     guidance for the sub-call.
+
+    Telemetry (PR-prep-1): when `source_tenant_id` is provided (i.e. the
+    caller resolved the loom-side UUID via
+    `tenant_mapping.lookup_source_tenant`), each invocation enqueues a
+    `TelemetryEvent` to the in-process collector. Failures in the
+    telemetry path are swallowed — telemetry MUST NOT block the agent's
+    response. When `source_tenant_id` is None, no telemetry is emitted
+    (e.g. tenants without a mapping row, or when the collector isn't
+    running).
     """
     skill_name = skill.name
     skill_description = skill.description
     skill_body = skill.body_md
+    skill_id = skill.id  # captured for the telemetry event
+
+    # Lazy import to avoid circular deps + to keep telemetry costs out
+    # of the hot path when not configured.
+    from time import perf_counter
+    from uuid import uuid4
 
     async def _run(task: str) -> str:
         """Apply this skill to a task and return the result."""
@@ -74,13 +92,46 @@ def compile_skill_to_tool(
             f"---\n\n## Skill body\n\n{skill_body}\n\n---\n\n"
             f"## Task\n\n{task.strip()}"
         )
+        start = perf_counter()
+        outcome = "success"
+        tokens_in = 0
+        tokens_out = 0
+        result = None
         try:
             result = await model.ainvoke(
                 [{"role": "user", "content": prompt}]
             )
         except Exception as e:
+            outcome = "error"
             log.exception("skill %s sub-call failed", skill_name)
+            _emit_telemetry(
+                start=start,
+                outcome=outcome,
+                tokens_in=0,
+                tokens_out=0,
+                skill_id=skill_id,
+                source_tenant_id=source_tenant_id,
+                model_name=model_name,
+            )
             return f"[skill {skill_name!r} failed: {e}]"
+
+        # Extract token counts from langchain's usage_metadata when
+        # available — providers expose this differently; we try the
+        # standardized langchain_core path first.
+        usage = getattr(result, "usage_metadata", None) or {}
+        tokens_in = int(usage.get("input_tokens", 0) or 0)
+        tokens_out = int(usage.get("output_tokens", 0) or 0)
+
+        _emit_telemetry(
+            start=start,
+            outcome=outcome,
+            tokens_in=tokens_in,
+            tokens_out=tokens_out,
+            skill_id=skill_id,
+            source_tenant_id=source_tenant_id,
+            model_name=model_name,
+        )
+
         # `content` may be a string or a list of content blocks. Extract text.
         content = getattr(result, "content", None)
         if isinstance(content, str):
@@ -105,6 +156,49 @@ def compile_skill_to_tool(
         description=skill_description,
         args_schema=_SkillInput,
     )
+
+
+def _emit_telemetry(
+    *,
+    start: float,
+    outcome: str,
+    tokens_in: int,
+    tokens_out: int,
+    skill_id: UUID,
+    source_tenant_id: str | None,
+    model_name: str | None,
+) -> None:
+    """Best-effort telemetry emission. Failures are logged + swallowed.
+
+    Skips when `source_tenant_id` is None (the runtime couldn't reverse-
+    look-up the loom-side UUID — see tenant_mapping.lookup_source_tenant).
+    Better to skip than to emit an event with a wrong-or-missing
+    tenant_id that the loom-side would reject.
+    """
+    if source_tenant_id is None:
+        return
+    try:
+        from time import perf_counter
+
+        from services.skill_making.telemetry_collector import record_event
+        from services.skill_making.telemetry_sender import build_event
+
+        latency_ms = int((perf_counter() - start) * 1000)
+        event = build_event(
+            skill_id=skill_id,
+            thread_id="",  # filled by runtime when wired (deepagents thread_id
+            # isn't trivially available here; the v0 collector accepts empty)
+            tenant_id=UUID(source_tenant_id),
+            outcome=outcome,
+            latency_ms=latency_ms,
+            tokens_in=tokens_in,
+            tokens_out=tokens_out,
+            model=model_name or "unknown",
+            trigger_context="skill_tool_invocation",
+        )
+        record_event(event)
+    except Exception:
+        log.debug("telemetry emission failed; ignoring", exc_info=True)
 
 
 # ---------------------------------------------------------------------------
