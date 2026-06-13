@@ -72,3 +72,30 @@ async def record(
                 """,
                 (str(promotion_id), status_code, json.dumps(response_json)),
             )
+
+
+async def update_response(
+    pool: AsyncConnectionPool,
+    promotion_id: UUID,
+    response_json: dict[str, Any],
+) -> None:
+    """Overwrite the stored response body for an existing idempotency row.
+
+    Used by compile_worker after compile completes: the original 202 body
+    was `{promotion_id, status: "queued"}`. Once compiled, the row is
+    rewritten to include `existing_skill_id` so the 409 replay path
+    surfaces the spec-required field to the-loom (per wire-contract
+    section 1 + `loom_agent_to_ms_agent_coordinated_alignment_plan_2026_06_13`).
+    Status code stays at the original (202); the receiver bumps to 409
+    on duplicate-after-accepted at replay time.
+    """
+    async with pool.connection() as conn:
+        async with conn.transaction():
+            await conn.execute(
+                """
+                UPDATE bridge_idempotency
+                SET response_json = %s::jsonb
+                WHERE promotion_id = %s::uuid
+                """,
+                (json.dumps(response_json), str(promotion_id)),
+            )

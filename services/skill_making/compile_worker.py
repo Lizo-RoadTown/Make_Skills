@@ -35,6 +35,7 @@ from core.skill_making.compiler import (
     compile_from_bridge_candidate,
 )
 from services.skill_making.ack_sender import AckSendError, send_registration_ack
+from services.skill_making.idempotency import update_response
 from services.skill_making.models import (
     AckDiagnostics,
     AckLoomMetadata,
@@ -148,6 +149,22 @@ async def compile_and_ack(
             promotion_id, engine_tenant_id,
         )
         return  # No ack — engine state is unchanged; loom will retry or pull.
+
+    # Update the idempotency row so 409 replays surface existing_skill_id
+    # per wire-contract section 1. The original 202 body was
+    # `{promotion_id, status: "queued"}`; replace with the compiled-state
+    # body so duplicate POSTs of the same promotion_id get back the
+    # skill_id (the spec-required field for the-loom's reconciliation).
+    if compiled.outcome == "compiled" and compiled.skill_id is not None:
+        await update_response(
+            pool,
+            promotion_id,
+            {
+                "promotion_id": str(promotion_id),
+                "status": "compiled",
+                "existing_skill_id": str(compiled.skill_id),
+            },
+        )
 
     ctx = await _load_ack_context(pool, promotion_id, engine_tenant_id)
     if ctx is None:

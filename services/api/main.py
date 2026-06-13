@@ -151,6 +151,19 @@ def healthz():
     return {"status": "ok"}
 
 
+@app.get("/access/webhook/skill-promotion/versions")
+def bridge_supported_versions():
+    """Schema-version discovery for the skill-making bridge.
+
+    Per the wire contract's schema-versioning section: both sides declare
+    which `schema_version` values they support so peers can negotiate
+    forward compatibility. v1.0 is the current canonical wire contract
+    as defined by `services/skill_making/models.py` (per
+    `loom_agent_to_ms_agent_coordinated_alignment_plan_2026_06_13`).
+    """
+    return {"supported_versions": ["1.0"], "canonical": "1.0"}
+
+
 @app.post("/bridge/promotion-candidate")
 async def bridge_promotion_candidate(
     request: Request,

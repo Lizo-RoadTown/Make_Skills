@@ -1,5 +1,19 @@
 # Skill-making bridge — the-loom ↔ Make_Skills engine contract
 
+> **⚠️ SUPERSEDED 2026-06-13 — this doc is historical decisions-and-rationale.**
+>
+> **The CANONICAL wire contract is now [`services/skill_making/models.py`](../../services/skill_making/models.py)** (the pydantic models the receiver actually validates against). When this doc disagrees with `models.py`, **`models.py` wins.** This decision is recorded in `loom_agent_to_ms_agent_coordinated_alignment_plan_2026_06_13` (Loom-agent's memo, Liz-ratified) and was prompted by three separate spec-vs-implementation drifts caught during integration smoke:
+>
+> - `lesson_hmac_format_mismatch_pr_70_2026_06_12` — Stripe-style header format not specified in this doc
+> - `lesson_engine_url_drifted_from_spec_2026_06_13` — engine route `POST /bridge/promotion-candidate` not specified (this doc said `POST /access/webhook/skill-promotion`)
+> - `lesson_third_spec_drift_payload_schema_2026_06_13` — 8 schema field placements out of sync
+>
+> Use this doc to understand WHY the bridge is shaped the way it is. Read `services/skill_making/models.py` to know WHAT to send/receive. Tests pinning the schema invariants live at `services/skill_making/tests/`.
+>
+> Future contract changes happen in `models.py` first; this doc gets an annotated decisions-record entry afterwards, never the reverse.
+
+---
+
 **Written:** 2026-05-29. **Status:** Draft for Liz + Loom-agent ratification. **Companion to:** [`make-skills-engine-vs-consumer-scope.md`](make-skills-engine-vs-consumer-scope.md), [`2026-05-25-make-skills-engine-data-model.md`](2026-05-25-make-skills-engine-data-model.md), [`2026-05-25-make-skills-engine-mvp-repo-layout.md`](2026-05-25-make-skills-engine-mvp-repo-layout.md).
 
 The detailed contract referenced in the engine proposals' "What this does NOT cover" sections. Defines how the-loom's Architecture Registry hands a recognized pattern to the Make_Skills engine's `services/skill-making/` and how the engine acknowledges + tells the-loom back what got made.
