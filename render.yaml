@@ -47,6 +47,22 @@ services:
         sync: false
       - key: OLLAMA_AUTH_HEADER
         sync: false
+      # Skill-making bridge — shared HMAC secret with the-loom. Value lives
+      # in the Render dashboard (sync: false); the same value must be set
+      # on the-loom's services (loom-architecture-registry and
+      # loom-telemetry-ingestion). See
+      # decision_tenant_id_mapping_option_b_2026_06_12 +
+      # loom_agent_bridge_complete_status_and_secret_2026_06_12_evening
+      # for context. The receiver verifies inbound POSTs via
+      # services/skill_making/hmac_verify.py and ack_sender uses the same
+      # secret to sign outbound acks.
+      - key: LOOM_SKILL_BRIDGE_SECRET
+        sync: false
+      # Optional override for the engine -> loom registration ack callback.
+      # Defaults to loom-architecture-registry.onrender.com/skill-registered
+      # when unset. Useful for staging or smoke-testing against a mock endpoint.
+      - key: LOOM_REGISTRATION_ACK_URL
+        sync: false
       # Auto-wired from the managed Postgres below.
       - key: DATABASE_URL
         fromDatabase:
