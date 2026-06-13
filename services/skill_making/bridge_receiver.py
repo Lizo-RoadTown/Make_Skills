@@ -50,14 +50,31 @@ from services.skill_making.tenant_mapping import (
 
 
 class ReceiverResult:
-    """The receiver's outcome as a (status_code, body) pair. The FastAPI
-    route translates this to an HTTP response."""
+    """The receiver's outcome as a (status_code, body) tuple, plus an
+    optional `compile_request`. The FastAPI route translates the
+    status_code + body into an HTTP response and, if `compile_request`
+    is set, schedules a background task to compile + ack the candidate.
 
-    __slots__ = ("status_code", "body")
+    Keeping `compile_request` here (rather than having the receiver
+    schedule the task itself) keeps the receiver transport-agnostic —
+    the verify script can call the receiver and either ignore the
+    compile request or invoke the compile_worker directly.
+    """
 
-    def __init__(self, status_code: int, body: dict[str, Any]):
+    __slots__ = ("status_code", "body", "compile_request")
+
+    def __init__(
+        self,
+        status_code: int,
+        body: dict[str, Any],
+        compile_request: tuple[Any, str] | None = None,
+    ):
         self.status_code = status_code
         self.body = body
+        # (promotion_id: UUID, engine_tenant_id: str) — when set, the
+        # route handler schedules compile_worker.compile_and_ack as a
+        # FastAPI BackgroundTask after sending the 202 response.
+        self.compile_request = compile_request
 
 
 async def _persist_candidate(
@@ -200,6 +217,7 @@ async def receive_promotion_candidate(
         return ReceiverResult(400, body)
 
     # 5. Kind dispatch.
+    compile_request: tuple[Any, str] | None = None
     if payload.candidate_kind == CandidateKind.SKILL:
         await _persist_candidate(pool, payload, engine_tenant_id, "queued")
         response_body = ReceiverResponse(
@@ -207,6 +225,10 @@ async def receive_promotion_candidate(
             status="queued",
         ).model_dump(mode="json")
         status_code = 202
+        # Schedule the compile + ack via the route handler's BackgroundTasks.
+        # The receiver stays transport-agnostic; the route does the actual
+        # task injection.
+        compile_request = (payload.promotion_id, engine_tenant_id)
     else:
         # ack-defer per the 9-kind taxonomy; v1.0 only compiles skill.
         await _persist_candidate(
@@ -227,4 +249,4 @@ async def receive_promotion_candidate(
     # 6. Record the response for idempotent retries.
     await record(pool, payload.promotion_id, status_code, response_body)
 
-    return ReceiverResult(status_code, response_body)
+    return ReceiverResult(status_code, response_body, compile_request=compile_request)
