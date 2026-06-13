@@ -11,13 +11,23 @@ runtime can invoke. Per docs/proposals/pillar-1b-agent-runtime.md Decision 2:
 This matches how the existing /skills/run endpoint composes prompts.
 The difference: there, the dashboard explicitly picks a skill; here,
 the agent's LLM picks among compiled tools by their descriptions.
+
+This module also hosts the bridge-side compile entry point
+`compile_from_bridge_candidate` (Phase 4 — PR B). That path is
+model-agnostic: it persists the candidate's SKILL.md source into the
+student_skills catalog with collision-resolved naming. Actual tool
+compilation (`compile_skill_to_tool` above) runs LATER at agent build
+time, against whichever model the agent runtime is configured for.
 """
 from __future__ import annotations
 
 import logging
+from dataclasses import dataclass
 from typing import TYPE_CHECKING
+from uuid import UUID
 
 from langchain_core.tools import StructuredTool
+from psycopg_pool import AsyncConnectionPool
 from pydantic import BaseModel, Field
 
 if TYPE_CHECKING:
@@ -94,4 +104,250 @@ def compile_skill_to_tool(
         name=sanitized_name,
         description=skill_description,
         args_schema=_SkillInput,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Phase 4 bridge-side compile entry point (PR B)
+# ---------------------------------------------------------------------------
+
+# Cap on name-collision suffix bumping. If a tenant somehow already has
+# this many `-promoted-N` skills with the same base name, something is
+# very wrong upstream — we'd rather reject than spin forever.
+MAX_COLLISION_SUFFIX_ATTEMPTS = 100
+
+
+@dataclass(frozen=True)
+class CompiledSkillResult:
+    """Outcome of `compile_from_bridge_candidate`. Mirrors the wire
+    contract's `RegistrationAck.outcome` semantics."""
+
+    outcome: str  # "compiled" | "rejected" | "queued_human_review"
+    skill_id: UUID | None
+    name: str | None
+    version: str | None
+    reason: str | None
+    capability_tags: list[str]
+
+
+async def _resolve_name_collision(
+    pool: AsyncConnectionPool,
+    engine_tenant_id: str,
+    suggested_name: str,
+) -> tuple[str, str | None]:
+    """Pick a final name for a bridge-sourced skill.
+
+    Returns (final_name, reason_if_renamed). Reason is None if no rename
+    happened.
+
+    Strategy per the Phase 4 sketch:
+      - If `suggested_name` doesn't collide in student_skills (for this
+        tenant), use it as-is.
+      - If it collides, append `-promoted-N` and bump N until unique.
+      - If we exceed MAX_COLLISION_SUFFIX_ATTEMPTS, return outcome=rejected
+        upstream (raises ValueError here; the caller catches).
+
+    Same-content-collision detection (rejecting an exact-content duplicate)
+    is NOT done here — `pattern_signature` idempotency in the receiver
+    handles that case before we ever reach the compiler. If we're called,
+    the upstream determined this is a NEW promotion of a DIFFERENT pattern.
+    """
+    async with pool.connection() as conn:
+        async with conn.transaction():
+            await conn.execute(
+                "SELECT set_config('app.tenant_id', %s, true)",
+                (engine_tenant_id,),
+            )
+            cur = await conn.execute(
+                """
+                SELECT name FROM student_skills
+                WHERE tenant_id = %s::uuid AND name LIKE %s
+                """,
+                (engine_tenant_id, f"{suggested_name}%"),
+            )
+            existing = {row[0] for row in await cur.fetchall()}
+
+    if suggested_name not in existing:
+        return suggested_name, None
+
+    for n in range(1, MAX_COLLISION_SUFFIX_ATTEMPTS + 1):
+        candidate = f"{suggested_name}-promoted-{n}"
+        if candidate not in existing:
+            return candidate, (
+                f"renamed from {suggested_name!r} to {candidate!r} "
+                "due to name collision in the student_skills catalog"
+            )
+
+    raise ValueError(
+        f"could not resolve name collision after "
+        f"{MAX_COLLISION_SUFFIX_ATTEMPTS} attempts for base "
+        f"name={suggested_name!r}"
+    )
+
+
+async def compile_from_bridge_candidate(
+    pool: AsyncConnectionPool,
+    promotion_id: UUID,
+    engine_tenant_id: str,
+) -> CompiledSkillResult:
+    """Compile a bridge-delivered candidate.
+
+    Model-agnostic — no LLM call at promote time. Loads the candidate
+    row from `promoted_skills` (RLS-scoped by `engine_tenant_id`),
+    resolves naming collisions against the tenant's existing
+    `student_skills`, INSERTs the skill, and updates the
+    `promoted_skills` row's status + skill_id.
+
+    Tool compilation (`compile_skill_to_tool` above) runs LATER at
+    agent build time against whichever model the runtime is configured
+    for. This function only persists the source + metadata.
+
+    Args:
+        pool: shared application pool. RLS scoping is via per-transaction
+            `set_config('app.tenant_id', engine_tenant_id, true)`.
+        promotion_id: the wire-contract idempotency key. Identifies the
+            promoted_skills row to compile.
+        engine_tenant_id: the engine-side tenant UUID (already resolved
+            from the loom-side UUID via tenant_id_mapping in the receiver).
+
+    Returns:
+        CompiledSkillResult capturing the outcome. The caller
+        (compile_worker) is responsible for converting this into a
+        RegistrationAck and sending it via ack_sender.
+    """
+    # 1. Load the queued candidate row.
+    async with pool.connection() as conn:
+        async with conn.transaction():
+            await conn.execute(
+                "SELECT set_config('app.tenant_id', %s, true)",
+                (engine_tenant_id,),
+            )
+            cur = await conn.execute(
+                """
+                SELECT source_name, source_description, body_md,
+                       capability_tags, pattern_signature, status,
+                       skill_id
+                FROM promoted_skills
+                WHERE promotion_id = %s::uuid
+                """,
+                (str(promotion_id),),
+            )
+            row = await cur.fetchone()
+
+    if not row:
+        log.error("compile_from_bridge_candidate: no promoted_skills row for promotion_id=%s", promotion_id)
+        return CompiledSkillResult(
+            outcome="rejected",
+            skill_id=None,
+            name=None,
+            version=None,
+            reason="no promoted_skills row found for this promotion_id",
+            capability_tags=[],
+        )
+
+    (suggested_name, description, body_md, capability_tags,
+     pattern_signature, current_status, existing_skill_id) = row
+
+    # 2. Idempotency on COMPILE itself — if the row is already compiled,
+    # return the existing result. The receiver's idempotency catches
+    # most cases; this handles the race where the receiver returned 202
+    # twice (shouldn't happen given the DB unique constraint, but defend).
+    if current_status == "compiled" and existing_skill_id:
+        log.info(
+            "compile_from_bridge_candidate: promotion_id=%s already compiled, returning existing skill_id=%s",
+            promotion_id, existing_skill_id,
+        )
+        return CompiledSkillResult(
+            outcome="compiled",
+            skill_id=existing_skill_id,
+            name=suggested_name,
+            version="0.1.0",
+            reason=None,
+            capability_tags=capability_tags or [],
+        )
+
+    if current_status != "queued":
+        log.error(
+            "compile_from_bridge_candidate: promotion_id=%s in unexpected status=%s",
+            promotion_id, current_status,
+        )
+        return CompiledSkillResult(
+            outcome="rejected",
+            skill_id=None,
+            name=None,
+            version=None,
+            reason=f"candidate row in unexpected status {current_status!r}",
+            capability_tags=[],
+        )
+
+    # 3. Resolve name collision.
+    try:
+        final_name, rename_reason = await _resolve_name_collision(
+            pool, engine_tenant_id, suggested_name
+        )
+    except ValueError as e:
+        return CompiledSkillResult(
+            outcome="rejected",
+            skill_id=None,
+            name=None,
+            version=None,
+            reason=str(e),
+            capability_tags=capability_tags or [],
+        )
+
+    # 4. INSERT into student_skills + UPDATE promoted_skills.
+    async with pool.connection() as conn:
+        async with conn.transaction():
+            await conn.execute(
+                "SELECT set_config('app.tenant_id', %s, true)",
+                (engine_tenant_id,),
+            )
+            cur = await conn.execute(
+                """
+                INSERT INTO student_skills (
+                    tenant_id, agent_id, name, description, body_md, version
+                ) VALUES (
+                    %s::uuid, NULL, %s, %s, %s, 1
+                )
+                RETURNING id
+                """,
+                (engine_tenant_id, final_name, description, body_md),
+            )
+            new_row = await cur.fetchone()
+            if not new_row:
+                # Defensive — INSERT ... RETURNING should always return.
+                log.error(
+                    "compile_from_bridge_candidate: INSERT returned no id "
+                    "for promotion_id=%s", promotion_id,
+                )
+                return CompiledSkillResult(
+                    outcome="rejected",
+                    skill_id=None,
+                    name=None,
+                    version=None,
+                    reason="student_skills INSERT returned no id (DB anomaly)",
+                    capability_tags=capability_tags or [],
+                )
+            new_skill_id = new_row[0]
+
+            await conn.execute(
+                """
+                UPDATE promoted_skills
+                SET status = 'compiled', skill_id = %s::uuid, updated_at = now()
+                WHERE promotion_id = %s::uuid
+                """,
+                (str(new_skill_id), str(promotion_id)),
+            )
+
+    log.info(
+        "compile_from_bridge_candidate: promotion_id=%s -> skill_id=%s name=%r tenant=%s",
+        promotion_id, new_skill_id, final_name, engine_tenant_id,
+    )
+    return CompiledSkillResult(
+        outcome="compiled",
+        skill_id=new_skill_id,
+        name=final_name,
+        version="0.1.0",
+        reason=rename_reason,
+        capability_tags=capability_tags or [],
     )

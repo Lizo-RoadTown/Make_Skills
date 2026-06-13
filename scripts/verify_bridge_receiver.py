@@ -40,6 +40,7 @@ from core.db.migrations import (  # noqa: E402
 from services.skill_making.bridge_receiver import (  # noqa: E402
     receive_promotion_candidate,
 )
+from services.skill_making.compile_worker import compile_and_ack  # noqa: E402
 from services.skill_making.hmac_verify import sign_payload  # noqa: E402
 
 
@@ -104,10 +105,16 @@ async def _count_in_promoted_skills(promotion_id: uuid.UUID) -> tuple[int, str |
             return 1, row[0]
 
 
-async def _cleanup(promotion_ids: list[uuid.UUID]) -> None:
+async def _cleanup(promotion_ids: list[uuid.UUID], skill_ids: list[uuid.UUID] | None = None) -> None:
     """Remove fixture rows so re-runs are clean."""
     async with get_pool().connection() as conn:
         async with conn.transaction():
+            # Have to set tenant scope to clear student_skills rows the
+            # compile produced (RLS gates DELETE too).
+            await conn.execute(
+                "SELECT set_config('app.tenant_id', %s, true)",
+                (DEFAULT_TENANT_ID,),
+            )
             for pid in promotion_ids:
                 await conn.execute(
                     "DELETE FROM bridge_idempotency WHERE promotion_id = %s::uuid",
@@ -117,6 +124,45 @@ async def _cleanup(promotion_ids: list[uuid.UUID]) -> None:
                     "DELETE FROM promoted_skills WHERE promotion_id = %s::uuid",
                     (str(pid),),
                 )
+            for sid in skill_ids or []:
+                await conn.execute(
+                    "DELETE FROM student_skills WHERE id = %s::uuid",
+                    (str(sid),),
+                )
+
+
+async def _load_student_skill(skill_id: uuid.UUID) -> tuple[str, str] | None:
+    """Return (name, description) of a student_skills row, or None.
+
+    RLS-scoped read — sets app.tenant_id to DEFAULT_TENANT_ID first."""
+    async with get_pool().connection() as conn:
+        async with conn.transaction():
+            await conn.execute(
+                "SELECT set_config('app.tenant_id', %s, true)",
+                (DEFAULT_TENANT_ID,),
+            )
+            cur = await conn.execute(
+                "SELECT name, description FROM student_skills WHERE id = %s::uuid",
+                (str(skill_id),),
+            )
+            row = await cur.fetchone()
+            return (row[0], row[1]) if row else None
+
+
+async def _read_compiled_skill_id(promotion_id: uuid.UUID) -> uuid.UUID | None:
+    """Return promoted_skills.skill_id for a given promotion_id, or None."""
+    async with get_pool().connection() as conn:
+        async with conn.transaction():
+            await conn.execute(
+                "SELECT set_config('app.tenant_id', %s, true)",
+                (DEFAULT_TENANT_ID,),
+            )
+            cur = await conn.execute(
+                "SELECT skill_id FROM promoted_skills WHERE promotion_id = %s::uuid",
+                (str(promotion_id),),
+            )
+            row = await cur.fetchone()
+            return uuid.UUID(str(row[0])) if row and row[0] else None
 
 
 def _assert(condition: bool, label: str) -> None:
@@ -135,6 +181,7 @@ async def main() -> None:
     await run_all(pool)
     pool_obj = get_pool()
     pids_to_clean: list[uuid.UUID] = []
+    skill_ids_to_clean: list[uuid.UUID] = []
 
     try:
         # ---- 1. HMAC mismatch ----
@@ -233,9 +280,56 @@ async def main() -> None:
             f"code == unknown_source_tenant (got {result.body['code']!r})",
         )
 
-        print("\n=== All 6 scenarios passed ===")
+        # ---- 7. Compile path: queued -> compiled (PR B) ----
+        # Calls compile_and_ack directly (skipping the BackgroundTasks
+        # wiring); the unscoped path through the receiver already
+        # exercised the route-side scheduling logic.
+        # The ack POST will fail (no mock endpoint here) but
+        # compile_and_ack swallows AckSendError per its contract —
+        # state stays at status='compiled'. We assert the state.
+        print("\n[7] Compile path: queued -> compiled + student_skills row written")
+        pid_compile = uuid.uuid4()
+        pids_to_clean.append(pid_compile)
+        payload = _make_payload(
+            promotion_id=pid_compile,
+            candidate_kind="skill",
+            pattern_signature="compile-sig-1",
+            name="bridge-compiled-test-skill",
+        )
+        body = json.dumps(payload).encode("utf-8")
+        result = await receive_promotion_candidate(
+            raw_body=body, signature=_sign(body), pool=pool_obj
+        )
+        _assert(result.status_code == 202, f"receiver 202 (got {result.status_code})")
+        _assert(
+            result.compile_request is not None,
+            "compile_request set on ReceiverResult for kind=skill",
+        )
+        # Drive the background task synchronously here. In production
+        # FastAPI BackgroundTasks runs it after the response goes out.
+        promo_id, engine_tid = result.compile_request
+        await compile_and_ack(pool_obj, promo_id, engine_tid)
+
+        # After compile: status should be 'compiled', skill_id should be set
+        count, status = await _count_in_promoted_skills(pid_compile)
+        _assert(count == 1, "promoted_skills row exists")
+        _assert(status == "compiled", f"DB status == compiled (got {status!r})")
+        compiled_skill_id = await _read_compiled_skill_id(pid_compile)
+        _assert(compiled_skill_id is not None, "promoted_skills.skill_id is set")
+        if compiled_skill_id:
+            skill_ids_to_clean.append(compiled_skill_id)
+            row = await _load_student_skill(compiled_skill_id)
+            _assert(row is not None, "student_skills row exists")
+            if row:
+                name, _ = row
+                _assert(
+                    name == "bridge-compiled-test-skill",
+                    f"student_skills.name == bridge-compiled-test-skill (got {name!r})",
+                )
+
+        print("\n=== All 7 scenarios passed ===")
     finally:
-        await _cleanup(pids_to_clean)
+        await _cleanup(pids_to_clean, skill_ids_to_clean)
         await close_pool()
 
 

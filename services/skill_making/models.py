@@ -156,3 +156,64 @@ class BridgeError(BaseModel):
     code: BridgeErrorCode
     message: str
     details: dict[str, Any] | None = None
+
+
+class CompileOutcome(str, Enum):
+    COMPILED = "compiled"
+    REJECTED = "rejected"
+    QUEUED_HUMAN_REVIEW = "queued_human_review"
+
+
+class AckSkill(BaseModel):
+    """The compiled-skill block inside a registration ack. Present when
+    outcome == 'compiled'. Per the wire contract section 2."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    skill_id: UUID
+    name: str
+    version: str
+    source_origin: str = "promoted"
+    capability_tags: list[str] = Field(default_factory=list)
+    tenant_id: UUID
+    compiled_at: str  # ISO 8601
+
+
+class AckDiagnostics(BaseModel):
+    """Diagnostics block when outcome != 'compiled'."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    errors: list[dict[str, str]] = Field(default_factory=list)
+    warnings: list[dict[str, str]] = Field(default_factory=list)
+
+
+class AckLoomMetadata(BaseModel):
+    """The-loom's audit metadata echoed back per the wire contract."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    pattern_signature: str
+    promotion_id: UUID
+
+
+class RegistrationAck(BaseModel):
+    """The engine -> loom callback body after compile completes (or fails).
+
+    POSTed to `LOOM_REGISTRATION_ACK_URL` (defaults to
+    https://loom-architecture-registry.onrender.com/skill-registered).
+    Signed with `X-MakeSkills-Signature` header in the same Stripe-style
+    format the inbound POSTs use.
+
+    Per wire contract section 2.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    schema_version: str = "1.0"
+    promotion_id: UUID
+    registered_at: str  # ISO 8601
+    outcome: CompileOutcome
+    skill: AckSkill | None = None
+    compilation_diagnostics: AckDiagnostics | None = None
+    the_loom_metadata: AckLoomMetadata

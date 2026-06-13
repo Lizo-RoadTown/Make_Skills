@@ -69,6 +69,7 @@ from core.auth.auth import TenantContext, get_current_tenant
 from core.db.db import close_pool, get_pool, init_pool
 from core.runtime.runtime import AgentRuntime
 from services.skill_making.bridge_receiver import receive_promotion_candidate
+from services.skill_making.compile_worker import compile_and_ack
 from core.auth.tenant_context import current_tenant
 from services.admin.roadmap.file import (
     VALID_STATUSES,
@@ -153,6 +154,7 @@ def healthz():
 @app.post("/bridge/promotion-candidate")
 async def bridge_promotion_candidate(
     request: Request,
+    background_tasks: BackgroundTasks,
     x_loom_signature: str | None = Header(default=None, alias="X-Loom-Signature"),
 ):
     """Bridge receiver entry point. The-loom POSTs promotion candidates
@@ -175,13 +177,28 @@ async def bridge_promotion_candidate(
 
     No FastAPI dependency on `get_current_tenant`: the bridge does
     NOT speak the consumer JWT contract; it speaks HMAC.
+
+    For `kind=skill` candidates, the receiver returns a `compile_request`
+    in the ReceiverResult. This route then schedules
+    `compile_worker.compile_and_ack` as a BackgroundTask — it runs AFTER
+    the 202 response is sent, so the loom side gets a fast ack and the
+    compile + registration-ack chain runs out-of-band. The engine_tenant_id
+    is passed explicitly into the task (NOT via the current_tenant
+    ContextVar) per the recorder convention documented at
+    `core/auth/tenant_context.py:18`.
     """
     raw_body = await request.body()
+    pool = get_pool()
     result = await receive_promotion_candidate(
         raw_body=raw_body,
         signature=x_loom_signature or "",
-        pool=get_pool(),
+        pool=pool,
     )
+    if result.compile_request is not None:
+        promotion_id, engine_tenant_id = result.compile_request
+        background_tasks.add_task(
+            compile_and_ack, pool, promotion_id, engine_tenant_id
+        )
     return JSONResponse(status_code=result.status_code, content=result.body)
 
 
