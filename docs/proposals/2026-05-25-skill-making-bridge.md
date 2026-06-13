@@ -40,17 +40,33 @@ The detailed contract referenced in the engine proposals' "What this does NOT co
   "schema_version": "1.0",                   // contract version
   "promoted_at": "2026-05-29T12:00:00Z",     // when the-loom decided this was stable
   "pattern_signature": "sha256:...",         // dedup key — same signature, same pattern
-  "tenant_id": "uuid | null",                // null = global skill candidate
+  // tenant_id is the SOURCE-side UUID (the-loom's tenant_id). The engine
+  // looks it up in its tenant_id_mapping table to resolve the engine-side
+  // UUID before any tenant-scoped write. See open question #5 below
+  // (resolved 2026-06-12) and `decision_tenant_id_mapping_option_b_2026_06_12`
+  // in loom-memory. Non-nullable — catalog-scope (whether the skill is
+  // visible cross-tenant) is the separate `is_global` boolean below.
+  "tenant_id": "uuid",                       // source-side tenant UUID (non-nullable)
+  "is_global": false,                        // true => catalog-visible cross-tenant
+  // The 9-kind taxonomy added in the-loom's PR #12 + Phase 4 sketch (2026-06-12):
+  //   skill | inline_tool | external_tool | architecture_pattern | service |
+  //   machine_support | process | agent | orchestration
+  // v1.0 receiver fully handles `skill`; other 8 ack-defer (record + 202 +
+  // outcome="ack_deferred", no compile) to keep the audit chain intact.
+  "candidate_kind": "skill",
   "source": {
     "format": "markdown",                    // for now, always markdown
     "content": "...",                        // the skill source body
     "frontmatter": {
       "name": "suggested-skill-name",        // kebab-case, may be rejected/renamed
-      "description": "...",                  // one-line summary for catalog
-      "capability_tags": ["search", "..."],  // skill catalog filters
-      "triggers": ["when X happens", "..."]  // when the agent should reach for it
+      "description": "..."                   // one-line summary for catalog
+      // capability_tags and triggers are NOT required in the frontmatter;
+      // the-loom's promote_dispatcher derives them from observer signals
+      // and injects them into the top-level fields below.
     }
   },
+  "capability_tags": ["search", "..."],      // derived by the-loom's promote_dispatcher
+  "triggers": ["when X happens", "..."],     // derived by the-loom's promote_dispatcher
   "evidence": {
     "occurrence_count": 12,                  // how many times the-loom saw the pattern
     "stability_window_days": 7,              // observed stable across N days
@@ -100,7 +116,12 @@ The detailed contract referenced in the engine proposals' "What this does NOT co
     "skill_source_location": "skills/...",   // engine-internal path to the markdown
     "compiled_at": "2026-05-29T12:05:00Z",
     "capability_tags": ["search", "..."],    // final tags (may differ from suggested)
-    "tenant_id": "uuid | null"               // scope
+    // tenant_id in the ack is the SOURCE-side UUID (echoed from the candidate),
+    // NOT the engine-side UUID. The-loom scopes its catalog by source UUIDs
+    // (its own native tenancy); the engine's internal engine_tenant_id is
+    // never crossed back over the wire. See
+    // `loom_agent_bridge_complete_status_and_secret_2026_06_12_evening`.
+    "tenant_id": "uuid"                      // source-side tenant UUID (non-nullable)
   },
   "compilation_diagnostics": {               // present when outcome != "compiled"
     "errors": [{ "phase": "validator", "message": "..." }],
@@ -159,11 +180,36 @@ The detailed contract referenced in the engine proposals' "What this does NOT co
 | Concern | Mechanism |
 |---|---|
 | **Confidentiality of payload** | Both sides should run over HTTPS. Webhook secret never traverses the network. |
-| **Authenticity of sender** | HMAC-SHA256 signature over `timestamp + body`. Verifier checks signature AND that timestamp is within ±5 minutes of current time. |
+| **Authenticity of sender** | HMAC-SHA256 in Stripe-style header format (see below). Verifier checks signature AND that timestamp is within ±5 minutes of current time. |
 | **Replay protection** | Timestamp bound + `promotion_id` / `batch_id` deduplication on the receiver side. |
 | **Idempotency for retries** | All three message types include a UUID the receiver dedups on. Retries are safe. |
 | **Out-of-order delivery** | Promotion candidate must arrive before registration ack; the engine enforces this implicitly (won't ack what it hasn't received). |
 | **Catastrophic key compromise** | Rotate `LOOM_SKILL_BRIDGE_SECRET` on both sides; in-flight messages signed with the old key are rejected after a 5-min grace window. |
+
+### HMAC signature header format
+
+Both directions use Stripe-style signature headers:
+
+```
+<header-name>: t=<unix_seconds>,v1=<sha256_hex>
+```
+
+- **Inbound** (the-loom → engine): header is `X-Loom-Signature`
+- **Outbound** (engine → the-loom): header is `X-MakeSkills-Signature`
+
+Where:
+
+- `<unix_seconds>` is the wall-clock time at signing, as decimal seconds since epoch (UTC)
+- `<sha256_hex>` is `HMAC-SHA256(LOOM_SKILL_BRIDGE_SECRET, "<unix_seconds>.<raw_body>").hexdigest()`
+- `<raw_body>` is the **exact bytes** of the request body — re-serializing changes byte order and breaks verification
+
+The verifier:
+
+1. Parses the header into `t=` and `v1=` fields (any malformed header → 401)
+2. Confirms `|now - t| <= 300` seconds (outside the window → 401; replay protection)
+3. Recomputes the HMAC and compares via `hmac.compare_digest` (constant-time)
+
+The format was specified by Loom-agent's PR #21 on the-loom side; the engine adopted it in PR #70 (`services/skill_making/hmac_verify.py`) per `loom_agent_bridge_complete_status_and_secret_2026_06_12_evening`.
 
 ## State machine
 
@@ -266,7 +312,7 @@ The detailed contract referenced in the engine proposals' "What this does NOT co
 2. **Skill-source markdown format.** Implied to be a `SKILL.md` per the agentskills.io spec. Should we require a specific frontmatter shape (`name`, `description`, `capability_tags`, `triggers`) or accept any valid SKILL.md? Default: require those four fields; everything else passes through.
 3. **Compilation diagnostics granularity.** What's the minimum the-loom needs in `compilation_diagnostics.errors`? Field name + message? Or also error code, severity, suggested fix? Default: `{phase, message}` for now; add structure as needed.
 4. **Telemetry event vocabulary.** `outcome: "success" | "error" | "timeout"` — is that enough? Or do we need `"cancelled"`, `"partial"`, `"degraded"`? Default: start with three; add more when the dashboard needs them.
-5. **Tenant_id semantics across the bridge.** Both sides use `tenant_id` but their definitions may differ. The-loom's tenant_id is Liz; the engine's is whoever the consumer says (humancensys-app's "tenant" might be one student). Reconciliation: the-loom's promotion candidate sets `tenant_id` to `null` for global skills, OR the engine's tenant_id for tenant-scoped skills. Engine ignores it for global skills; uses it for tenant-scoped ones.
+5. **Tenant_id semantics across the bridge.** **RESOLVED 2026-06-12 per `decision_tenant_id_mapping_option_b_2026_06_12` — Option B: explicit `tenant_id_mapping` table on the engine side.** The payload's `tenant_id` is the SOURCE-side UUID (the-loom's tenant_id). The engine looks it up in `tenant_id_mapping` to resolve the engine-side UUID before any tenant-scoped write. Unmapped tenants → `400 unknown_source_tenant` (no silent fall-through; correct for hosted-multitenant). Catalog scope (whether the skill is visible cross-tenant) is the separate `is_global: boolean` field, NOT the absence of `tenant_id` — `tenant_id` is now non-nullable. The ack echoes the source UUID back; the engine's internal engine_tenant_id is never crossed back over the wire. The original framing in this question — "engine's tenant_id for tenant-scoped, null for global" — was rejected because it conflated tenant scope with catalog scope. The current framing keeps the two orthogonal.
 6. **Catalog ownership** (carryover from data model proposal Q3). Engine owns the SkillSource + CompiledSkill catalog. The-loom queries it via `GET /skills/{skill_id}` for dashboard purposes. The-loom does NOT replicate the catalog locally.
 
 ## What needs to happen next
