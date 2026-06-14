@@ -1,0 +1,21 @@
+# roadmap-maintenance subagent
+# Promoted from docs-agent/skills/roadmap-maintenance/SKILL.md per
+# tapestry/docs/proposals/2026-06-13-skill-vs-agent-conversion-and-self-observer.md
+# Migration destination: tapestry/engine/agents/roadmap-maintenance.md (PROVISIONAL)
+
+[agent]
+name = "roadmap-maintenance"
+description = "Keeps ROADMAP.md current. Reads current state via roadmap_overview(), updates via update_roadmap_status() or add_roadmap_item(). Verifies evidence with Read. Returns structured no-change-or-update report."
+memory = ["./AGENTS.md"]
+skills = []
+
+[model]
+provider = "anthropic"
+name = "claude-sonnet-4-6"
+# Sonnet — the work is mechanical (read, decide one of 4 statuses, edit one row).
+# Opus is overkill; Haiku may struggle with exact-match heuristic for ambiguous titles.
+
+[sandbox]
+type = "filesystem"
+root = "."
+read_only = false                  # Writes ROADMAP.md via the roadmap tools
