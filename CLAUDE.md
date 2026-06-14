@@ -22,14 +22,33 @@ See [`docs/proposals/make-skills-engine-vs-consumer-scope.md`](docs/proposals/ma
 
 ## Discipline plugin (required)
 
-This project depends on the `make-skills-discipline` Claude Code plugin (being renamed to `loom-discipline` as part of the-loom Phase 1; both names work during transition). Install once per machine:
+```text
+/plugin marketplace add Lizo-RoadTown/claude-skills-marketplace
+/plugin install make-skills-discipline@lizo-skills
+```
 
-    /plugin marketplace add Lizo-RoadTown/claude-skills-marketplace
-    /plugin install make-skills-discipline@lizo-skills
+The plugin auto-injects behavioral rules into every Claude Code session — PROBE before asserting, cite `file:line`, distinguish dev-tooling from runtime, write friction as memory at the moment of correction, cite skills by name, append to the test-runs log.
 
-The plugin auto-injects behavioral rules into every Claude Code session in this repo — PROBE before asserting, cite `file:line`, distinguish dev-tooling from runtime, write friction as memory at the moment of correction, cite skills by name, append to the test-runs log. Hook scripts enforce the rules; the skill body documents them.
+(Reconciliation note: `loom-discipline` v0.1.12 in `the-loom/adapters/claude-code/` is the newer/fuller-featured discipline plugin; marketplace migration deferred — see `feedback_discipline_plugin_reconciliation_deferred_2026_06_14`.)
 
-The discipline-skills in `skills/` and `skills_private/` (`agentic-skill-design`, `lessons-learned`, `agentic-upskilling`, `orchestration-cataloging`, `next-actions-planning`, `design-evaluation`) are the longer-form discipline the plugin points at.
+## Canonical patterns (operator's patterns library)
+
+The canonical home for reusable agents + skills + tools is the `liz-patterns` plugin in the operator's Claude Code marketplace. Install once per machine:
+
+```text
+/plugin install liz-patterns@lizo-skills
+```
+
+This makes the following available **by name in every project**, with one canonical implementation:
+
+- **Agents** (invoke via `Agent({subagent_type: "liz-patterns:<name>", ...})`):
+  `infrastructure-mapping`, `next-actions-planning`, `lessons-learned`, `orchestration-cataloging`, `eval-deep-research`, `web-app-scaffold`, `agentic-upskilling`
+- **Skills** (invoke via Skill tool with `liz-patterns:<name>`):
+  `agentic-skill-design`, `deep-research-pattern`, `design-evaluation`, `documentation`, `document-parsing`, `layered-explanation`, `open-source-documentation`, `proposal-authoring`
+
+Plus the exception that stays in this repo: `roadmap-maintenance` subagent at `Make_Skills/subagents/roadmap-maintenance/AGENTS.md` — its LangChain `@tool`-decorated functions at `services/admin/roadmap/tools.py:22, 69, 106` are imported in-process by `core/runtime/agent.py`, so the agent must run inside this runtime to call them.
+
+**Do not look for the canonical patterns in this repo's local `skills/` directory** — they were deleted in commit `ee757d7` 2026-06-13. They live in the plugin. Per [tapestry/MANIFESTO.md Pillar 1](https://github.com/Lizo-RoadTown/tapestry/blob/main/MANIFESTO.md): every reusable pattern has ONE name, ONE home, available everywhere via reference, not copy.
 
 ## The engine stack
 
