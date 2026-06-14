@@ -24,12 +24,12 @@ See [`docs/proposals/make-skills-engine-vs-consumer-scope.md`](docs/proposals/ma
 
 ```text
 /plugin marketplace add Lizo-RoadTown/claude-skills-marketplace
-/plugin install make-skills-discipline@lizo-skills
+/plugin install loom-discipline@lizo-loom
 ```
 
 The plugin auto-injects behavioral rules into every Claude Code session — PROBE before asserting, cite `file:line`, distinguish dev-tooling from runtime, write friction as memory at the moment of correction, cite skills by name, append to the test-runs log.
 
-(Reconciliation note: `loom-discipline` v0.1.12 in `the-loom/adapters/claude-code/` is the newer/fuller-featured discipline plugin; marketplace migration deferred — see `feedback_discipline_plugin_reconciliation_deferred_2026_06_14`.)
+(Reconciliation resolved 2026-06-14 per Option A: `loom-discipline` is the canonical discipline plugin, published via the `lizo-loom` marketplace which sources from `the-loom/adapters/claude-code/loom-discipline/`. The previously-deferred reconciliation is complete; the `make-skills-discipline` plugin was a subset and has been retired.)
 
 ## Canonical patterns (operator's patterns library)
 
