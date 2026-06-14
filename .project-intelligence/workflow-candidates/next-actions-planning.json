@@ -1,0 +1,14 @@
+{
+  "candidate_id": "ca488878-e573-4aab-9fcd-db322e73108b",
+  "current_status": "draft",
+  "first_seen_at": 1781306264.931242,
+  "last_count": 4,
+  "last_seen_at": 1781306264.931242,
+  "schema_version": 1,
+  "session_ids": [
+    "ff5278db-f8ac-4174-bf90-ec021292f143"
+  ],
+  "sessions_seen": 1,
+  "skill_name": "next-actions-planning",
+  "total_count": 4
+}

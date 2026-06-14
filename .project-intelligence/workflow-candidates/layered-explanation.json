@@ -1,0 +1,14 @@
+{
+  "candidate_id": "5a107d20-bde5-4645-b16d-24fa36bea2d3",
+  "current_status": "draft",
+  "first_seen_at": 1781306264.4693758,
+  "last_count": 3,
+  "last_seen_at": 1781306264.4693758,
+  "schema_version": 1,
+  "session_ids": [
+    "ff5278db-f8ac-4174-bf90-ec021292f143"
+  ],
+  "sessions_seen": 1,
+  "skill_name": "layered-explanation",
+  "total_count": 3
+}

@@ -1,0 +1,14 @@
+{
+  "candidate_id": "8636b752-eef8-4909-802f-8b6983eccc2e",
+  "current_status": "draft",
+  "first_seen_at": 1781306264.7892182,
+  "last_count": 5,
+  "last_seen_at": 1781306264.7892182,
+  "schema_version": 1,
+  "session_ids": [
+    "ff5278db-f8ac-4174-bf90-ec021292f143"
+  ],
+  "sessions_seen": 1,
+  "skill_name": "lessons-learned",
+  "total_count": 5
+}
