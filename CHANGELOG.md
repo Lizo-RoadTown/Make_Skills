@@ -2,6 +2,81 @@
 
 All notable changes to Make_Skills are documented here. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Version-bumps and releases are managed by `release-please`.
 
+## [0.2.0](https://github.com/Lizo-RoadTown/Make_Skills/compare/v0.1.0...v0.2.0) (2026-06-16)
+
+
+### Added
+
+* **adapters:** canonical default-seed templates per adapter type ([caf579e](https://github.com/Lizo-RoadTown/Make_Skills/commit/caf579efc45b5f3275172fcd9df12e5fde7f676f))
+* **adapters:** canonical default-seed templates per adapter type ([261ef67](https://github.com/Lizo-RoadTown/Make_Skills/commit/261ef678d76815198c9d3eac9ffc7999a1e7be9d))
+* **adapters:** stub classroom + development + research-project adapter directories ([#56](https://github.com/Lizo-RoadTown/Make_Skills/issues/56)) ([13903d1](https://github.com/Lizo-RoadTown/Make_Skills/commit/13903d1dbd54e7551b5883cc3b9277545bcc403e))
+* **bridge:** coordinated alignment engine-side — supersede spec, add tests, telemetry, /versions, fix 409 ([#75](https://github.com/Lizo-RoadTown/Make_Skills/issues/75)) ([5fe6b73](https://github.com/Lizo-RoadTown/Make_Skills/commit/5fe6b739d2dbec50016be229a8594ac3a3580cc5))
+* **bridge:** phase 4 receiver back half — compile + ack ([#71](https://github.com/Lizo-RoadTown/Make_Skills/issues/71)) ([1eaf6b9](https://github.com/Lizo-RoadTown/Make_Skills/commit/1eaf6b97b4a93d9a6759323723bb32f910ce7224))
+* **bridge:** phase 4 receiver front half — guard + intake (no LLM) ([#70](https://github.com/Lizo-RoadTown/Make_Skills/issues/70)) ([882f744](https://github.com/Lizo-RoadTown/Make_Skills/commit/882f7444de58668ce9778acc7798c1843ce5568d))
+* **core:** mvp migration phase 2 — extract low-coupling modules ([e0ed6fb](https://github.com/Lizo-RoadTown/Make_Skills/commit/e0ed6fbfff1403fab04a9561bd6e6d2689af8d2a))
+* **core:** mvp migration phase 2 — extract low-coupling modules ([73cdeb8](https://github.com/Lizo-RoadTown/Make_Skills/commit/73cdeb83b2596f9a1483ee4bffa728f874c97d20))
+* **core:** mvp migration phase 3 — skill-making boundary ([2050128](https://github.com/Lizo-RoadTown/Make_Skills/commit/20501287596fc9e29c5093a580333cced603a6be))
+* **core:** mvp migration phase 3 — skill-making boundary (re-open after [#61](https://github.com/Lizo-RoadTown/Make_Skills/issues/61) closed) ([728d03f](https://github.com/Lizo-RoadTown/Make_Skills/commit/728d03fdbe0469378c1ee8726616572db44f60a0))
+* **core:** mvp migration phase 5 — runtime + main move ([f58909a](https://github.com/Lizo-RoadTown/Make_Skills/commit/f58909a97b97d888f5934b7a6c9a2b96a4354c5c))
+* **core:** mvp migration phase 5 — runtime + main move (final phase) ([ff0d206](https://github.com/Lizo-RoadTown/Make_Skills/commit/ff0d206832294d276d8b004a4b40bf13641db3e4))
+* **deprecate:** mvp migration phase 4 — rip out lancedb memory subsystem ([d12e05f](https://github.com/Lizo-RoadTown/Make_Skills/commit/d12e05f2171e9a240e545a9c08ce7b43f21a5f74))
+* **deprecate:** mvp migration phase 4 — rip out lancedb memory subsystem ([4152d24](https://github.com/Lizo-RoadTown/Make_Skills/commit/4152d246e5d9d9530cf585734bf1a2c473c62c65))
+* extract consumer (web/) to humancensys-app — Make_Skills becomes engine-only ([#52](https://github.com/Lizo-RoadTown/Make_Skills/issues/52)) ([3820bc9](https://github.com/Lizo-RoadTown/Make_Skills/commit/3820bc9e4400285c5a1c29bcd3b810d40cb5b81f))
+* **memory-mcp:** phase 3 hosted-mode HTTP transport + JWT auth ([#46](https://github.com/Lizo-RoadTown/Make_Skills/issues/46)) ([d07777f](https://github.com/Lizo-RoadTown/Make_Skills/commit/d07777ff9f916d58ae8ed294fcd1c408d19dd68a))
+* **observability:** dev-experience layer — Loki + Promtail + Grafana dashboard for hook activity ([#38](https://github.com/Lizo-RoadTown/Make_Skills/issues/38)) ([55a253a](https://github.com/Lizo-RoadTown/Make_Skills/commit/55a253aadef6aa0e8476c037a146f5d167a43a8e))
+* **observability:** initialise LangSmith gating + Sentry SDKs ([#40](https://github.com/Lizo-RoadTown/Make_Skills/issues/40)) ([acc2137](https://github.com/Lizo-RoadTown/Make_Skills/commit/acc21376535bd7f4db8f7df5a0cfb3d6f7986563))
+* phase 1 of mvp migration — scaffold core/ + services/ + deprecated/ ([#59](https://github.com/Lizo-RoadTown/Make_Skills/issues/59)) ([50619ee](https://github.com/Lizo-RoadTown/Make_Skills/commit/50619ee99282998fd4cea428822ca79eb3952154))
+* Phase A CI + observability bundle ([#35](https://github.com/Lizo-RoadTown/Make_Skills/issues/35)) ([ee28987](https://github.com/Lizo-RoadTown/Make_Skills/commit/ee289878af0c5073d38527a46d57dabc7ec93761))
+* **subagents:** roadmap-maintenance — promoted from docs-agent skill ([03d42da](https://github.com/Lizo-RoadTown/Make_Skills/commit/03d42dae0882b8928e10e2b3c170f0ead2aaa4b2))
+* **telemetry:** PR-prep-1 wire engine collector hook → /skill-used ([#76](https://github.com/Lizo-RoadTown/Make_Skills/issues/76)) ([a61f078](https://github.com/Lizo-RoadTown/Make_Skills/commit/a61f07895b2e5a8a69b11593aee5f39c339a4ad3))
+
+
+### Fixed
+
+* **auth:** construct Drizzle client eagerly with placeholder fallback ([2ed4591](https://github.com/Lizo-RoadTown/Make_Skills/commit/2ed4591c7b0720f23dcdc278eb0f0939174c5c68))
+* **auth:** defer DATABASE_URL + AUTH_SECRET checks until runtime ([1fd9bed](https://github.com/Lizo-RoadTown/Make_Skills/commit/1fd9bede6d0b457bb6e2d22b1d8b5c8729c41aaf))
+* **auth:** proxy.ts default-exports the auth function ([1c3ea8b](https://github.com/Lizo-RoadTown/Make_Skills/commit/1c3ea8b9d6187a98e1868a1f137cdec19fee47f9))
+* **db:** enable SSL for Render Postgres + verbose pool error logging ([2429cda](https://github.com/Lizo-RoadTown/Make_Skills/commit/2429cda75a7d395c388daade90bd459ace0b3739))
+* **db:** log loud warning when DATABASE_URL falls back to placeholder ([fa056a7](https://github.com/Lizo-RoadTown/Make_Skills/commit/fa056a7f3a4cde42c15a42657e38faa7d745b3f7))
+* **deps:** add explicit httpx&gt;=0.27 to platform/requirements.txt ([#74](https://github.com/Lizo-RoadTown/Make_Skills/issues/74)) ([e276fe9](https://github.com/Lizo-RoadTown/Make_Skills/commit/e276fe9e5ea3c3fc00964e1058874a1e89ac88c7))
+
+
+### Documentation
+
+* Docs:  ([4152d24](https://github.com/Lizo-RoadTown/Make_Skills/commit/4152d246e5d9d9530cf585734bf1a2c473c62c65))
+* add layered-explanation skill + observability-layering callout in infrastructure-mapping ([#39](https://github.com/Lizo-RoadTown/Make_Skills/issues/39)) ([a6131f9](https://github.com/Lizo-RoadTown/Make_Skills/commit/a6131f99b5a15e625fa8a08fc335be9d26e641e6))
+* application-vs-dev-tooling scoping doc + the-loom pointer ([#50](https://github.com/Lizo-RoadTown/Make_Skills/issues/50)) ([88fb7db](https://github.com/Lizo-RoadTown/Make_Skills/commit/88fb7dba11b90f85faf67204ef76a438df1d1180))
+* auto-upskilling loop proposal ([#48](https://github.com/Lizo-RoadTown/Make_Skills/issues/48)) ([8f48c32](https://github.com/Lizo-RoadTown/Make_Skills/commit/8f48c32fab2d9155dd49026374168e2d7f9ba2dc))
+* capture plugin v0.1.3 follow-ups + merge-queue session log ([#41](https://github.com/Lizo-RoadTown/Make_Skills/issues/41)) ([b5e5d7a](https://github.com/Lizo-RoadTown/Make_Skills/commit/b5e5d7a867ff313e89c65885792fad89ca169e61))
+* **changelog:** add canonical default-seed/ entry for PR [#67](https://github.com/Lizo-RoadTown/Make_Skills/issues/67) ([4123f29](https://github.com/Lizo-RoadTown/Make_Skills/commit/4123f2957fc64e89c8b6b77d090f5eac513bdf02))
+* **changelog:** add Phase 4 sketch entry for PR [#66](https://github.com/Lizo-RoadTown/Make_Skills/issues/66) ([db0def3](https://github.com/Lizo-RoadTown/Make_Skills/commit/db0def367a6a1a221d37fae29287e0e578981d48))
+* **changelog:** add Pillar 2 → Atelier rename entry for PR [#68](https://github.com/Lizo-RoadTown/Make_Skills/issues/68) ([0f1c54d](https://github.com/Lizo-RoadTown/Make_Skills/commit/0f1c54d54bdf78bc20fc6f8ff8632b86dd5e0e8e))
+* **CLAUDE.md:** replace stale local-skills references with liz-patterns plugin canonical home ([9ed3541](https://github.com/Lizo-RoadTown/Make_Skills/commit/9ed354172f409ec343fd79e73b4f82ae74b21374))
+* Make_Skills engine-vs-consumer mapping (3 proposals) ([#51](https://github.com/Lizo-RoadTown/Make_Skills/issues/51)) ([5aeaa47](https://github.com/Lizo-RoadTown/Make_Skills/commit/5aeaa47b450ad2c8382cb3c09a3eca259f7f0c56))
+* Memory MCP Phase 3 plan + research dispatch notes ([#44](https://github.com/Lizo-RoadTown/Make_Skills/issues/44)) ([24cda5f](https://github.com/Lizo-RoadTown/Make_Skills/commit/24cda5f66ba023cfbb1a3b5a646279fed097afb6))
+* **memory-mcp:** hosted-mode runbook + client wiring example + proposal update ([#47](https://github.com/Lizo-RoadTown/Make_Skills/issues/47)) ([a1de732](https://github.com/Lizo-RoadTown/Make_Skills/commit/a1de732a98e154d1ca4b0cb5711f6d459623276f))
+* **plan:** mark phase 2 shipped + record dockerfile + history caveats ([5b774a2](https://github.com/Lizo-RoadTown/Make_Skills/commit/5b774a288eb5b1b7401dd380a90b38a83fa6754d))
+* **plan:** mvp migration plan for engine restructure ([#57](https://github.com/Lizo-RoadTown/Make_Skills/issues/57)) ([e787d6f](https://github.com/Lizo-RoadTown/Make_Skills/commit/e787d6f69571c8b86e22911e4ffe58014823d3d1))
+* **proposal:** skill-making bridge — the-loom &lt;-&gt; engine contract ([#54](https://github.com/Lizo-RoadTown/Make_Skills/issues/54)) ([06266a0](https://github.com/Lizo-RoadTown/Make_Skills/commit/06266a05e3e81b6cec8168a0115f86607f3f38c5))
+* **proposal:** three-layer engine spec — Make_Skills module spec mirroring the-loom v3 ([#55](https://github.com/Lizo-RoadTown/Make_Skills/issues/55)) ([c42e128](https://github.com/Lizo-RoadTown/Make_Skills/commit/c42e128612d7db8a27ffc8d353887c2b81e0bab2))
+* refresh README + ARCHITECTURE for three-layer model + add mermaid diagrams ([#58](https://github.com/Lizo-RoadTown/Make_Skills/issues/58)) ([c047df8](https://github.com/Lizo-RoadTown/Make_Skills/commit/c047df8e2ff41249fbea3e5648c74d03daf913df))
+* **rename:** Pillar 2 page references → the Atelier ([8fc83bb](https://github.com/Lizo-RoadTown/Make_Skills/commit/8fc83bbad10a9a9be2ae7841f62ec781b2932741))
+* **rename:** pillar-2 page refs → the Atelier ([5a652e5](https://github.com/Lizo-RoadTown/Make_Skills/commit/5a652e5a6e4aeefa7ff1f854bcfd7b5212371a1d))
+* rewrite CLAUDE.md + ARCHITECTURE.md for engine-only scope ([#53](https://github.com/Lizo-RoadTown/Make_Skills/issues/53)) ([38003b8](https://github.com/Lizo-RoadTown/Make_Skills/commit/38003b8495e786248f98cb498035d77a8fa823c6))
+* rewrite project-starter recommendations with publishing strategy ([#31](https://github.com/Lizo-RoadTown/Make_Skills/issues/31)) ([32237ba](https://github.com/Lizo-RoadTown/Make_Skills/commit/32237ba08e1237a82a42e7313c4cee7727b56b7b))
+* **runbook:** render deploy step-by-step ([#49](https://github.com/Lizo-RoadTown/Make_Skills/issues/49)) ([fc1eb72](https://github.com/Lizo-RoadTown/Make_Skills/commit/fc1eb72a351ce9be7889c7d49b26398c52b96e9d))
+* **sketch:** bridge receiver + compiler Phase 4 shape (no impl yet) ([f6d19ed](https://github.com/Lizo-RoadTown/Make_Skills/commit/f6d19edf81d0e743f0f0dafc6a3b7c5ef3cc433e))
+* **sketch:** bridge receiver + compiler Phase 4 shape (no impl yet) ([60eaf3d](https://github.com/Lizo-RoadTown/Make_Skills/commit/60eaf3dc8db8ba69caf493b76baaf5de1829c4ca))
+* **sketch:** incorporate loom-agent's 5 bridge-spec ratification adjustments ([#69](https://github.com/Lizo-RoadTown/Make_Skills/issues/69)) ([b0abba7](https://github.com/Lizo-RoadTown/Make_Skills/commit/b0abba7f0d3d49a09f898d05c2650a667d4d7980))
+* smoke-test v0.1.3 PASS + new v0.1.4 candidate ([#43](https://github.com/Lizo-RoadTown/Make_Skills/issues/43)) ([ee2a81a](https://github.com/Lizo-RoadTown/Make_Skills/commit/ee2a81a47f7ce6c45f78b4f02a92ab3361a9ae48))
+* **spec:** align skill-making-bridge wire contract with what's implemented + ratified ([#73](https://github.com/Lizo-RoadTown/Make_Skills/issues/73)) ([d77cfed](https://github.com/Lizo-RoadTown/Make_Skills/commit/d77cfed42d53f120fae730aff5adfda7e68fd050))
+* tick [#1](https://github.com/Lizo-RoadTown/Make_Skills/issues/1) + [#1](https://github.com/Lizo-RoadTown/Make_Skills/issues/1)a on plugin v0.1.3 punch list ([#42](https://github.com/Lizo-RoadTown/Make_Skills/issues/42)) ([98908c0](https://github.com/Lizo-RoadTown/Make_Skills/commit/98908c0dc0633ebecb1fad215e90fc604b61de16))
+
+
+### Changed
+
+* **memory-mcp:** thread tenant_id via tenant_ctx_var (Phase 3 prep) ([#45](https://github.com/Lizo-RoadTown/Make_Skills/issues/45)) ([f3df0b8](https://github.com/Lizo-RoadTown/Make_Skills/commit/f3df0b87c8a5e1f3c9732573109ae1c2335abf2a))
+
 ## [Unreleased]
 
 ### Changed
